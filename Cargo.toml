@@ -1,0 +1,10 @@
+[package]
+name = "kontroli"
+version = "0.1.0"
+authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
+edition = "2018"
+
+[dependencies]
+nom = "5.0"
+circular = "0.3"
+fnv = "1.0.3"
