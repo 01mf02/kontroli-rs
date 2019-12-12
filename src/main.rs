@@ -12,7 +12,7 @@ use nom::{
   character::streaming::{char, multispace0},
   combinator::{flat_map, map, opt, value},
   error::VerboseError,
-  multi::{fold_many0, many0},
+  multi::{fold_many0, many0, separated_list},
   sequence::{preceded, terminated, delimited, pair, tuple},
   Err,
   IResult,
@@ -45,7 +45,11 @@ impl Term {
   }
 }
 
-type Command = (String, Vec<Arg>, DCommand);
+#[derive(Debug, Clone)]
+pub enum Command {
+  DCmd(String, Vec<Arg>, DCommand),
+  Rule(Vec<String>, BTerm, BTerm),
+}
 
 #[derive(Debug, Clone)]
 pub enum DCommand {
@@ -185,7 +189,10 @@ fn term(i: &[u8]) -> Parse<Term> {
   ))(i)
 }
 
-fn command(i: &[u8]) -> Parse<Command> {
+fn dcommand(i: &[u8]) -> Parse<Command> {
+  use Command::DCmd;
+  use DCommand::*;
+
   alt((
     preceded(tag("def"),
       map(tuple((
@@ -193,21 +200,39 @@ fn command(i: &[u8]) -> Parse<Command> {
         many0(lexeme(parens(arg))),
         opt(lexeme(of_term)),
         opt(lexeme(is_term)))),
-        |(id, params, ty, tm)| (id, params, DCommand::Definition(ty, tm)))),
+        |(id, params, ty, tm)| DCmd(id, params, Definition(ty, tm)))),
     preceded(tag("thm"),
       map(tuple((
         lexeme(ident),
         many0(lexeme(parens(arg))),
         lexeme(of_term),
         lexeme(is_term))),
-        |(id, params, ty, tm)| (id, params, DCommand::Theorem(ty, tm)))),
+        |(id, params, ty, tm)| DCmd(id, params, Theorem(ty, tm)))),
     map(tuple((
       ident,
       many0(lexeme(parens(arg))),
       lexeme(of_term))),
-      |(id, params, ty)| (id, params, DCommand::Declaration(ty))),
+      |(id, params, ty)| DCmd(id, params, Declaration(ty))),
   ))
   (i)
+}
+
+fn rule(i: &[u8]) -> Parse<Command> {
+  map(
+    tuple((
+      preceded(char('['), terminated(separated_list(lexeme(char(',')), lexeme(ident)), lexeme(char(']')))),
+      lexeme(term),
+      lexeme(tag("-->")),
+      lexeme(term))),
+    |(vars, lhs, _, rhs)| Command::Rule(vars, Box::new(lhs), Box::new(rhs))
+  )(i)
+}
+
+fn command(i: &[u8]) -> Parse<Command> {
+  alt((
+    dcommand,
+    rule,
+  ))(i)
 }
 
 // parse whitespace or commands
@@ -444,7 +469,7 @@ fn run(filename: &str) -> std::io::Result<()> {
       },
 
       Ok((remaining, toplevel)) => {
-        if let Some((id, args, dcmd)) = toplevel {
+        if let Some(Command::DCmd(id, args, dcmd)) = toplevel {
           println!("{}", id);
           let dcmd = dcmd.parametrise(args);
           let dcmd = scope::dcommand(&symbols, &mut Vec::new(), dcmd);

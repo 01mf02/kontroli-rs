@@ -3,7 +3,7 @@ def eta : ! _ : Typ -> Type.
 
 (; theory Pure ;)
 {|fun|type|} : ! _ : Typ -> ! _ : Typ -> Typ.
-(;[a, b] eta ({|fun|type|} a b) --> ! _ : eta a -> eta b.;)
+[a, b] eta ({|fun|type|} a b) --> ! _ : eta a -> eta b.
 {|prop|type|} : Typ.
 def eps : ! _ : eta {|prop|type|} -> Type.
 {|itself|type|} : ! _ : Typ -> Typ.
@@ -11,9 +11,9 @@ def eps : ! _ : eta {|prop|type|} -> Type.
 {|Pure.proof|type|} : Typ.
 {|Pure.eq|const|} : ! {|'a|} : Typ -> eta ({|fun|type|} {|'a|} ({|fun|type|} {|'a|} {|prop|type|})).
 {|Pure.imp|const|} : eta ({|fun|type|} {|prop|type|} ({|fun|type|} {|prop|type|} {|prop|type|})).
-(;[a, b] eps ({|Pure.imp|const|} a b) --> ! _ : eps a -> eps b.;)
+[a, b] eps ({|Pure.imp|const|} a b) --> ! _ : eps a -> eps b.
 {|Pure.all|const|} : ! {|'a|} : Typ -> eta ({|fun|type|} ({|fun|type|} {|'a|} {|prop|type|}) {|prop|type|}).
-(;[a, b] eps ({|Pure.all|const|} a b) --> ! x : eta a -> eps (b x).;)
+[a, b] eps ({|Pure.all|const|} a b) --> ! x : eta a -> eps (b x).
 {|Pure.prop|const|} : eta ({|fun|type|} {|prop|type|} {|prop|type|}).
 {|Pure.type|const|} : ! {|'a|} : Typ -> eta ({|itself|type|} {|'a|}).
 {|Pure.dummy_pattern|const|} : ! {|'a|} : Typ -> eta {|'a|}.
