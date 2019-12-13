@@ -340,11 +340,43 @@ use super::*;
 pub type Signature = FnvHashMap<String, Term>;
 
 pub fn whnf(sig: &Signature, tm: Term) -> Term {
+  // TODO
   tm
 }
 
+fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
+  use Term::*;
+
+  match cn {
+    (Kind, Kind) |
+    (Type, Type) => true,
+    (Symb(s1), Symb(s2)) if s1 == s2 => true,
+    (BVar(v1), BVar(v2)) if v1 == v2 => true,
+    (Abst(_, t1), Abst(_, t2)) => { cns.push((*t1, *t2)); true },
+    (Prod((_, Some(ty1)), tm1), Prod((_, Some(ty2)), tm2)) => {
+      cns.push((*ty1, *ty2));
+      cns.push((*tm1, *tm2));
+      true
+    },
+    // TODO: eta-equivalence
+    (Appl(_, _), Appl(_, _)) => panic!("todo"),
+    _ => false
+  }
+}
+
 pub fn convertible(sig: &Signature, tm1: Term, tm2: Term) -> bool {
-  true
+  let mut cns = vec!((tm1, tm2));
+  loop {
+    match cns.pop() {
+      Some((tm1, tm2)) => {
+        if tm1 != tm2 {
+          let cn = (whnf(sig, tm1), whnf(sig, tm2));
+          if ! conversion_step(cn, &mut cns) { break false }
+        }
+      },
+      None => break true
+    }
+  }
 }
 
 }
