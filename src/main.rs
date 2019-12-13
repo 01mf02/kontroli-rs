@@ -31,7 +31,7 @@ pub enum Term {
   Type,
   Symb(String),
   BVar(DeBruijn),
-  Appl(BTerm, BTerm),
+  Appl(BTerm, Vec<BTerm>),
   Abst(Arg, BTerm),
   Prod(Arg, BTerm),
 }
@@ -141,9 +141,8 @@ fn sterm(i: &[u8]) -> Parse<Term> {
 }
 
 fn appl(i: &[u8]) -> Parse<Term> {
-  flat_map(sterm, |head|
-    fold_many0(lexeme(sterm), head, |acc, x|
-      Term::Appl(Box::new(acc), Box::new(x))))(i)
+  map(pair(sterm, many0(lexeme(sterm))),
+    |(head, tail)| Term::Appl(Box::new(head), tail.into_iter().map(Box::new).collect()))(i)
 }
 
 fn maybe_ident(i: &[u8]) -> Parse<Option<String>> {
@@ -304,9 +303,9 @@ fn term(sym: &SymTable, bnd: &mut Bound, tm: Term) -> Term {
           else { panic!("undeclared symbol") }
       }
     },
-    Appl(t1, t2) => Appl(
-      Box::new(term(sym, bnd, *t1)),
-      Box::new(term(sym, bnd, *t2))),
+    Appl(head, tail) => Appl(
+      Box::new(term(sym, bnd, *head)),
+      tail.into_iter().map(|tm| Box::new(term(sym, bnd, *tm))).collect()),
     Abst(arg, tm) => {
       let arg = argument(sym, bnd, arg);
       bind(bnd, arg.0.clone(), |bnd| Abst(arg, Box::new(term(sym, bnd, *tm))))
@@ -338,6 +337,39 @@ use super::*;
 
 // symbol -> type
 pub type Signature = FnvHashMap<String, Term>;
+
+fn state_whnf2(sig: &Signature, tm: Term) -> Term {
+  use Term::*;
+  // abstractions
+  // TODO: convert usize to slice?
+  let mut ctx: Vec<(BTerm, usize)> = Vec::new();
+  // applications
+  let mut stack: Vec<(BTerm, usize)> = Vec::new();
+  let mut tm = tm;
+  loop {
+    match tm {
+      Type | Kind | Prod(_, _) => break tm,
+      Abst(a, t) => {
+        match stack.pop() {
+          None => break Abst(a, t),
+          Some(p) => {
+            ctx.push(p);
+            tm = *t;
+          }
+        }
+      }
+      Appl(head, tail) => {
+        let offset = ctx.len();
+        tm = *head;
+        for t in tail.into_iter().rev() { stack.push((t, offset)) }
+      }
+      _ => panic!("todo")
+    }
+  }
+
+  // TODO: wrap ctx and stack around tm
+}
+
 
 pub fn whnf(sig: &Signature, tm: Term) -> Term {
   // TODO
