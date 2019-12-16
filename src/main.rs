@@ -349,6 +349,12 @@ fn state_whnf2(sig: &Signature, tm: Term) -> Term {
   loop {
     match tm {
       Type | Kind | Prod(_, _) => break tm,
+      BVar(x) => {
+        tm =
+          if x < ctx.len() { panic!("todo") }
+          else { panic!("todo, make DB") };
+        ctx.clear();
+      }
       Abst(a, t) => {
         match stack.pop() {
           None => break Abst(a, t),
