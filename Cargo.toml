@@ -8,3 +8,4 @@ edition = "2018"
 nom = "5.0"
 circular = "0.3"
 fnv = "1.0.3"
+lazy-st = { git = "https://github.com/01mf02/lazy-st", rev = "cb357e1" }
