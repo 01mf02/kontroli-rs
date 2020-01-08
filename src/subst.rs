@@ -46,14 +46,11 @@ impl Term {
 // TODO: merge with psubst?
 fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Option<Term> + '_ {
     move |n: usize, k: usize| {
-        Some(
-        if n == k {
+        Some(if n == k {
             u.clone() << k
-        }
-        else {
-            Term::BVar(n+1)
-        }
-        )
+        } else {
+            Term::BVar(n + 1)
+        })
     }
 }
 
