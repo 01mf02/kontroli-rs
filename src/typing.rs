@@ -30,6 +30,16 @@ fn infer(sig: &Signature, ctx: &mut Context, tm: Term) -> Result<Term, Error> {
         Type => Ok(Kind),
         Symb(s) => Ok(sig.get(&s).unwrap().clone()),
         BVar(x) => Ok(ctx.iter().rev().nth(x).unwrap().clone()),
+        Appl(f, args) => {
+            args.into_iter()
+                .try_fold(infer(sig, ctx, *f)?, |ty, arg| match ty.whnf(sig) {
+                    Prod((_, Some(a)), b) => {
+                        check(sig, ctx, *arg.clone(), *a)?;
+                        Ok(b.subst(*arg))
+                    }
+                    _ => Err(Error::ProductExpected),
+                })
+        }
         Abst((id, Some(ty)), tm) => {
             match bind(sig, ctx, *ty.clone(), |ctx| infer(sig, ctx, *tm))? {
                 Kind => Err(Error::UnexpectedKind),
@@ -43,7 +53,6 @@ fn infer(sig: &Signature, ctx: &mut Context, tm: Term) -> Result<Term, Error> {
             }
         }
         Abst((_, None), _) | Prod((_, None), _) => Err(Error::DomainFreeAbstraction),
-        _ => unimplemented!(),
     }
 }
 

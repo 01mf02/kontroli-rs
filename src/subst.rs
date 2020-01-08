@@ -37,6 +37,10 @@ impl Term {
     fn psubst(self, args: &Vec<Lazy<Term>>) -> Term {
         self.apply_subst(&psubst(args), 0)
     }
+
+    pub fn subst(self, u: Term) -> Term {
+        unimplemented!()
+    }
 }
 
 fn psubst(args: &Vec<Lazy<Term>>) -> impl Fn(usize, usize) -> Option<Term> + '_ {
