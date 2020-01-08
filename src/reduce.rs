@@ -79,7 +79,13 @@ fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
             cns.push((*tm1, *tm2));
             true
         }
-        // TODO: eta-equivalence
+        // TODO: only check this if eta-equivalence is enabled
+        (a, Abst(_, b)) | (Abst(_, b), a) => {
+            let mut shifted = a << 1;
+            shifted.apply(vec!(Box::new(BVar(0))));
+            cns.push((*b, shifted));
+            true
+        }
         (Appl(f1, args1), Appl(f2, args2)) => {
             if args1.len() == args2.len() {
                 let unbox = |a: Vec<BTerm>| a.into_iter().map(|a| *a);
