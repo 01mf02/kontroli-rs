@@ -38,8 +38,22 @@ impl Term {
         self.apply_subst(&psubst(args), 0)
     }
 
-    pub fn subst(self, u: Term) -> Term {
-        unimplemented!()
+    pub fn subst(self, u: &Term) -> Term {
+        self.apply_subst(&psubst_single(u), 0)
+    }
+}
+
+// TODO: merge with psubst?
+fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Option<Term> + '_ {
+    move |n: usize, k: usize| {
+        Some(
+        if n == k {
+            u.clone() << k
+        }
+        else {
+            Term::BVar(n+1)
+        }
+        )
     }
 }
 

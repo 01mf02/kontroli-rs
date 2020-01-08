@@ -35,7 +35,7 @@ fn infer(sig: &Signature, ctx: &mut Context, tm: Term) -> Result<Term, Error> {
                 .try_fold(infer(sig, ctx, *f)?, |ty, arg| match ty.whnf(sig) {
                     Prod((_, Some(a)), b) => {
                         check(sig, ctx, *arg.clone(), *a)?;
-                        Ok(b.subst(*arg))
+                        Ok(b.subst(&arg))
                     }
                     _ => Err(Error::ProductExpected),
                 })
