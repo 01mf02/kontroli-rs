@@ -34,7 +34,7 @@ impl Term {
         }
     }
 
-    fn psubst(self, args: &Vec<Lazy<Term>>) -> Term {
+    fn psubst(self, args: &[Lazy<Term>]) -> Term {
         self.apply_subst(&psubst(args), 0)
     }
 
@@ -57,7 +57,7 @@ fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Option<Term> + '_ {
     }
 }
 
-fn psubst(args: &Vec<Lazy<Term>>) -> impl Fn(usize, usize) -> Option<Term> + '_ {
+fn psubst(args: &[Lazy<Term>]) -> impl Fn(usize, usize) -> Option<Term> + '_ {
     move |n: usize, k: usize| {
         Some({
             if n >= k + args.len() {
