@@ -82,7 +82,7 @@ fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
         // TODO: only check this if eta-equivalence is enabled
         (a, Abst(_, b)) | (Abst(_, b), a) => {
             let mut shifted = a << 1;
-            shifted.apply(vec!(Box::new(BVar(0))));
+            shifted.apply(vec![Box::new(BVar(0))]);
             cns.push((*b, shifted));
             true
         }
