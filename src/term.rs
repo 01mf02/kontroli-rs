@@ -29,12 +29,14 @@ impl Term {
     }
 
     pub fn apply(&mut self, mut args: Vec<BTerm>) {
-        match self {
-            Self::Appl(_, ref mut args1) => args1.append(&mut args),
-            _ => {
-                use std::mem;
-                let old = mem::replace(&mut *self, Self::Kind);
-                *self = Self::Appl(Box::new(old), args);
+        if !args.is_empty() {
+            match self {
+                Self::Appl(_, ref mut args1) => args1.append(&mut args),
+                _ => {
+                    use std::mem;
+                    let old = mem::replace(&mut *self, Self::Kind);
+                    *self = Self::Appl(Box::new(old), args);
+                }
             }
         }
     }
