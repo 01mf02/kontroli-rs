@@ -63,6 +63,8 @@ impl From<State> for Term {
     }
 }
 
+const ETA: bool = true;
+
 fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
     use Term::*;
 
@@ -79,8 +81,7 @@ fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
             cns.push((*tm1, *tm2));
             true
         }
-        // TODO: only check this if eta-equivalence is enabled
-        (a, Abst(_, b)) | (Abst(_, b), a) => {
+        (a, Abst(_, b)) | (Abst(_, b), a) if ETA => {
             let mut shifted = a << 1;
             shifted.apply(vec![Box::new(BVar(0))]);
             cns.push((*b, shifted));
