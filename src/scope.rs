@@ -20,48 +20,52 @@ where
     }
 }
 
-fn term(sym: &SymTable, bnd: &mut Bound, tm: Term) -> Term {
-    use super::Term::*;
-    match tm {
-        Kind => Kind,
-        Type => Type,
-        Symb(s) => match bnd.iter().rev().position(|id| *id == s) {
-            Some(idx) => BVar(idx),
-            None => {
-                if sym.contains_key(&s) {
-                    Symb(s)
-                } else {
-                    panic!("undeclared symbol")
+impl Term {
+    fn scope(self, sym: &SymTable, bnd: &mut Bound) -> Self {
+        use super::Term::*;
+        match self {
+            Kind => Kind,
+            Type => Type,
+            Symb(s) => match bnd.iter().rev().position(|id| *id == s) {
+                Some(idx) => BVar(idx),
+                None => {
+                    if sym.contains_key(&s) {
+                        Symb(s)
+                    } else {
+                        panic!("undeclared symbol")
+                    }
                 }
+            },
+            Appl(head, tail) => Appl(
+                Box::new(head.scope(sym, bnd)),
+                tail.into_iter()
+                    .map(|tm| Box::new(tm.scope(sym, bnd)))
+                    .collect(),
+            ),
+            Abst(arg, tm) => {
+                let arg = argument(sym, bnd, arg);
+                bind(bnd, arg.0.clone(), |bnd| {
+                    Abst(arg, Box::new(tm.scope(sym, bnd)))
+                })
             }
-        },
-        Appl(head, tail) => Appl(
-            Box::new(term(sym, bnd, *head)),
-            tail.into_iter()
-                .map(|tm| Box::new(term(sym, bnd, *tm)))
-                .collect(),
-        ),
-        Abst(arg, tm) => {
-            let arg = argument(sym, bnd, arg);
-            bind(bnd, arg.0.clone(), |bnd| {
-                Abst(arg, Box::new(term(sym, bnd, *tm)))
-            })
+            Prod(arg, tm) => {
+                let arg = argument(sym, bnd, arg);
+                bind(bnd, arg.0.clone(), |bnd| {
+                    Prod(arg, Box::new(tm.scope(sym, bnd)))
+                })
+            }
+            BVar(_) => panic!("found bound variable during scoping"),
         }
-        Prod(arg, tm) => {
-            let arg = argument(sym, bnd, arg);
-            bind(bnd, arg.0.clone(), |bnd| {
-                Prod(arg, Box::new(term(sym, bnd, *tm)))
-            })
-        }
-        BVar(_) => panic!("found bound variable during scoping"),
     }
 }
 
 fn argument(sym: &SymTable, bnd: &mut Bound, (id, tm): Arg) -> Arg {
-    (id, tm.map(|tm| Box::new(term(sym, bnd, *tm))))
+    (id, tm.map(|tm| Box::new(tm.scope(sym, bnd))))
 }
 
-pub fn dcommand(sym: &SymTable, bnd: &mut Bound, dcmd: DCommand) -> DCommand {
-    dcmd.map_type(|tm| Box::new(term(sym, bnd, *tm)))
-        .map_term(|tm| Box::new(term(sym, bnd, *tm)))
+impl DCommand {
+    pub fn scope(self, sym: &SymTable, bnd: &mut Bound) -> Self {
+        self.map_type(|tm| Box::new(tm.scope(sym, bnd)))
+            .map_term(|tm| Box::new(tm.scope(sym, bnd)))
+    }
 }

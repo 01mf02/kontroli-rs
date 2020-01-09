@@ -33,8 +33,7 @@ fn run(filename: &str) -> std::io::Result<()> {
         let i = entry.expect("parse error");
         if let Some(Command::DCmd(id, args, dcmd)) = i {
             println!("{}", id);
-            let dcmd = dcmd.parametrise(args);
-            let dcmd = scope::dcommand(&symbols, &mut Vec::new(), dcmd);
+            let dcmd = dcmd.parametrise(args).scope(&symbols, &mut Vec::new());
             if symbols.insert(id, ()).is_some() {
                 panic!("symbol redeclaration");
             };
