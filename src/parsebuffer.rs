@@ -42,7 +42,7 @@ where
                         // no more data to read or parse, stopping the reading loop
                         break None;
                     } else if read_bytes == 0 {
-                        break Some(Err((self.fail)(Err::Incomplete(n))))
+                        break Some(Err((self.fail)(Err::Incomplete(n))));
                     }
                 }
 
