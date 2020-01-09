@@ -28,15 +28,16 @@ impl Term {
             .fold(self, |acc, arg| Term::Prod(arg, Box::new(acc)))
     }
 
-    pub fn apply(&mut self, mut args: Vec<BTerm>) {
-        if !args.is_empty() {
+    pub fn apply(mut self, mut args: Vec<BTerm>) -> Term {
+        if args.is_empty() {
+            self
+        } else {
             match self {
-                Self::Appl(_, ref mut args1) => args1.append(&mut args),
-                _ => {
-                    use std::mem;
-                    let old = mem::replace(&mut *self, Self::Kind);
-                    *self = Self::Appl(Box::new(old), args);
+                Self::Appl(_, ref mut args1) => {
+                    args1.append(&mut args);
+                    self
                 }
+                _ => Self::Appl(Box::new(self), args),
             }
         }
     }

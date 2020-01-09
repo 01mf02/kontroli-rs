@@ -56,10 +56,9 @@ impl State {
 
 impl From<State> for Term {
     fn from(State(ctx, tm, stack): State) -> Self {
-        let mut t = if ctx.is_empty() { tm } else { unimplemented!() };
+        let t = if ctx.is_empty() { tm } else { tm.psubst(&ctx) };
         let args = stack.into_iter().map(|la| Box::new(la.unwrap())).collect();
-        t.apply(args);
-        t
+        t.apply(args)
     }
 }
 
@@ -82,9 +81,7 @@ fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
             true
         }
         (a, Abst(_, b)) | (Abst(_, b), a) if ETA => {
-            let mut shifted = a << 1;
-            shifted.apply(vec![Box::new(BVar(0))]);
-            cns.push((*b, shifted));
+            cns.push((*b, (a << 1).apply(vec![Box::new(BVar(0))])));
             true
         }
         (Appl(f1, args1), Appl(f2, args2)) => {

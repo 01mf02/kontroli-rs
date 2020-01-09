@@ -1,5 +1,6 @@
 use super::*;
 use lazy_st::Lazy;
+use std::rc::Rc;
 
 impl Term {
     fn subst_box<S>(self, subst: &S, k: usize) -> BTerm
@@ -34,7 +35,7 @@ impl Term {
         }
     }
 
-    fn psubst(self, args: &[Lazy<Term>]) -> Term {
+    pub fn psubst(self, args: &[Rc<Lazy<Term>>]) -> Term {
         self.apply_subst(&psubst(args), 0)
     }
 
@@ -54,7 +55,7 @@ fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Option<Term> + '_ {
     }
 }
 
-fn psubst(args: &[Lazy<Term>]) -> impl Fn(usize, usize) -> Option<Term> + '_ {
+fn psubst(args: &[Rc<Lazy<Term>>]) -> impl Fn(usize, usize) -> Option<Term> + '_ {
     move |n: usize, k: usize| {
         Some({
             if n >= k + args.len() {
