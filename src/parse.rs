@@ -79,7 +79,10 @@ fn is_term(i: &[u8]) -> Parse<BTerm> {
 }
 
 fn arg(i: &[u8]) -> Parse<Arg> {
-    pair(maybe_ident, opt(lexeme(of_term)))(i)
+    map(pair(maybe_ident, opt(lexeme(of_term))), |(id, ty)| Arg {
+        id,
+        ty,
+    })(i)
 }
 
 fn abst(i: &[u8]) -> Parse<Term> {

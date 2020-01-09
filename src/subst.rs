@@ -21,15 +21,15 @@ impl Term {
                 let args2 = args.into_iter().map(|a| a.subst_box(subst, k)).collect();
                 Appl(f2, args2)
             }
-            Abst((x, a), f) => {
-                let a2 = a.map(|a| a.subst_box(subst, k));
-                let f2 = f.subst_box(subst, k + 1);
-                Abst((x, a2), f2)
+            Abst(arg, f) => {
+                let ty = arg.ty.map(|a| a.subst_box(subst, k));
+                let f = f.subst_box(subst, k + 1);
+                Abst(Arg { id: arg.id, ty }, f)
             }
-            Prod((x, a), f) => {
-                let a2 = a.map(|a| a.subst_box(subst, k));
-                let f2 = f.subst_box(subst, k + 1);
-                Prod((x, a2), f2)
+            Prod(arg, f) => {
+                let ty = arg.ty.map(|a| a.subst_box(subst, k));
+                let f = f.subst_box(subst, k + 1);
+                Prod(Arg { id: arg.id, ty }, f)
             }
             _ => self,
         }

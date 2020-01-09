@@ -75,7 +75,7 @@ fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
             cns.push((*t1, *t2));
             true
         }
-        (Prod((_, Some(ty1)), tm1), Prod((_, Some(ty2)), tm2)) => {
+        (Prod(Arg { ty: Some(ty1), .. }, tm1), Prod(Arg { ty: Some(ty2), .. }, tm2)) => {
             cns.push((*ty1, *ty2));
             cns.push((*tm1, *tm2));
             true

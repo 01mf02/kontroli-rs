@@ -33,40 +33,47 @@ fn infer(sig: &Signature, ctx: &mut Context, tm: Term) -> Result<Term, Error> {
         Appl(f, args) => {
             args.into_iter()
                 .try_fold(infer(sig, ctx, *f)?, |ty, arg| match ty.whnf(sig) {
-                    Prod((_, Some(a)), b) => {
+                    Prod(Arg { ty: Some(a), .. }, b) => {
                         check(sig, ctx, *arg.clone(), *a)?;
                         Ok(b.subst(&arg))
                     }
                     _ => Err(Error::ProductExpected),
                 })
         }
-        Abst((id, Some(ty)), tm) => {
+        Abst(Arg { id, ty: Some(ty) }, tm) => {
             match bind(sig, ctx, *ty.clone(), |ctx| infer(sig, ctx, *tm))? {
                 Kind => Err(Error::UnexpectedKind),
-                tm_ty => Ok(Prod((id, Some(ty)), Box::new(tm_ty))),
+                tm_ty => Ok(Prod(Arg { id, ty: Some(ty) }, Box::new(tm_ty))),
             }
         }
-        Prod((id, Some(ty)), tm) => {
+        Prod(Arg { id, ty: Some(ty) }, tm) => {
             match bind(sig, ctx, *ty.clone(), |ctx| infer(sig, ctx, *tm))? {
                 tm_ty @ Kind | tm_ty @ Type => Ok(tm_ty),
                 _ => Err(Error::SortExpected),
             }
         }
-        Abst((_, None), _) | Prod((_, None), _) => Err(Error::DomainFreeAbstraction),
+        Abst(Arg { ty: None, .. }, _) | Prod(Arg { ty: None, .. }, _) => {
+            Err(Error::DomainFreeAbstraction)
+        }
     }
 }
 
 fn check(sig: &Signature, ctx: &mut Context, tm: Term, ty_exp: Term) -> Result<(), Error> {
     match tm {
-        Abst((id, None), tm) => match ty_exp.whnf(sig) {
-            Prod((_, Some(ty_a)), ty_b) => {
+        Abst(Arg { ty: None, .. }, tm) => match ty_exp.whnf(sig) {
+            Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {
                 scope::bind(ctx, Some(*ty_a), |ctx| check(sig, ctx, *tm, *ty_b))
             }
             _ => Err(Error::ProductExpected),
         },
-        Abst((id, Some(ty_a_exp)), tm) => {
+        Abst(
+            Arg {
+                ty: Some(ty_a_exp), ..
+            },
+            tm,
+        ) => {
             match ty_exp.whnf(sig) {
-                Prod((_, Some(ty_a)), ty_b) => {
+                Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {
                     let _ = infer(sig, ctx, *ty_a.clone());
                     if !reduce::convertible(sig, *ty_a_exp.clone(), *ty_a) {
                         Err(Error::Unconvertible)

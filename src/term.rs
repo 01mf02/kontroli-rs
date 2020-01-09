@@ -1,4 +1,9 @@
-pub type Arg = (Option<String>, Option<BTerm>);
+#[derive(Clone, Debug, PartialEq)]
+pub struct Arg {
+    pub id: Option<String>,
+    pub ty: Option<BTerm>,
+}
+
 pub type BTerm = Box<Term>;
 
 pub type DeBruijn = usize;

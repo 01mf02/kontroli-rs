@@ -43,14 +43,14 @@ impl Term {
                     .collect(),
             ),
             Abst(arg, tm) => {
-                let arg = argument(sym, bnd, arg);
-                bind(bnd, arg.0.clone(), |bnd| {
+                let arg = arg.scope(sym, bnd);
+                bind(bnd, arg.id.clone(), |bnd| {
                     Abst(arg, Box::new(tm.scope(sym, bnd)))
                 })
             }
             Prod(arg, tm) => {
-                let arg = argument(sym, bnd, arg);
-                bind(bnd, arg.0.clone(), |bnd| {
+                let arg = arg.scope(sym, bnd);
+                bind(bnd, arg.id.clone(), |bnd| {
                     Prod(arg, Box::new(tm.scope(sym, bnd)))
                 })
             }
@@ -59,8 +59,13 @@ impl Term {
     }
 }
 
-fn argument(sym: &SymTable, bnd: &mut Bound, (id, tm): Arg) -> Arg {
-    (id, tm.map(|tm| Box::new(tm.scope(sym, bnd))))
+impl Arg {
+    fn scope(self, sym: &SymTable, bnd: &mut Bound) -> Arg {
+        Arg {
+            id: self.id,
+            ty: self.ty.map(|ty| Box::new(ty.scope(sym, bnd))),
+        }
+    }
 }
 
 impl DCommand {
