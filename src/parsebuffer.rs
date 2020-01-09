@@ -1,24 +1,26 @@
 use nom::{Err, IResult, Offset};
 use std::io::Read;
 
-pub struct ParseBuffer<R, P> {
+pub struct ParseBuffer<R, P, F> {
     pub buf: circular::Buffer,
     pub read: R,
     pub parse: P,
+    pub fail: F,
 }
 
 use nom::error::VerboseError;
 
-impl<O, R: Read, P> Iterator for ParseBuffer<R, P>
+impl<O, E, R: Read, P, F> Iterator for ParseBuffer<R, P, F>
 where
     P: Fn(&[u8]) -> IResult<&[u8], O, VerboseError<&[u8]>>,
+    F: Fn(nom::Err<VerboseError<&[u8]>>) -> E,
 {
-    type Item = O;
+    type Item = Result<O, E>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match (self.parse)(self.buf.data()) {
-                Err(Err::Incomplete(_)) => {
+                Err(Err::Incomplete(n)) => {
                     // ensure that we have some space available in the buffer
                     if self.buf.available_space() == 0 {
                         if self.buf.position() == 0 {
@@ -40,15 +42,15 @@ where
                         // no more data to read or parse, stopping the reading loop
                         break None;
                     } else if read_bytes == 0 {
-                        panic!("incomplete parse at end of file");
+                        break Some(Err((self.fail)(Err::Incomplete(n))))
                     }
                 }
 
-                Err(Err::Error(e)) | Err(Err::Failure(e)) => panic!("parse error: {:#?}", e),
+                Err(e) => break Some(Err((self.fail)(e))),
 
                 Ok((remaining, toplevel)) => {
                     self.buf.consume(self.buf.data().offset(remaining));
-                    break Some(toplevel);
+                    break Some(Ok(toplevel));
                 }
             }
         }
