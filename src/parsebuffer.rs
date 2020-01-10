@@ -18,7 +18,7 @@ where
     type Item = Result<O, E>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
+        let (consumed, result) = loop {
             match (self.parse)(self.buf.data()) {
                 Err(Err::Incomplete(n)) => {
                     // ensure that we have some space available in the buffer
@@ -40,19 +40,21 @@ where
 
                     if self.buf.available_data() == 0 {
                         // no more data to read or parse, stopping the reading loop
-                        break None;
+                        break (0, None);
                     } else if read_bytes == 0 {
-                        break Some(Err((self.fail)(Err::Incomplete(n))));
+                        break (0, Some(Err((self.fail)(Err::Incomplete(n)))));
                     }
                 }
 
-                Err(e) => break Some(Err((self.fail)(e))),
+                Err(e) => break (0, Some(Err((self.fail)(e)))),
 
                 Ok((remaining, toplevel)) => {
-                    self.buf.consume(self.buf.data().offset(remaining));
-                    break Some(Ok(toplevel));
+                    break (self.buf.data().offset(remaining), Some(Ok(toplevel)));
                 }
             }
-        }
+        };
+
+        self.buf.consume(consumed);
+        result
     }
 }
