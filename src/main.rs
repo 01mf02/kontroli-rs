@@ -20,7 +20,7 @@ use nom::error::VerboseError;
 
 fn run(filename: &str) -> std::io::Result<()> {
     use parsebuffer::ParseBuffer;
-    let mut pb: ParseBuffer<_, _, _> = ParseBuffer {
+    let pb: ParseBuffer<_, _, _> = ParseBuffer {
         buf: circular::Buffer::with_capacity(64 * 1024 * 1024),
         read: std::fs::File::open(filename)?,
         parse: parse::parse_toplevel,
