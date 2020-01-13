@@ -79,11 +79,12 @@ fn run(filename: &str) -> Result<(), CliError> {
     Ok(())
 }
 
-fn main() {
+fn main() -> Result<(), CliError> {
     let mut args = std::env::args();
     let _ = args.next().expect("first arg is program path");
     let filename = args
         .next()
         .expect("please pass a file path as first argument");
-    run(&filename).expect("should parse file correctly");
+    run(&filename)?;
+    Ok(())
 }
