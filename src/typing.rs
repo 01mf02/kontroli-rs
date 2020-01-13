@@ -5,7 +5,8 @@ use super::*;
 // DB -> type
 type Context = Vec<Term>;
 
-enum Error {
+#[derive(Debug)]
+pub enum Error {
     ProductExpected,
     SortExpected,
     Unconvertible,
@@ -13,6 +14,14 @@ enum Error {
     UnexpectedKind,
     DomainFreeAbstraction,
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "typing error")
+    }
+}
+
+impl std::error::Error for Error {}
 
 fn bind<F, A>(sig: &Signature, ctx: &mut Context, ty: Term, f: F) -> Result<A, Error>
 where
@@ -25,7 +34,7 @@ where
 }
 
 impl Term {
-    fn infer(self, sig: &Signature, ctx: &mut Context) -> Result<Term, Error> {
+    pub fn infer(self, sig: &Signature, ctx: &mut Context) -> Result<Term, Error> {
         match self {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(Kind),
