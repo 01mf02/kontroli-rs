@@ -61,31 +61,23 @@ impl Term {
 
     fn check(self, sig: &Signature, ctx: &mut Context, ty_exp: Term) -> Result<(), Error> {
         match self {
-            Abst(Arg { ty: None, .. }, tm) => match ty_exp.whnf(sig) {
+            Abst(arg, tm) => match ty_exp.whnf(sig) {
                 Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {
+                    match arg.ty {
+                        None => Ok(()),
+                        Some(ty_a_exp) => {
+                            let _ = ty_a.clone().infer(sig, ctx)?;
+                            if reduce::convertible(sig, *ty_a_exp, *ty_a.clone()) {
+                                Ok(())
+                            } else {
+                                Err(Error::Unconvertible)
+                            }
+                        }
+                    }?;
                     scope::bind(ctx, Some(*ty_a), |ctx| tm.check(sig, ctx, *ty_b))
                 }
                 _ => Err(Error::ProductExpected),
             },
-            Abst(
-                Arg {
-                    ty: Some(ty_a_exp), ..
-                },
-                tm,
-            ) => {
-                match ty_exp.whnf(sig) {
-                    Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {
-                        let _ = ty_a.clone().infer(sig, ctx);
-                        if !reduce::convertible(sig, *ty_a_exp.clone(), *ty_a) {
-                            Err(Error::Unconvertible)
-                        } else {
-                            // TODO: can we use ty_a instead of ty_a_exp here?
-                            scope::bind(ctx, Some(*ty_a_exp), |ctx| tm.check(sig, ctx, *ty_b))
-                        }
-                    }
-                    _ => Err(Error::ProductExpected),
-                }
-            }
             _ => {
                 let ty_inf = self.infer(sig, ctx)?;
                 if reduce::convertible(sig, ty_inf, ty_exp) {
