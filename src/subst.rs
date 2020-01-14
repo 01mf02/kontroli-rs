@@ -58,13 +58,11 @@ fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Option<Term> + '_ {
 fn psubst(args: &[Rc<Lazy<Term>>]) -> impl Fn(usize, usize) -> Option<Term> + '_ {
     move |n: usize, k: usize| {
         Some({
-            if n >= k + args.len() {
-                Term::BVar(n - args.len())
-            } else {
-                let arg = (**args.get(n - k).expect("args")).clone();
-                // TODO: if this turns out to be a performance bottleneck,
+            match args.get(n - k) {
+                // TODO: if shifting turns out to be a performance bottleneck,
                 // switch to a shift-memoised version as in Dedukti
-                arg << k
+                Some(arg) => (**arg).clone() << k,
+                None => Term::BVar(n - args.len())
             }
         })
     }
