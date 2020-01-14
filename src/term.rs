@@ -31,6 +31,14 @@ impl Term {
             .fold(self, |acc, arg| Term::Prod(arg, Box::new(acc)))
     }
 
+    pub fn appl(head: Term, args: Vec<Term>) -> Self {
+        if args.is_empty() {
+            head
+        } else {
+            Term::Appl(Box::new(head), args.into_iter().map(Box::new).collect())
+        }
+    }
+
     pub fn apply(mut self, mut args: Vec<BTerm>) -> Term {
         if args.is_empty() {
             self

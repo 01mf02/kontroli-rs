@@ -62,7 +62,7 @@ fn sterm(i: &[u8]) -> Parse<Term> {
 
 fn appl(i: &[u8]) -> Parse<Term> {
     map(pair(sterm, many0(lexeme(sterm))), |(head, tail)| {
-        Term::Appl(Box::new(head), tail.into_iter().map(Box::new).collect())
+        Term::appl(head, tail)
     })(i)
 }
 
