@@ -16,7 +16,7 @@ pub enum Entry {
 
 impl Entry {
     pub fn declare(sig: &Signature, st: Staticity, ty: Term) -> Result<Self, typing::Error> {
-        match ty.clone().infer(&sig, &mut Vec::new())? {
+        match ty.infer(&sig, &mut Vec::new())? {
             Term::Kind | Term::Type => Ok(Entry::Declaration(st, ty)),
             _ => Err(typing::Error::SortExpected),
         }
@@ -29,9 +29,9 @@ impl Entry {
         tm: Term,
     ) -> Result<Self, typing::Error> {
         let ty = match oty {
-            None => tm.clone().infer(&sig, &mut Vec::new())?,
+            None => tm.infer(&sig, &mut Vec::new())?,
             Some(ty) => {
-                tm.clone().check(&sig, &mut Vec::new(), *ty.clone())?;
+                tm.check(&sig, &mut Vec::new(), *ty.clone())?;
                 *ty
             }
         };
