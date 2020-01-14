@@ -22,10 +22,18 @@ impl Entry {
         }
     }
 
-    pub fn define(sig: &Signature, opaque: bool, oty: Option<BTerm>, tm: Term) -> Result<Self, typing::Error> {
+    pub fn define(
+        sig: &Signature,
+        opaque: bool,
+        oty: Option<BTerm>,
+        tm: Term,
+    ) -> Result<Self, typing::Error> {
         let ty = match oty {
             None => tm.clone().infer(&sig, &mut Vec::new())?,
-            Some(ty) => { tm.clone().check(&sig, &mut Vec::new(), *ty.clone())?; *ty }
+            Some(ty) => {
+                tm.clone().check(&sig, &mut Vec::new(), *ty.clone())?;
+                *ty
+            }
         };
         match ty {
             Term::Kind => Err(typing::Error::UnexpectedKind),

@@ -15,8 +15,8 @@ mod term;
 mod typing;
 
 use command::*;
-use term::*;
 use signature::Signature;
+use term::*;
 
 use nom::error::VerboseError;
 
