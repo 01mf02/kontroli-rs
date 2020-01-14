@@ -76,7 +76,8 @@ fn run(filename: &str) -> Result<(), CliError> {
                     (oty, Some(tm)) => signature::Entry::define(&sig, false, oty, *tm),
                     (None, None) => panic!("both type and term are empty"),
                 },
-                _ => unimplemented!(),
+                DCommand::Theorem(ty, tm) =>
+                    signature::Entry::define(&sig, true, Some(ty), *tm),
             }?;
             if sig.insert(id, entry).is_some() {
                 panic!("symbol redeclaration");
