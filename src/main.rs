@@ -66,13 +66,18 @@ fn run(filename: &str) -> Result<(), CliError> {
         if let Some(Command::DCmd(id, args, dcmd)) = i {
             println!("{}", id);
             let dcmd = dcmd.parametrise(args).scope(&symbols, &mut Vec::new());
-            match dcmd {
-                DCommand::Declaration(tm) => match tm.infer(&sig, &mut Vec::new())? {
-                    Term::Kind | Term::Type => Ok(()),
-                    _ => Err(typing::Error::SortExpected),
+            let entry = match dcmd {
+                DCommand::Declaration(ty) => {
+                    signature::Entry::declare(&sig, signature::Staticity::Static, *ty)
+                }
+                DCommand::Definition(oty, otm) => match (oty, otm) {
+                    (None, None) => panic!("both type and term are empty"),
+                    (oty, Some(tm)) => unimplemented!(),
+                    (Some(ty), None) => {
+                        signature::Entry::declare(&sig, signature::Staticity::Definable, *ty)
+                    }
                 },
-                DCommand::Definition(oty, otm) => unimplemented!(),
-                _ => Ok(()),
+                _ => unimplemented!(),
             }?;
             if symbols.insert(id, ()).is_some() {
                 panic!("symbol redeclaration");
