@@ -3,15 +3,14 @@ use nom::{
     bytes::streaming::{tag, take_until, take_while1},
     character::is_alphanumeric,
     character::streaming::{char, multispace0},
-    combinator::{flat_map, map, opt, value},
+    combinator::{map, opt, value},
     error::VerboseError,
-    multi::{fold_many0, many0, separated_list},
+    multi::{many0, separated_list},
     sequence::{delimited, pair, preceded, terminated, tuple},
-    Err, IResult, Offset,
+    IResult,
 };
 
 use crate::command::*;
-use crate::signature::*;
 use crate::term::*;
 
 type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;

@@ -1,8 +1,5 @@
-use fnv::FnvHashMap;
-
 use super::*;
 
-pub type SymTable = FnvHashMap<String, ()>;
 type Bound = Vec<String>;
 
 pub fn bind<X, A, F>(bnd: &mut Vec<X>, arg: Option<X>, f: F) -> A
@@ -21,7 +18,7 @@ where
 }
 
 impl Term {
-    fn scope(self, sym: &SymTable, bnd: &mut Bound) -> Self {
+    fn scope(self, sig: &Signature, bnd: &mut Bound) -> Self {
         use super::Term::*;
         match self {
             Kind => Kind,
@@ -29,7 +26,7 @@ impl Term {
             Symb(s) => match bnd.iter().rev().position(|id| *id == s) {
                 Some(idx) => BVar(idx),
                 None => {
-                    if sym.contains_key(&s) {
+                    if sig.contains_symbol(&s) {
                         Symb(s)
                     } else {
                         panic!("undeclared symbol")
@@ -37,21 +34,21 @@ impl Term {
                 }
             },
             Appl(head, tail) => Appl(
-                Box::new(head.scope(sym, bnd)),
+                Box::new(head.scope(sig, bnd)),
                 tail.into_iter()
-                    .map(|tm| Box::new(tm.scope(sym, bnd)))
+                    .map(|tm| Box::new(tm.scope(sig, bnd)))
                     .collect(),
             ),
             Abst(arg, tm) => {
-                let arg = arg.scope(sym, bnd);
+                let arg = arg.scope(sig, bnd);
                 bind(bnd, arg.id.clone(), |bnd| {
-                    Abst(arg, Box::new(tm.scope(sym, bnd)))
+                    Abst(arg, Box::new(tm.scope(sig, bnd)))
                 })
             }
             Prod(arg, tm) => {
-                let arg = arg.scope(sym, bnd);
+                let arg = arg.scope(sig, bnd);
                 bind(bnd, arg.id.clone(), |bnd| {
-                    Prod(arg, Box::new(tm.scope(sym, bnd)))
+                    Prod(arg, Box::new(tm.scope(sig, bnd)))
                 })
             }
             BVar(_) => panic!("found bound variable during scoping"),
@@ -60,17 +57,17 @@ impl Term {
 }
 
 impl Arg {
-    fn scope(self, sym: &SymTable, bnd: &mut Bound) -> Arg {
+    fn scope(self, sig: &Signature, bnd: &mut Bound) -> Arg {
         Arg {
             id: self.id,
-            ty: self.ty.map(|ty| Box::new(ty.scope(sym, bnd))),
+            ty: self.ty.map(|ty| Box::new(ty.scope(sig, bnd))),
         }
     }
 }
 
 impl DCommand {
-    pub fn scope(self, sym: &SymTable, bnd: &mut Bound) -> Self {
-        self.map_type(|tm| Box::new(tm.scope(sym, bnd)))
-            .map_term(|tm| Box::new(tm.scope(sym, bnd)))
+    pub fn scope(self, sig: &Signature, bnd: &mut Bound) -> Self {
+        self.map_type(|tm| Box::new(tm.scope(sig, bnd)))
+            .map_term(|tm| Box::new(tm.scope(sig, bnd)))
     }
 }

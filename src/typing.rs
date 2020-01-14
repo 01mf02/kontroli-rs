@@ -56,7 +56,7 @@ impl Term {
                     tm_ty => Ok(Prod(Arg { id, ty: Some(ty) }, Box::new(tm_ty))),
                 }
             }
-            Prod(Arg { id, ty: Some(ty) }, tm) => {
+            Prod(Arg { ty: Some(ty), .. }, tm) => {
                 match bind(sig, ctx, *ty.clone(), |ctx| tm.infer(sig, ctx))? {
                     tm_ty @ Kind | tm_ty @ Type => Ok(tm_ty),
                     _ => Err(Error::SortExpected),
@@ -68,7 +68,7 @@ impl Term {
         }
     }
 
-    fn check(self, sig: &Signature, ctx: &mut Context, ty_exp: Term) -> Result<(), Error> {
+    pub fn check(self, sig: &Signature, ctx: &mut Context, ty_exp: Term) -> Result<(), Error> {
         match self {
             Abst(arg, tm) => match ty_exp.whnf(sig) {
                 Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {

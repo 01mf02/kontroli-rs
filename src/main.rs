@@ -16,6 +16,7 @@ mod typing;
 
 use command::*;
 use term::*;
+use signature::Signature;
 
 use nom::error::VerboseError;
 
@@ -50,7 +51,6 @@ impl From<typing::Error> for CliError {
 
 fn run(filename: &str) -> Result<(), CliError> {
     use parsebuffer::ParseBuffer;
-    use signature::Signature;
     let pb: ParseBuffer<_, _, _> = ParseBuffer {
         buf: circular::Buffer::with_capacity(64 * 1024 * 1024),
         read: std::fs::File::open(filename)?,
@@ -58,28 +58,27 @@ fn run(filename: &str) -> Result<(), CliError> {
         fail: |e: nom::Err<VerboseError<&[u8]>>| format!("{:#?}", e),
     };
 
-    let mut symbols: scope::SymTable = FnvHashMap::default();
     let mut sig: Signature = Signature::new();
 
     for entry in pb {
         let i = entry.expect("parse error");
         if let Some(Command::DCmd(id, args, dcmd)) = i {
             println!("{}", id);
-            let dcmd = dcmd.parametrise(args).scope(&symbols, &mut Vec::new());
+            let dcmd = dcmd.parametrise(args).scope(&sig, &mut Vec::new());
             let entry = match dcmd {
                 DCommand::Declaration(ty) => {
                     signature::Entry::declare(&sig, signature::Staticity::Static, *ty)
                 }
                 DCommand::Definition(oty, otm) => match (oty, otm) {
-                    (None, None) => panic!("both type and term are empty"),
-                    (oty, Some(tm)) => unimplemented!(),
                     (Some(ty), None) => {
                         signature::Entry::declare(&sig, signature::Staticity::Definable, *ty)
                     }
+                    (oty, Some(tm)) => signature::Entry::define(&sig, false, oty, *tm),
+                    (None, None) => panic!("both type and term are empty"),
                 },
                 _ => unimplemented!(),
             }?;
-            if symbols.insert(id, ()).is_some() {
+            if sig.insert(id, entry).is_some() {
                 panic!("symbol redeclaration");
             };
         }

@@ -77,7 +77,7 @@ impl core::ops::Shl<usize> for Term {
         if rhs == 0 {
             self
         } else {
-            self.apply_subst(&|n, k| Some(Term::BVar(n + rhs)), 0)
+            self.apply_subst(&|n, _k| Some(Term::BVar(n + rhs)), 0)
         }
     }
 }
