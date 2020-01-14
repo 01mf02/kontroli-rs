@@ -11,6 +11,7 @@ use nom::{
 };
 
 use crate::command::*;
+use crate::signature::*;
 use crate::term::*;
 
 type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;

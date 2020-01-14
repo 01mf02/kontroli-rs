@@ -1,6 +1,6 @@
-use super::reduce::Signature;
 use super::Term::*;
 use super::*;
+use crate::signature::Signature;
 
 // DB -> type
 type Context = Vec<Term>;

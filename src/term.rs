@@ -19,8 +19,6 @@ pub enum Term {
     Prod(Arg, BTerm),
 }
 
-use crate::reduce::{Signature, State};
-
 impl Term {
     pub fn absts(self, args: Vec<Arg>) -> Term {
         args.into_iter()
@@ -45,9 +43,5 @@ impl Term {
                 _ => Self::Appl(Box::new(self), args),
             }
         }
-    }
-
-    pub fn whnf(self, sig: &Signature) -> Self {
-        Term::from(State::new(self).whnf(sig))
     }
 }

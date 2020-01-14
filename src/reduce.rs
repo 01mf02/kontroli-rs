@@ -1,9 +1,7 @@
 use super::*;
+use crate::signature::Signature;
 use lazy_st::{lazy, Lazy};
 use std::rc::Rc;
-
-// symbol -> type
-pub type Signature = FnvHashMap<String, Term>;
 
 type Context = Vec<Rc<Lazy<Term>>>;
 type Stack = Vec<Lazy<Term>>;
@@ -59,6 +57,12 @@ impl From<State> for Term {
         let t = if ctx.is_empty() { tm } else { tm.psubst(&ctx) };
         let args = stack.into_iter().map(|la| Box::new(la.unwrap())).collect();
         t.apply(args)
+    }
+}
+
+impl Term {
+    pub fn whnf(self, sig: &Signature) -> Self {
+        Term::from(State::new(self).whnf(sig))
     }
 }
 

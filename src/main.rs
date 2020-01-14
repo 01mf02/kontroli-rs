@@ -9,6 +9,7 @@ mod parse;
 mod parsebuffer;
 mod reduce;
 mod scope;
+mod signature;
 mod subst;
 mod term;
 mod typing;
@@ -49,6 +50,7 @@ impl From<typing::Error> for CliError {
 
 fn run(filename: &str) -> Result<(), CliError> {
     use parsebuffer::ParseBuffer;
+    use signature::Signature;
     let pb: ParseBuffer<_, _, _> = ParseBuffer {
         buf: circular::Buffer::with_capacity(64 * 1024 * 1024),
         read: std::fs::File::open(filename)?,
@@ -57,7 +59,7 @@ fn run(filename: &str) -> Result<(), CliError> {
     };
 
     let mut symbols: scope::SymTable = FnvHashMap::default();
-    let sig: reduce::Signature = FnvHashMap::default();
+    let mut sig: Signature = Signature::new();
 
     for entry in pb {
         let i = entry.expect("parse error");
@@ -69,6 +71,7 @@ fn run(filename: &str) -> Result<(), CliError> {
                     Term::Kind | Term::Type => Ok(()),
                     _ => Err(typing::Error::SortExpected),
                 },
+                DCommand::Definition(oty, otm) => unimplemented!(),
                 _ => Ok(()),
             }?;
             if symbols.insert(id, ()).is_some() {
