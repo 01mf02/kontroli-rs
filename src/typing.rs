@@ -38,7 +38,7 @@ impl Term {
         match self {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(Kind),
-            Symb(s) => Ok(sig.get(&s).unwrap().clone()),
+            Symb(s) => Ok(sig.get(&s).unwrap().typ.clone()),
             BVar(x) => Ok(ctx.iter().rev().nth(*x).unwrap().clone()),
             Appl(f, args) => {
                 args.iter()
@@ -53,7 +53,13 @@ impl Term {
             Abst(Arg { id, ty: Some(ty) }, tm) => {
                 match bind(sig, ctx, *ty.clone(), |ctx| tm.infer(sig, ctx))? {
                     Kind => Err(Error::UnexpectedKind),
-                    tm_ty => Ok(Prod(Arg { id: id.clone(), ty: Some(ty.clone()) }, Box::new(tm_ty))),
+                    tm_ty => Ok(Prod(
+                        Arg {
+                            id: id.clone(),
+                            ty: Some(ty.clone()),
+                        },
+                        Box::new(tm_ty),
+                    )),
                 }
             }
             Prod(Arg { ty: Some(ty), .. }, tm) => {

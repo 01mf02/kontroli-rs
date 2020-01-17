@@ -1,7 +1,14 @@
 use super::*;
+use crate::rule::Rule;
+
+pub struct SymInfo {
+    stat: Staticity,
+    pub typ: Term,
+    rules: Vec<Rule>,
+}
 
 // symbol -> type
-pub struct Signature(FnvHashMap<String, Term>);
+pub struct Signature(FnvHashMap<String, SymInfo>);
 
 #[derive(Clone, Debug)]
 pub enum Staticity {
@@ -9,9 +16,31 @@ pub enum Staticity {
     Definable,
 }
 
+type Opacity = bool;
+
 pub enum Entry {
     Declaration(Staticity, Term),
-    Definition(bool, Term, Term),
+    Definition(Opacity, Term, Term),
+}
+
+impl From<Entry> for SymInfo {
+    fn from(e: Entry) -> Self {
+        match e {
+            Entry::Declaration(stat, typ) => {
+                let rules = Vec::new();
+                SymInfo { stat, typ, rules }
+            }
+            Entry::Definition(opaque, typ, tm) => {
+                let stat = if opaque {
+                    Staticity::Static
+                } else {
+                    Staticity::Definable
+                };
+                let rules = if opaque { Vec::new() } else { unimplemented!() };
+                SymInfo { stat, typ, rules }
+            }
+        }
+    }
 }
 
 impl Entry {
@@ -47,7 +76,7 @@ impl Signature {
         Signature(FnvHashMap::default())
     }
 
-    pub fn get(&self, id: &str) -> Option<&Term> {
+    pub fn get(&self, id: &str) -> Option<&SymInfo> {
         self.0.get(id)
     }
 
@@ -55,10 +84,7 @@ impl Signature {
         self.0.contains_key(id)
     }
 
-    pub fn insert(&mut self, id: String, entry: Entry) -> Option<Term> {
-        match entry {
-            Entry::Declaration(st, ty) => self.0.insert(id, ty),
-            Entry::Definition(opaque, ty, tm) => self.0.insert(id, ty),
-        }
+    pub fn insert(&mut self, id: String, entry: Entry) -> Option<SymInfo> {
+        self.0.insert(id, SymInfo::from(entry))
     }
 }
