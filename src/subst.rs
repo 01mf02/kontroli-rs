@@ -62,7 +62,7 @@ fn psubst(args: &[Rc<Lazy<Term>>]) -> impl Fn(usize, usize) -> Option<Term> + '_
                 // TODO: if shifting turns out to be a performance bottleneck,
                 // switch to a shift-memoised version as in Dedukti
                 Some(arg) => (**arg).clone() << k,
-                None => Term::BVar(n - args.len())
+                None => Term::BVar(n - args.len()),
             }
         })
     }
