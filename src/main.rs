@@ -16,6 +16,7 @@ mod term;
 mod typing;
 
 use command::*;
+use rule::*;
 use signature::Signature;
 use term::*;
 
