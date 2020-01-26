@@ -26,6 +26,7 @@ use nom::error::VerboseError;
 enum CliError {
     Io(std::io::Error),
     Type(typing::Error),
+    Scope(scope::Error),
 }
 
 impl std::fmt::Display for CliError {
@@ -33,6 +34,7 @@ impl std::fmt::Display for CliError {
         match *self {
             Self::Io(ref err) => err.fmt(f),
             Self::Type(ref err) => err.fmt(f),
+            Self::Scope(ref err) => err.fmt(f),
         }
     }
 }
@@ -51,6 +53,12 @@ impl From<typing::Error> for CliError {
     }
 }
 
+impl From<scope::Error> for CliError {
+    fn from(err: scope::Error) -> Self {
+        Self::Scope(err)
+    }
+}
+
 fn run(filename: &str) -> Result<(), CliError> {
     use parsebuffer::ParseBuffer;
     let pb: ParseBuffer<_, _, _> = ParseBuffer {
@@ -66,7 +74,7 @@ fn run(filename: &str) -> Result<(), CliError> {
         let i = entry.expect("parse error");
         if let Some(Command::DCmd(id, args, dcmd)) = i {
             println!("{}", id);
-            let dcmd = dcmd.parametrise(args).scope(&sig, &mut Vec::new());
+            let dcmd = dcmd.parametrise(args).scope(&sig, &mut Vec::new())?;
             let entry = match dcmd {
                 DCommand::Declaration(ty) => {
                     signature::Entry::declare(&sig, signature::Staticity::Static, *ty)
