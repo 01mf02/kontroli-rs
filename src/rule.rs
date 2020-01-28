@@ -16,6 +16,13 @@ impl Pattern {
             _ => None,
         }
     }
+
+    fn is_symb_appl(self) -> Option<(String, Vec<Pattern>)> {
+        match self {
+            Pattern::Symb(s, args) => Some((s, args)),
+            _ => None,
+        }
+    }
 }
 
 impl From<Term> for Pattern {
@@ -42,4 +49,38 @@ pub struct Rule {
     pub ctx: Vec<String>,
     pub pat: Pattern,
     pub rhs: Term,
+}
+
+pub struct RuleInfo {
+    pub ctx: Vec<String>,
+    pub symbol: String,
+    pub args: Vec<Pattern>,
+    pub rhs: Term,
+}
+
+#[derive(Debug)]
+pub enum Error {
+    AVariableIsNotAPattern,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "rule error")
+    }
+}
+
+impl TryFrom<Rule> for RuleInfo {
+    type Error = Error;
+    fn try_from(rule: Rule) -> Result<Self, Self::Error> {
+        let (symbol, args) = rule
+            .pat
+            .is_symb_appl()
+            .ok_or(Error::AVariableIsNotAPattern)?;
+        Ok(RuleInfo {
+            ctx: rule.ctx,
+            symbol,
+            args,
+            rhs: rule.rhs,
+        })
+    }
 }

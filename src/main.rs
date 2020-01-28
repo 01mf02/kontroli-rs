@@ -28,6 +28,7 @@ enum CliError {
     Io(std::io::Error),
     Type(typing::Error),
     Scope(scope::Error),
+    Rule(rule::Error),
 }
 
 impl std::fmt::Display for CliError {
@@ -36,6 +37,7 @@ impl std::fmt::Display for CliError {
             Self::Io(ref err) => err.fmt(f),
             Self::Type(ref err) => err.fmt(f),
             Self::Scope(ref err) => err.fmt(f),
+            Self::Rule(ref err) => err.fmt(f),
         }
     }
 }
@@ -60,6 +62,12 @@ impl From<scope::Error> for CliError {
     }
 }
 
+impl From<rule::Error> for CliError {
+    fn from(err: rule::Error) -> Self {
+        Self::Rule(err)
+    }
+}
+
 impl Command {
     fn handle(self, sig: &mut Signature) -> Result<(), CliError> {
         match self {
@@ -75,8 +83,8 @@ impl Command {
             Self::Rule(ctx, lhs, rhs) => {
                 let pat = Pattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
                 let rhs = rhs.scope(sig, &mut ctx.clone())?;
-                // TODO: separate top symbol from pattern
                 let rule = Rule { ctx, pat, rhs };
+                let rule_info = RuleInfo::try_from(rule)?;
 
                 // TODO: add rule to signature
                 Ok(())
