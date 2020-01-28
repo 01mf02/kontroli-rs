@@ -20,7 +20,7 @@ impl State {
             match tm {
                 Type | Kind | Prod(_, _) => break,
                 BVar(x) => {
-                    tm = match ctx.get(x).take() {
+                    tm = match ctx.get(x) {
                         Some(tm) => (**tm).clone(),
                         None => BVar(x - ctx.len()),
                     };
