@@ -60,6 +60,31 @@ impl From<scope::Error> for CliError {
     }
 }
 
+impl Command {
+    fn handle(self, sig: &mut Signature) -> Result<(), CliError> {
+        match self {
+            Self::DCmd(id, args, dcmd) => {
+                println!("{}", id);
+                let dcmd = dcmd.parametrise(args).scope(sig, &mut Vec::new())?;
+                let entry = signature::Entry::try_from((dcmd, &*sig))?;
+                if sig.insert(id, entry).is_some() {
+                    panic!("symbol redeclaration");
+                };
+                Ok(())
+            }
+            Self::Rule(ctx, lhs, rhs) => {
+                let pat = Pattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
+                let rhs = *rhs;
+                // TODO: separate top symbol from pattern
+                let rule = Rule { ctx, pat, rhs };
+
+                // TODO: add rule to signature
+                Ok(())
+            }
+        }
+    }
+}
+
 fn run(filename: &str) -> Result<(), CliError> {
     use parsebuffer::ParseBuffer;
     let pb: ParseBuffer<_, _, _> = ParseBuffer {
@@ -73,13 +98,8 @@ fn run(filename: &str) -> Result<(), CliError> {
 
     for entry in pb {
         let i = entry.expect("parse error");
-        if let Some(Command::DCmd(id, args, dcmd)) = i {
-            println!("{}", id);
-            let dcmd = dcmd.parametrise(args).scope(&sig, &mut Vec::new())?;
-            let entry = signature::Entry::try_from((dcmd, &sig))?;
-            if sig.insert(id, entry).is_some() {
-                panic!("symbol redeclaration");
-            };
+        if let Some(cmd) = i {
+            cmd.handle(&mut sig)?;
         }
     }
     Ok(())

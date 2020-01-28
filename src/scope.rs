@@ -85,7 +85,7 @@ impl std::fmt::Display for Error {
 }
 
 impl Pattern {
-    fn scope(self, sig: &Signature, mvar: &Bound, bvar: &mut Bound) -> Result<Self, Error> {
+    pub fn scope(self, sig: &Signature, mvar: &Bound, bvar: &mut Bound) -> Result<Self, Error> {
         let scope_many = |args: Vec<Pattern>, bvar: &mut Bound| -> Result<Vec<_>, _> {
             args.into_iter().map(|a| a.scope(sig, mvar, bvar)).collect()
         };
