@@ -1,5 +1,6 @@
 use super::*;
 use crate::rule::Rule;
+use std::convert::TryFrom;
 
 pub struct SymInfo {
     stat: Staticity,
@@ -67,6 +68,22 @@ impl Entry {
         match ty {
             Term::Kind => Err(typing::Error::UnexpectedKind),
             _ => Ok(Entry::Definition(opaque, ty, tm)),
+        }
+    }
+}
+
+impl TryFrom<(DCommand, &Signature)> for Entry {
+    type Error = typing::Error;
+
+    fn try_from((dcmd, sig): (DCommand, &Signature)) -> Result<Self, Self::Error> {
+        match dcmd {
+            DCommand::Declaration(ty) => Self::declare(&sig, Staticity::Static, *ty),
+            DCommand::Definition(oty, otm) => match (oty, otm) {
+                (Some(ty), None) => Self::declare(&sig, Staticity::Definable, *ty),
+                (oty, Some(tm)) => Self::define(&sig, false, oty, *tm),
+                (None, None) => panic!("both type and term are empty"),
+            },
+            DCommand::Theorem(ty, tm) => Self::define(&sig, true, Some(ty), *tm),
         }
     }
 }

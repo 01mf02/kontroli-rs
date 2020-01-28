@@ -21,6 +21,7 @@ use signature::Signature;
 use term::*;
 
 use nom::error::VerboseError;
+use std::convert::TryFrom;
 
 #[derive(Debug)]
 enum CliError {
@@ -75,19 +76,7 @@ fn run(filename: &str) -> Result<(), CliError> {
         if let Some(Command::DCmd(id, args, dcmd)) = i {
             println!("{}", id);
             let dcmd = dcmd.parametrise(args).scope(&sig, &mut Vec::new())?;
-            let entry = match dcmd {
-                DCommand::Declaration(ty) => {
-                    signature::Entry::declare(&sig, signature::Staticity::Static, *ty)
-                }
-                DCommand::Definition(oty, otm) => match (oty, otm) {
-                    (Some(ty), None) => {
-                        signature::Entry::declare(&sig, signature::Staticity::Definable, *ty)
-                    }
-                    (oty, Some(tm)) => signature::Entry::define(&sig, false, oty, *tm),
-                    (None, None) => panic!("both type and term are empty"),
-                },
-                DCommand::Theorem(ty, tm) => signature::Entry::define(&sig, true, Some(ty), *tm),
-            }?;
+            let entry = signature::Entry::try_from((dcmd, &sig))?;
             if sig.insert(id, entry).is_some() {
                 panic!("symbol redeclaration");
             };
