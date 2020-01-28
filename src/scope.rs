@@ -18,7 +18,7 @@ where
 }
 
 impl Term {
-    fn scope(self, sig: &Signature, bnd: &mut Bound) -> Result<Self, Error> {
+    pub fn scope(self, sig: &Signature, bnd: &mut Bound) -> Result<Self, Error> {
         use super::Term::*;
         match self {
             Kind => Ok(Kind),

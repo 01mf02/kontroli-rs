@@ -74,7 +74,7 @@ impl Command {
             }
             Self::Rule(ctx, lhs, rhs) => {
                 let pat = Pattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
-                let rhs = *rhs;
+                let rhs = rhs.scope(sig, &mut ctx.clone())?;
                 // TODO: separate top symbol from pattern
                 let rule = Rule { ctx, pat, rhs };
 
