@@ -1,6 +1,6 @@
 use super::*;
 
-type Miller = usize;
+pub struct Miller(pub usize);
 
 pub enum Pattern {
     MVar(Miller, Vec<DeBruijn>),
