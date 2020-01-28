@@ -96,7 +96,10 @@ impl Pattern {
                     Some(idx) => {
                         let args: Option<Vec<_>> =
                             args.into_iter().map(|a| a.is_de_bruijn()).collect();
-                        Ok(Pattern::MVar(Miller(idx), args.ok_or(Error::MillerPattern)?))
+                        Ok(Pattern::MVar(
+                            Miller(idx),
+                            args.ok_or(Error::MillerPattern)?,
+                        ))
                     }
                     None => {
                         if sig.contains_symbol(&s) {
