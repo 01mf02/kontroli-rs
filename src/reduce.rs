@@ -39,7 +39,7 @@ impl State {
                 Appl(head, tail) => {
                     tm = *head;
                     for t in tail.into_iter().rev() {
-                        let st = State(ctx.clone(), *t, Vec::new());
+                        let st = State(ctx.clone(), t, Vec::new());
                         stack.push(lazy!(Term::from(st)))
                     }
                 }
@@ -54,7 +54,7 @@ impl State {
 impl From<State> for Term {
     fn from(State(ctx, tm, stack): State) -> Self {
         let t = if ctx.is_empty() { tm } else { tm.psubst(&ctx) };
-        let args = stack.into_iter().map(|la| Box::new(la.unwrap())).collect();
+        let args = stack.into_iter().map(|la| la.unwrap()).collect();
         t.apply(args)
     }
 }
@@ -84,14 +84,13 @@ fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
             true
         }
         (a, Abst(_, b)) | (Abst(_, b), a) if ETA => {
-            cns.push((*b, (a << 1).apply(vec![Box::new(BVar(0))])));
+            cns.push((*b, (a << 1).apply(vec![BVar(0)])));
             true
         }
         (Appl(f1, args1), Appl(f2, args2)) => {
             if args1.len() == args2.len() {
-                let unbox = |a: Vec<BTerm>| a.into_iter().map(|a| *a);
                 cns.push((*f1, *f2));
-                cns.extend(unbox(args1).zip(unbox(args2)));
+                cns.extend(args1.into_iter().zip(args2));
                 true
             } else {
                 false

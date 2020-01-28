@@ -34,10 +34,8 @@ impl Term {
                 }
             },
             Appl(head, tail) => {
-                let tail: Result<_, _> = tail
-                    .into_iter()
-                    .map(|tm| Ok(Box::new(tm.scope(sig, bnd)?)))
-                    .collect();
+                let tail: Result<_, _> =
+                    tail.into_iter().map(|tm| Ok(tm.scope(sig, bnd)?)).collect();
                 Ok(Appl(Box::new(head.scope(sig, bnd)?), tail?))
             }
             Abst(arg, tm) => {

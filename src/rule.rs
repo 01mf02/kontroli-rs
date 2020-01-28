@@ -23,7 +23,7 @@ impl From<Term> for Pattern {
         use Term::*;
         match tm {
             Appl(head, mut args) => match *head {
-                Symb(s) => Pattern::Symb(s, args.into_iter().map(|t| Self::from(*t)).collect()),
+                Symb(s) => Pattern::Symb(s, args.into_iter().map(Self::from).collect()),
                 Appl(head2, mut args2) => {
                     args2.append(&mut args);
                     Self::from(Appl(head2, args2))

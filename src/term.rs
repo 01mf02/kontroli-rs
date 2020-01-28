@@ -14,7 +14,7 @@ pub enum Term {
     Type,
     Symb(String),
     BVar(DeBruijn),
-    Appl(BTerm, Vec<BTerm>),
+    Appl(BTerm, Vec<Term>),
     Abst(Arg, BTerm),
     Prod(Arg, BTerm),
 }
@@ -35,11 +35,11 @@ impl Term {
         if args.is_empty() {
             head
         } else {
-            Term::Appl(Box::new(head), args.into_iter().map(Box::new).collect())
+            Term::Appl(Box::new(head), args)
         }
     }
 
-    pub fn apply(mut self, mut args: Vec<BTerm>) -> Term {
+    pub fn apply(mut self, mut args: Vec<Term>) -> Term {
         if args.is_empty() {
             self
         } else {

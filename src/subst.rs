@@ -18,7 +18,7 @@ impl Term {
             BVar(n) if n >= k => subst(n, k).unwrap_or(self),
             Appl(f, args) => {
                 let f2 = f.subst_box(subst, k);
-                let args2 = args.into_iter().map(|a| a.subst_box(subst, k)).collect();
+                let args2 = args.into_iter().map(|a| a.apply_subst(subst, k)).collect();
                 Appl(f2, args2)
             }
             Abst(arg, f) => {
