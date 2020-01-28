@@ -105,7 +105,8 @@ impl Pattern {
                 Some(idx) => Ok(Pattern::BVar(idx, scope_many(args, bvar)?)),
                 None => match mvar.iter().position(|id| *id == s) {
                     Some(idx) => {
-                        let args = args.into_iter().map(|a| a.is_de_bruijn()).collect();
+                        let args: Option<Vec<_>> =
+                            args.into_iter().map(|a| a.is_de_bruijn()).collect();
                         let args = args.ok_or(Error::MillerPattern)?;
                         if all_unique(args.clone()) {
                             Ok(Pattern::MVar(Miller(idx), args))
