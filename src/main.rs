@@ -83,8 +83,7 @@ impl Command {
             Self::Rule(ctx, lhs, rhs) => {
                 let pat = Pattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
                 let rhs = rhs.scope(sig, &mut ctx.clone())?;
-                let rule = Rule { ctx, pat, rhs };
-                let rule_info = RuleInfo::try_from(rule)?;
+                let rule = Rule::new(ctx, pat, rhs)?;
 
                 // TODO: add rule to signature
                 Ok(())

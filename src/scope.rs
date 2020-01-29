@@ -115,13 +115,3 @@ impl Pattern {
         }
     }
 }
-
-impl Rule {
-    fn scope(mut self, sig: &Signature) -> Result<Self, Error> {
-        Ok(Rule {
-            ctx: self.ctx.clone(),
-            pat: self.pat.scope(sig, &self.ctx, &mut Vec::new())?,
-            rhs: self.rhs.scope(sig, &mut self.ctx)?,
-        })
-    }
-}

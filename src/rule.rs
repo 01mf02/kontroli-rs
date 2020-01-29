@@ -95,12 +95,6 @@ impl From<Term> for Pattern {
 }
 
 pub struct Rule {
-    pub ctx: Vec<String>,
-    pub pat: Pattern,
-    pub rhs: Term,
-}
-
-pub struct RuleInfo {
     pub ctx: Vec<(String, Arity)>,
     pub symbol: String,
     pub args: Vec<Pattern>,
@@ -121,19 +115,16 @@ impl std::fmt::Display for Error {
     }
 }
 
-impl TryFrom<Rule> for RuleInfo {
-    type Error = Error;
-    fn try_from(rule: Rule) -> Result<Self, Self::Error> {
-        let ctx = rule.pat.arities(rule.ctx)?;
-        let (symbol, args) = rule
-            .pat
-            .get_symb_appl()
-            .ok_or(Error::AVariableIsNotAPattern)?;
-        Ok(RuleInfo {
+impl Rule {
+    pub fn new(ctx: Vec<String>, pat: Pattern, rhs: Term) -> Result<Self, Error> {
+        let ctx = pat.arities(ctx)?;
+        let (symbol, args) = pat.get_symb_appl().ok_or(Error::AVariableIsNotAPattern)?;
+        // TODO: verify that Miller variables on RHS are applied with right arity
+        Ok(Rule {
             ctx,
             symbol,
             args,
-            rhs: rule.rhs,
+            rhs,
         })
     }
 }
