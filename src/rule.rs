@@ -101,6 +101,7 @@ pub enum Error {
     MillerPattern,
     NonLinearPattern,
     MillerUnused,
+    NotEnoughArguments,
 }
 
 impl std::fmt::Display for Error {
@@ -109,11 +110,40 @@ impl std::fmt::Display for Error {
     }
 }
 
+// TODO: name type of k "Lambdas"?
+
+impl Arg {
+    fn check_arity(&self, k: usize, arities: &Vec<(String, Arity)>) -> bool {
+        self.ty.as_ref().map_or(true, |t| t.check_arity(k, arities))
+    }
+}
+
+impl Term {
+    fn check_arity(&self, k: usize, arities: &Vec<(String, Arity)>) -> bool {
+        let check = |x: DeBruijn, k: usize, args: usize| unimplemented!();
+        match self {
+            Self::Kind | Self::Type | Self::BVar(_) | Self::Symb(_) => true,
+            // TODO: can Appl(Appl(.., ..), ..) occur?
+            Self::Appl(head, args) => {
+                (match **head {
+                    Self::BVar(n) if n >= k => args.len() >= arities.get(n - k).expect("arity").1,
+                    _ => true,
+                }) && args.iter().all(|a| a.check_arity(k, arities))
+            }
+            Self::Abst(arg, tm) | Self::Prod(arg, tm) => {
+                arg.check_arity(k, arities) && tm.check_arity(k + 1, arities)
+            }
+        }
+    }
+}
+
 impl Rule {
     pub fn new(ctx: Vec<String>, pat: Pattern, rhs: Term) -> Result<Self, Error> {
         let ctx = pat.arities(ctx)?;
         let (symbol, args) = pat.get_symb_appl().ok_or(Error::AVariableIsNotAPattern)?;
-        // TODO: verify that Miller variables on RHS are applied with right arity
+        if !rhs.check_arity(0, &ctx) {
+            return Err(Error::NotEnoughArguments);
+        }
         Ok(Rule {
             ctx,
             symbol,
