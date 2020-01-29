@@ -84,17 +84,6 @@ impl std::fmt::Display for Error {
     }
 }
 
-// Taken from:
-// https://stackoverflow.com/questions/46766560/how-to-check-if-there-are-duplicates-in-a-slice/46767732#46767732
-fn all_unique<T>(iter: T) -> bool
-where
-    T: IntoIterator,
-    T::Item: Eq + std::hash::Hash,
-{
-    let mut uniq = std::collections::HashSet::new();
-    iter.into_iter().all(move |x| uniq.insert(x))
-}
-
 impl Pattern {
     pub fn scope(self, sig: &Signature, mvar: &Bound, bvar: &mut Bound) -> Result<Self, Error> {
         let scope_many = |args: Vec<Pattern>, bvar: &mut Bound| -> Result<Vec<_>, _> {
@@ -106,13 +95,9 @@ impl Pattern {
                 None => match mvar.iter().position(|id| *id == s) {
                     Some(idx) => {
                         let args: Option<Vec<_>> =
-                            args.into_iter().map(|a| a.is_de_bruijn()).collect();
+                            args.into_iter().map(|a| a.get_de_bruijn()).collect();
                         let args = args.ok_or(Error::MillerPattern)?;
-                        if all_unique(args.clone()) {
-                            Ok(Pattern::MVar(Miller(idx), args))
-                        } else {
-                            Err(Error::MillerPattern)
-                        }
+                        Ok(Pattern::MVar(Miller(idx), args))
                     }
                     None => {
                         if sig.contains_symbol(&s) {
