@@ -12,7 +12,6 @@ pub enum Pattern {
 }
 
 type Arity = usize;
-type ArityMap = HashMap<Miller, Arity>;
 
 // Taken from:
 // https://stackoverflow.com/questions/46766560/how-to-check-if-there-are-duplicates-in-a-slice/46767732#46767732
@@ -40,37 +39,32 @@ impl Pattern {
         }
     }
 
+    fn mvars<'a>(&'a self) -> Box<dyn Iterator<Item = (&Miller, &Vec<DeBruijn>)> + 'a> {
+        match self {
+            Self::MVar(mv, dbs) => Box::new(std::iter::once((mv, dbs))),
+            Self::Abst(_, pat) => pat.mvars(),
+            Self::Symb(_, pats) | Self::BVar(_, pats) => {
+                Box::new(pats.iter().map(|p| p.mvars()).flatten())
+            }
+        }
+    }
+
     fn arities(&self, mvars: Vec<String>) -> Result<Vec<(String, Arity)>, Error> {
         let mut arities = HashMap::new();
-        self.add_arities(&mut arities)?;
+        for (m, args) in self.mvars() {
+            if !all_unique(args.clone()) {
+                return Err(Error::MillerPattern);
+            }
+            if arities.insert(*m, args.len()).is_some() {
+                return Err(Error::NonLinearPattern);
+            }
+        }
         let result: Option<Vec<_>> = mvars
             .into_iter()
             .enumerate()
             .map(|(i, x)| Some((x, *arities.get(&Miller(i))?)))
             .collect();
         result.ok_or(Error::MillerUnused)
-    }
-
-    fn add_arities(&self, ars: &mut ArityMap) -> Result<(), Error> {
-        match self {
-            Self::MVar(m, args) => {
-                if !all_unique(args.clone()) {
-                    return Err(Error::MillerPattern);
-                }
-
-                match ars.insert(*m, args.len()) {
-                    None => Ok(()),
-                    Some(_) => Err(Error::NonLinearPattern),
-                }
-            }
-            Self::Abst(arg, pat) => pat.add_arities(ars),
-            Self::Symb(_, args) | Self::BVar(_, args) => {
-                for a in args {
-                    a.add_arities(ars)?
-                }
-                Ok(())
-            }
-        }
     }
 }
 
