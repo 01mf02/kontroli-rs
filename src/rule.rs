@@ -42,7 +42,7 @@ impl Pattern {
 
     fn arities(&self, mvars: Vec<String>) -> Result<Vec<(String, Arity)>, Error> {
         let mut arities = HashMap::new();
-        self.add_arities(&mvars, &mut arities)?;
+        self.add_arities(&mut arities)?;
         let result: Option<Vec<_>> = mvars
             .into_iter()
             .enumerate()
@@ -51,7 +51,7 @@ impl Pattern {
         result.ok_or(Error::MillerUnused)
     }
 
-    fn add_arities(&self, mvars: &[String], ars: &mut ArityMap) -> Result<(), Error> {
+    fn add_arities(&self, ars: &mut ArityMap) -> Result<(), Error> {
         match self {
             Self::MVar(m, args) => {
                 if !all_unique(args.clone()) {
@@ -63,10 +63,10 @@ impl Pattern {
                     Some(_) => Err(Error::NonLinearPattern),
                 }
             }
-            Self::Abst(arg, pat) => pat.add_arities(mvars, ars),
+            Self::Abst(arg, pat) => pat.add_arities(ars),
             Self::Symb(_, args) | Self::BVar(_, args) => {
                 for a in args {
-                    a.add_arities(mvars, ars)?
+                    a.add_arities(ars)?
                 }
                 Ok(())
             }
