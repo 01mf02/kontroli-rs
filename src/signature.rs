@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 pub struct SymInfo {
     stat: Staticity,
     pub typ: Term,
-    rules: Vec<Rule>,
+    pub rules: Vec<Rule>,
 }
 
 // symbol -> type

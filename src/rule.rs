@@ -12,7 +12,7 @@ pub enum Pattern {
 }
 
 type Arity = usize;
-type Subst = HashMap<Miller, Term>;
+pub type Subst = HashMap<Miller, Term>;
 
 // Taken from:
 // https://stackoverflow.com/questions/46766560/how-to-check-if-there-are-duplicates-in-a-slice/46767732#46767732
