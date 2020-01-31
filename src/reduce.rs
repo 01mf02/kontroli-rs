@@ -19,13 +19,17 @@ impl State {
         loop {
             match tm {
                 Type | Kind | Prod(_, _) => break,
-                BVar(x) => {
-                    tm = match ctx.get(x) {
-                        Some(tm) => (**tm).clone(),
-                        None => BVar(x - ctx.len()),
-                    };
-                    ctx.clear();
-                }
+                BVar(x) => match ctx.get(x) {
+                    Some(ctm) => {
+                        tm = (**ctm).clone();
+                        ctx.clear()
+                    }
+                    None => {
+                        tm = BVar(x - ctx.len());
+                        ctx.clear();
+                        break;
+                    }
+                },
                 Abst(a, t) => match stack.pop() {
                     None => {
                         tm = Abst(a, t);
