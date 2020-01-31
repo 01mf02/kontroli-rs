@@ -113,14 +113,13 @@ impl std::fmt::Display for Error {
 // TODO: name type of k "Lambdas"?
 
 impl Arg {
-    fn check_arity(&self, k: usize, arities: &Vec<(String, Arity)>) -> bool {
+    fn check_arity(&self, k: usize, arities: &[(String, Arity)]) -> bool {
         self.ty.as_ref().map_or(true, |t| t.check_arity(k, arities))
     }
 }
 
 impl Term {
-    fn check_arity(&self, k: usize, arities: &Vec<(String, Arity)>) -> bool {
-        let check = |x: DeBruijn, k: usize, args: usize| unimplemented!();
+    fn check_arity(&self, k: usize, arities: &[(String, Arity)]) -> bool {
         match self {
             Self::Kind | Self::Type | Self::BVar(_) | Self::Symb(_) => true,
             // TODO: can Appl(Appl(.., ..), ..) occur?
