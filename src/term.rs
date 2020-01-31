@@ -52,4 +52,15 @@ impl Term {
             }
         }
     }
+
+    pub fn get_symb_appl(self) -> Option<(String, Vec<Term>)> {
+        match self {
+            Self::Symb(s) => Some((s, Vec::new())),
+            Self::Appl(head, args) => match *head {
+                Self::Symb(s) => Some((s, args)),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
 }

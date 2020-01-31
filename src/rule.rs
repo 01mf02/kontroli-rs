@@ -12,6 +12,7 @@ pub enum Pattern {
 }
 
 type Arity = usize;
+type Subst = HashMap<Miller, Term>;
 
 // Taken from:
 // https://stackoverflow.com/questions/46766560/how-to-check-if-there-are-duplicates-in-a-slice/46767732#46767732
@@ -65,6 +66,34 @@ impl Pattern {
             .map(|(i, x)| Some((x, *arities.get(&Miller(i))?)))
             .collect();
         result.ok_or(Error::MillerUnused)
+    }
+
+    fn match_term(&self, tm: Term, sig: &Signature, subst: &mut Subst) -> Option<()> {
+        match self {
+            Self::Symb(sp, pats) => {
+                let (st, tms) = tm.whnf(sig).get_symb_appl()?;
+                if *sp == st && tms.len() >= pats.len() {
+                    for (pat, tm) in pats.iter().zip(tms) {
+                        pat.match_term(tm, sig, subst)?;
+                    }
+                    Some(())
+                } else {
+                    None
+                }
+            }
+            Self::MVar(x, dbs) => {
+                if dbs.is_empty() {
+                    // TODO: what if tm is not closed?
+                    match subst.insert(*x, tm) {
+                        None => Some(()),
+                        Some(_) => None,
+                    }
+                } else {
+                    unimplemented!()
+                }
+            }
+            _ => unimplemented!(),
+        }
     }
 }
 
