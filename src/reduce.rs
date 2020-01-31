@@ -4,7 +4,7 @@ use lazy_st::{lazy, Lazy};
 use std::rc::Rc;
 
 type Context = Vec<Rc<Lazy<Term>>>;
-pub type Stack = Vec<Lazy<Term>>;
+type Stack = Vec<Lazy<Term>>;
 
 pub struct State(Context, Term, Stack);
 
@@ -46,7 +46,7 @@ impl State {
                 Symb(s) => {
                     let rules = &sig.get(&s).expect("symbol info").rules;
                     match rules.iter().filter_map(|r| r.match_stack(&stack, sig)).next() {
-                        None => (),
+                        None => tm = Symb(s),
                         Some(subst) => unimplemented!()
                     }
                 }
@@ -59,6 +59,7 @@ impl State {
 
 impl Rule {
     pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<rule::Subst> {
+
         unimplemented!()
     }
 
