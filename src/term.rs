@@ -31,11 +31,11 @@ impl Term {
             .fold(self, |acc, arg| Term::Prod(arg, Box::new(acc)))
     }
 
-    pub fn appl(head: Term, args: Vec<Term>) -> Self {
+    pub fn appl(self, args: Vec<Term>) -> Self {
         if args.is_empty() {
-            head
+            self
         } else {
-            Term::Appl(Box::new(head), args)
+            Term::Appl(Box::new(self), args)
         }
     }
 
