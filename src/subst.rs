@@ -39,6 +39,10 @@ impl Term {
         self.apply_subst(&psubst(args), 0)
     }
 
+    pub fn psubst2(self, args: Vec<&Term>) -> Term {
+        self.apply_subst(&psubst2(args), 0)
+    }
+
     pub fn subst(self, u: &Term) -> Term {
         self.apply_subst(&psubst_single(u), 0)
     }
@@ -62,6 +66,19 @@ fn psubst(args: &[Rc<Lazy<Term>>]) -> impl Fn(usize, usize) -> Option<Term> + '_
                 // TODO: if shifting turns out to be a performance bottleneck,
                 // switch to a shift-memoised version as in Dedukti
                 Some(arg) => (**arg).clone() << k,
+                None => Term::BVar(n - args.len()),
+            }
+        })
+    }
+}
+
+fn psubst2(args: Vec<&Term>) -> impl Fn(usize, usize) -> Option<Term> + '_ {
+    move |n: usize, k: usize| {
+        Some({
+            match args.get(n - k) {
+                // TODO: if shifting turns out to be a performance bottleneck,
+                // switch to a shift-memoised version as in Dedukti
+                Some(arg) => (*arg).clone() << k,
                 None => Term::BVar(n - args.len()),
             }
         })

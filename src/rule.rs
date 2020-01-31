@@ -68,7 +68,7 @@ impl Pattern {
         result.ok_or(Error::MillerUnused)
     }
 
-    fn match_term(&self, tm: Term, sig: &Signature, subst: &mut Subst) -> Option<()> {
+    pub fn match_term(&self, tm: Term, sig: &Signature, subst: &mut Subst) -> Option<()> {
         match self {
             Self::Symb(sp, pats) => {
                 let (st, tms) = tm.whnf(sig).get_symb_appl()?;

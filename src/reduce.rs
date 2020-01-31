@@ -45,9 +45,19 @@ impl State {
                 }
                 Symb(s) => {
                     let rules = &sig.get(&s).expect("symbol info").rules;
-                    match rules.iter().filter_map(|r| r.match_stack(&stack, sig)).next() {
-                        None => tm = Symb(s),
-                        Some(subst) => unimplemented!()
+                    match rules
+                        .iter()
+                        .filter_map(|r| Some((r.match_stack(&stack, sig)?, r.args.len())))
+                        .next()
+                    {
+                        None => {
+                            tm = Symb(s);
+                            break;
+                        }
+                        Some((rhs, consumed)) => {
+                            tm = rhs;
+                            stack.truncate(stack.len() - consumed)
+                        }
                     }
                 }
             }
@@ -58,11 +68,14 @@ impl State {
 }
 
 impl Rule {
-    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<rule::Subst> {
-
-        unimplemented!()
+    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Term> {
+        let mut subst = std::collections::HashMap::new();
+        for (pat, tm) in self.args.iter().zip(stack.iter().rev()) {
+            pat.match_term((&**tm).clone(), sig, &mut subst)?;
+        }
+        let subst: Option<_> = (0..self.ctx.len()).map(|i| subst.get(&Miller(i))).collect();
+        Some(self.rhs.clone().psubst2(subst?))
     }
-
 }
 
 impl From<State> for Term {
