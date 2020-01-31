@@ -97,6 +97,10 @@ impl Signature {
         self.0.get(id)
     }
 
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut SymInfo> {
+        self.0.get_mut(id)
+    }
+
     pub fn contains_symbol(&self, id: &str) -> bool {
         self.0.contains_key(id)
     }
