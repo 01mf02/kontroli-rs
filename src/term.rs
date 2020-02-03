@@ -1,4 +1,4 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Arg {
     pub id: Option<String>,
     pub ty: Option<BTerm>,
@@ -8,7 +8,7 @@ pub type BTerm = Box<Term>;
 
 pub type DeBruijn = usize;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Term {
     Kind,
     Type,
@@ -18,6 +18,26 @@ pub enum Term {
     Abst(Arg, BTerm),
     Prod(Arg, BTerm),
 }
+
+impl PartialEq for Term {
+    fn eq(&self, other: &Self) -> bool {
+        use Term::*;
+        match (self, other) {
+            (Kind, Kind) | (Type, Type) => true,
+            (Symb(s1), Symb(s2)) => s1 == s2,
+            (BVar(x1), BVar(x2)) => x1 == x2,
+            (Appl(f1, args1), Appl(f2, args2)) => {
+                f1 == f2
+                    && args1.len() == args2.len()
+                    && args1.iter().zip(args2).all(|(t1, t2)| t1 == t2)
+            }
+            (Abst(_, tm1), Abst(_, tm2)) => tm1 == tm2,
+            (Prod(arg1, tm1), Prod(arg2, tm2)) => arg1.ty == arg2.ty && tm1 == tm2,
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for Term {}
 
 impl std::fmt::Display for Arg {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
