@@ -40,7 +40,7 @@ impl std::fmt::Display for Context {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "[")?;
         for (i, x) in self.0.iter().rev().enumerate() {
-            write!(f, "{} : {}, ", BVar(i), x)?;
+            write!(f, "{} : {}, ", BVar(i), x.clone() << (i + 1))?;
         }
         write!(f, "]")
     }
