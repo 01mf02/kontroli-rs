@@ -19,6 +19,36 @@ pub enum Term {
     Prod(Arg, BTerm),
 }
 
+impl std::fmt::Display for Arg {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.id.as_ref().unwrap_or(&"_".to_string()))?;
+        for ty in self.ty.as_ref() {
+            write!(f, " : {}", ty)?;
+        }
+        Ok(())
+    }
+}
+
+impl std::fmt::Display for Term {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Kind => write!(f, "Kind"),
+            Self::Type => write!(f, "Type"),
+            Self::Symb(s) => write!(f, "{}", s),
+            Self::BVar(x) => write!(f, "𝕍{}", x),
+            Self::Appl(head, tail) => {
+                write!(f, "{}", head)?;
+                for t in tail {
+                    write!(f, " {}", t)?;
+                }
+                Ok(())
+            }
+            Self::Abst(arg, tm) => write!(f, "λ {}. {}", arg, tm),
+            Self::Prod(arg, tm) => write!(f, "Π {}. {}", arg, tm),
+        }
+    }
+}
+
 impl Term {
     pub fn absts(self, args: Vec<Arg>) -> Term {
         args.into_iter()

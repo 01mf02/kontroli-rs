@@ -9,6 +9,7 @@ type Context = Vec<Term>;
 pub enum Error {
     ProductExpected,
     SortExpected,
+    BindNoType,
     Unconvertible,
     KindNotTypable,
     UnexpectedKind,
@@ -29,12 +30,21 @@ where
 {
     match ty.infer(sig, ctx)? {
         Type => Ok(scope::bind(ctx, Some(ty), |ctx| f(ctx))?),
-        _ => Err(Error::Unconvertible),
+        _ => Err(Error::BindNoType),
+    }
+}
+
+fn assert_convertible(sig: &Signature, tm1: Term, tm2: Term) -> Result<(), Error> {
+    if reduce::convertible(sig, tm1, tm2) {
+        Ok(())
+    } else {
+        Err(Error::Unconvertible)
     }
 }
 
 impl Term {
     pub fn infer(&self, sig: &Signature, ctx: &mut Context) -> Result<Term, Error> {
+        debug!("infer type of {}", self);
         match self {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(Kind),
@@ -75,6 +85,10 @@ impl Term {
     }
 
     pub fn check(&self, sig: &Signature, ctx: &mut Context, ty_exp: Term) -> Result<(), Error> {
+        debug!(
+            "check that {} is of type {} in context {:?}",
+            self, ty_exp, ctx
+        );
         match self {
             Abst(arg, tm) => match ty_exp.whnf(sig) {
                 Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {
@@ -82,11 +96,7 @@ impl Term {
                         None => Ok(()),
                         Some(ty_a_exp) => {
                             let _ = ty_a.infer(sig, ctx)?;
-                            if reduce::convertible(sig, *ty_a_exp, *ty_a.clone()) {
-                                Ok(())
-                            } else {
-                                Err(Error::Unconvertible)
-                            }
+                            assert_convertible(sig, *ty_a_exp, *ty_a.clone())
                         }
                     }?;
                     scope::bind(ctx, Some(*ty_a), |ctx| tm.check(sig, ctx, *ty_b))
@@ -95,11 +105,11 @@ impl Term {
             },
             _ => {
                 let ty_inf = self.infer(sig, ctx)?;
-                if reduce::convertible(sig, ty_inf, ty_exp) {
-                    Ok(())
-                } else {
-                    Err(Error::Unconvertible)
-                }
+                debug!(
+                    "check that {} of expected type {} is also of inferred type {}",
+                    self, ty_exp, ty_inf
+                );
+                assert_convertible(sig, ty_inf, ty_exp)
             }
         }
     }

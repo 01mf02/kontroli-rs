@@ -1,6 +1,9 @@
 extern crate circular;
 extern crate lazy_st;
 extern crate nom;
+extern crate pretty_env_logger;
+#[macro_use]
+extern crate log;
 
 use fnv::FnvHashMap;
 
@@ -94,7 +97,7 @@ impl Command {
 fn run(filename: &str) -> Result<(), CliError> {
     use parsebuffer::ParseBuffer;
     let pb: ParseBuffer<_, _, _> = ParseBuffer {
-        buf: circular::Buffer::with_capacity(64 * 1024 * 1024),
+        buf: circular::Buffer::with_capacity(1024 * 1024),
         read: std::fs::File::open(filename)?,
         parse: parse::parse_toplevel,
         fail: |e: nom::Err<VerboseError<&[u8]>>| format!("{:#?}", e),
@@ -112,6 +115,8 @@ fn run(filename: &str) -> Result<(), CliError> {
 }
 
 fn main() -> Result<(), CliError> {
+    pretty_env_logger::init();
+
     let mut args = std::env::args();
     let _ = args.next().expect("first arg is program path");
     let filename = args

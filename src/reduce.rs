@@ -92,6 +92,7 @@ impl From<State> for Term {
 
 impl Term {
     pub fn whnf(self, sig: &Signature) -> Self {
+        trace!("whnf of {}", self);
         Term::from(State::new(self).whnf(sig))
     }
 }
@@ -136,6 +137,7 @@ pub fn convertible(sig: &Signature, tm1: Term, tm2: Term) -> bool {
     loop {
         match cns.pop() {
             Some((tm1, tm2)) => {
+                trace!("convertible: {} ~? {}", tm1, tm2);
                 if tm1 != tm2 {
                     let cn = (tm1.whnf(sig), tm2.whnf(sig));
                     if !conversion_step(cn, &mut cns) {
