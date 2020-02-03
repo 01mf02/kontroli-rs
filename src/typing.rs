@@ -3,7 +3,38 @@ use super::*;
 use crate::signature::Signature;
 
 // DB -> type
-type Context = Vec<Term>;
+#[derive(Debug)]
+pub struct Context(Vec<Term>);
+
+impl Context {
+    pub fn new() -> Self {
+        Context(Vec::new())
+    }
+
+    fn get(&self, n: usize) -> Option<&Term> {
+        self.0.iter().rev().nth(n)
+    }
+
+    fn bind<A, F>(&mut self, arg: Term, f: F) -> Result<A, Error>
+    where
+        F: FnOnce(&mut Context) -> Result<A, Error>,
+    {
+        self.0.push(arg);
+        let x = f(self)?;
+        self.0.pop();
+        Ok(x)
+    }
+
+    fn bind_of_type<A, F>(&mut self, sig: &Signature, arg: Term, f: F) -> Result<A, Error>
+    where
+        F: FnOnce(&mut Context) -> Result<A, Error>,
+    {
+        match arg.infer(sig, self)? {
+            Type => self.bind(arg, f),
+            _ => Err(Error::BindNoType),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum Error {
@@ -24,16 +55,6 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-fn bind<F, A>(sig: &Signature, ctx: &mut Context, ty: Term, f: F) -> Result<A, Error>
-where
-    F: FnOnce(&mut Context) -> Result<A, Error>,
-{
-    match ty.infer(sig, ctx)? {
-        Type => Ok(scope::bind(ctx, Some(ty), |ctx| f(ctx))?),
-        _ => Err(Error::BindNoType),
-    }
-}
-
 fn assert_convertible(sig: &Signature, tm1: Term, tm2: Term) -> Result<(), Error> {
     if reduce::convertible(sig, tm1, tm2) {
         Ok(())
@@ -49,7 +70,7 @@ impl Term {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(Kind),
             Symb(s) => Ok(sig.get(&s).unwrap().typ.clone()),
-            BVar(x) => Ok(ctx.iter().rev().nth(*x).unwrap().clone()),
+            BVar(x) => Ok(ctx.get(*x).unwrap().clone()),
             Appl(f, args) => {
                 args.iter()
                     .try_fold(f.infer(sig, ctx)?, |ty, arg| match ty.whnf(sig) {
@@ -61,7 +82,7 @@ impl Term {
                     })
             }
             Abst(Arg { id, ty: Some(ty) }, tm) => {
-                match bind(sig, ctx, *ty.clone(), |ctx| tm.infer(sig, ctx))? {
+                match ctx.bind_of_type(sig, *ty.clone(), |ctx| tm.infer(sig, ctx))? {
                     Kind => Err(Error::UnexpectedKind),
                     tm_ty => Ok(Prod(
                         Arg {
@@ -73,7 +94,7 @@ impl Term {
                 }
             }
             Prod(Arg { ty: Some(ty), .. }, tm) => {
-                match bind(sig, ctx, *ty.clone(), |ctx| tm.infer(sig, ctx))? {
+                match ctx.bind_of_type(sig, *ty.clone(), |ctx| tm.infer(sig, ctx))? {
                     tm_ty @ Kind | tm_ty @ Type => Ok(tm_ty),
                     _ => Err(Error::SortExpected),
                 }
@@ -99,7 +120,7 @@ impl Term {
                             assert_convertible(sig, *ty_a_exp, *ty_a.clone())
                         }
                     }?;
-                    scope::bind(ctx, Some(*ty_a), |ctx| tm.check(sig, ctx, *ty_b))
+                    ctx.bind(*ty_a, |ctx| tm.check(sig, ctx, *ty_b))
                 }
                 _ => Err(Error::ProductExpected),
             },

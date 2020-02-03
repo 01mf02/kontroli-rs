@@ -46,7 +46,7 @@ impl From<Entry> for SymInfo {
 
 impl Entry {
     pub fn declare(sig: &Signature, st: Staticity, ty: Term) -> Result<Self, typing::Error> {
-        match ty.infer(&sig, &mut Vec::new())? {
+        match ty.infer(&sig, &mut typing::Context::new())? {
             Term::Kind | Term::Type => Ok(Entry::Declaration(st, ty)),
             _ => Err(typing::Error::SortExpected),
         }
@@ -59,9 +59,9 @@ impl Entry {
         tm: Term,
     ) -> Result<Self, typing::Error> {
         let ty = match oty {
-            None => tm.infer(&sig, &mut Vec::new())?,
+            None => tm.infer(&sig, &mut typing::Context::new())?,
             Some(ty) => {
-                tm.check(&sig, &mut Vec::new(), *ty.clone())?;
+                tm.check(&sig, &mut typing::Context::new(), *ty.clone())?;
                 *ty
             }
         };

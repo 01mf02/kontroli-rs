@@ -38,12 +38,16 @@ impl std::fmt::Display for Term {
             Self::BVar(x) => write!(f, "𝕍{}", x),
             Self::Appl(head, tail) => {
                 let parens = !tail.is_empty();
-                if parens {write!(f, "(")?; };
+                if parens {
+                    write!(f, "(")?;
+                };
                 write!(f, "{}", head)?;
                 for t in tail {
                     write!(f, " {}", t)?;
                 }
-                if parens {write!(f, ")")?; };
+                if parens {
+                    write!(f, ")")?;
+                };
                 Ok(())
             }
             Self::Abst(arg, tm) => write!(f, "(λ {}. {})", arg, tm),
