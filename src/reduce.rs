@@ -59,6 +59,7 @@ impl State {
                             break;
                         }
                         Some((rhs, consumed)) => {
+                            debug!("rewrite: {} ... ⟶ {}", s, rhs);
                             tm = rhs;
                             stack.truncate(stack.len() - consumed)
                         }
