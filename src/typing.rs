@@ -36,6 +36,16 @@ impl Context {
     }
 }
 
+impl std::fmt::Display for Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "[")?;
+        for (i, x) in self.0.iter().rev().enumerate() {
+            write!(f, "{} : {}, ", BVar(i), x)?;
+        }
+        write!(f, "]")
+    }
+}
+
 #[derive(Debug)]
 pub enum Error {
     ProductExpected,
@@ -106,10 +116,7 @@ impl Term {
     }
 
     pub fn check(&self, sig: &Signature, ctx: &mut Context, ty_exp: Term) -> Result<(), Error> {
-        debug!(
-            "check that {} is of type {} in context {:?}",
-            self, ty_exp, ctx
-        );
+        debug!("check {} is of type {} when {}", self, ty_exp, ctx);
         match self {
             Abst(arg, tm) => match ty_exp.whnf(sig) {
                 Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {
