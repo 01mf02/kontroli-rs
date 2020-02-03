@@ -61,6 +61,7 @@ impl Entry {
         let ty = match oty {
             None => tm.infer(&sig, &mut typing::Context::new())?,
             Some(ty) => {
+                let _ = ty.infer(&sig, &mut typing::Context::new())?;
                 tm.check(&sig, &mut typing::Context::new(), *ty.clone())?;
                 *ty
             }
