@@ -11,8 +11,8 @@ impl Context {
         Context(Vec::new())
     }
 
-    fn get(&self, n: usize) -> Option<&Term> {
-        self.0.iter().rev().nth(n)
+    fn get_type(&self, n: usize) -> Option<Term> {
+        Some(self.0.iter().rev().nth(n)?.clone() << (n + 1))
     }
 
     fn bind<A, F>(&mut self, arg: Term, f: F) -> Result<A, Error>
@@ -80,7 +80,7 @@ impl Term {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(Kind),
             Symb(s) => Ok(sig.get(&s).unwrap().typ.clone()),
-            BVar(x) => Ok(ctx.get(*x).unwrap().clone()),
+            BVar(x) => Ok(ctx.get_type(*x).unwrap()),
             Appl(f, args) => {
                 args.iter()
                     .try_fold(f.infer(sig, ctx)?, |ty, arg| match ty.whnf(sig) {
