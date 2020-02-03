@@ -133,10 +133,7 @@ impl Term {
             },
             _ => {
                 let ty_inf = self.infer(sig, ctx)?;
-                debug!(
-                    "check that {} of expected type {} is also of inferred type {}",
-                    self, ty_exp, ty_inf
-                );
+                debug!("checking convertibility: {} ~ {}", ty_inf, ty_exp);
                 assert_convertible(sig, ty_inf, ty_exp)
             }
         }
