@@ -54,7 +54,7 @@ fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Option<Term> + '_ {
         Some(if n == k {
             u.clone() << k
         } else {
-            Term::BVar(n + 1)
+            Term::BVar(n - 1)
         })
     }
 }
