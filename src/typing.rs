@@ -120,10 +120,10 @@ impl Term {
         match self {
             Abst(arg, tm) => match ty_exp.whnf(sig) {
                 Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {
-                    match arg.clone().ty {
+                    match arg.ty.clone() {
                         None => Ok(()),
                         Some(ty_a_exp) => {
-                            let _ = ty_a.infer(sig, ctx)?;
+                            let _ = ty_a_exp.infer(sig, ctx)?;
                             assert_convertible(sig, *ty_a_exp, *ty_a.clone())
                         }
                     }?;
