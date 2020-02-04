@@ -1,14 +1,36 @@
 use super::*;
+use crate::term::fmt_appl;
 use std::collections::HashMap;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Miller(pub usize);
 
+impl std::fmt::Display for Miller {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "μ{}", self.0)
+    }
+}
+
+#[derive(Clone)]
 pub enum Pattern {
     MVar(Miller, Vec<DeBruijn>),
     Abst(Option<String>, Box<Pattern>),
     Symb(String, Vec<Pattern>),
     BVar(DeBruijn, Vec<Pattern>),
+}
+
+impl std::fmt::Display for Pattern {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Symb(s, pats) => fmt_appl(&Term::Symb(s.clone()), pats, f),
+            Self::BVar(x, pats) => fmt_appl(&Term::BVar(*x), pats, f),
+            Self::MVar(m, dbs) => {
+                let tail: Vec<_> = dbs.iter().map(|db| Term::BVar(*db)).collect();
+                fmt_appl(m, &tail, f)
+            }
+            Self::Abst(arg, tm) => unimplemented!(),
+        }
+    }
 }
 
 type Arity = usize;
@@ -122,6 +144,13 @@ pub struct Rule {
     pub symbol: String,
     pub args: Vec<Pattern>,
     pub rhs: Term,
+}
+
+impl std::fmt::Display for Rule {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let pat = Pattern::Symb(self.symbol.clone(), self.args.clone());
+        write!(f, "{} ⟶ {}", &pat, self.rhs)
+    }
 }
 
 #[derive(Debug)]

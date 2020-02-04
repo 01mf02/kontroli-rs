@@ -49,6 +49,25 @@ impl std::fmt::Display for Arg {
     }
 }
 
+pub fn fmt_appl<H, T>(head: &H, tail: &[T], f: &mut std::fmt::Formatter) -> std::fmt::Result
+where
+    H: std::fmt::Display,
+    T: std::fmt::Display,
+{
+    let parens = !tail.is_empty();
+    if parens {
+        write!(f, "(")?;
+    };
+    write!(f, "{}", head)?;
+    for t in tail {
+        write!(f, " {}", t)?;
+    }
+    if parens {
+        write!(f, ")")?;
+    };
+    Ok(())
+}
+
 impl std::fmt::Display for Term {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
@@ -56,20 +75,7 @@ impl std::fmt::Display for Term {
             Self::Type => write!(f, "Type"),
             Self::Symb(s) => write!(f, "{}", s),
             Self::BVar(x) => write!(f, "β{}", x),
-            Self::Appl(head, tail) => {
-                let parens = !tail.is_empty();
-                if parens {
-                    write!(f, "(")?;
-                };
-                write!(f, "{}", head)?;
-                for t in tail {
-                    write!(f, " {}", t)?;
-                }
-                if parens {
-                    write!(f, ")")?;
-                };
-                Ok(())
-            }
+            Self::Appl(head, tail) => fmt_appl(head, tail, f),
             Self::Abst(arg, tm) => write!(f, "(λ {}. {})", arg, tm),
             Self::Prod(arg, tm) => write!(f, "(Π {}. {})", arg, tm),
         }
