@@ -105,8 +105,8 @@ fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
 
     match cn {
         (Kind, Kind) | (Type, Type) => true,
-        (Symb(s1), Symb(s2)) if s1 == s2 => true,
-        (BVar(v1), BVar(v2)) if v1 == v2 => true,
+        (Symb(s1), Symb(s2)) => s1 == s2,
+        (BVar(v1), BVar(v2)) => v1 == v2,
         (Abst(_, t1), Abst(_, t2)) => {
             cns.push((*t1, *t2));
             true
