@@ -42,7 +42,7 @@ impl Eq for Term {}
 impl std::fmt::Display for Arg {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.id.as_ref().unwrap_or(&"_".to_string()))?;
-        for ty in self.ty.as_ref() {
+        if let Some(ty) = self.ty.as_ref() {
             write!(f, " : {}", ty)?;
         }
         Ok(())
@@ -55,7 +55,7 @@ impl std::fmt::Display for Term {
             Self::Kind => write!(f, "Kind"),
             Self::Type => write!(f, "Type"),
             Self::Symb(s) => write!(f, "{}", s),
-            Self::BVar(x) => write!(f, "𝕍{}", x),
+            Self::BVar(x) => write!(f, "β{}", x),
             Self::Appl(head, tail) => {
                 let parens = !tail.is_empty();
                 if parens {
