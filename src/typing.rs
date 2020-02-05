@@ -3,26 +3,18 @@ use super::*;
 use crate::signature::Signature;
 
 // DB -> type
-#[derive(Debug, Default)]
-pub struct Context(Vec<Term>);
+pub type Context = crate::stack::Stack<Term>;
 
 impl Context {
-    pub fn new() -> Self {
-        Default::default()
-    }
-
     fn get_type(&self, n: usize) -> Option<Term> {
-        Some(self.0.iter().rev().nth(n)?.clone() << (n + 1))
+        Some(self.get(n)?.clone() << (n + 1))
     }
 
     fn bind<A, F>(&mut self, arg: Term, f: F) -> Result<A, Error>
     where
         F: FnOnce(&mut Context) -> Result<A, Error>,
     {
-        self.0.push(arg);
-        let x = f(self)?;
-        self.0.pop();
-        Ok(x)
+        self.with_pushed(arg, f)
     }
 
     fn bind_of_type<A, F>(&mut self, sig: &Signature, arg: Term, f: F) -> Result<A, Error>
@@ -39,7 +31,7 @@ impl Context {
 impl std::fmt::Display for Context {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "[")?;
-        for (i, x) in self.0.iter().rev().enumerate() {
+        for (i, x) in self.iter().enumerate() {
             write!(f, "{} : {}, ", BVar(i), x.clone() << (i + 1))?;
         }
         write!(f, "]")

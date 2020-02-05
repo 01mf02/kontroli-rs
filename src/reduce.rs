@@ -6,21 +6,23 @@ use std::rc::Rc;
 
 pub type RState = Rc<RefCell<State>>;
 
-type Context = Vec<Rc<Thunk<RState, Term>>>;
-type Stack = Vec<RState>;
+// DB -> term
+type Context = crate::stack::Stack<Rc<Thunk<RState, Term>>>;
+type Stack = crate::stack::Stack<RState>;
 
 #[derive(Clone, Default)]
 pub struct State(Context, Term, Stack);
 
 impl State {
     pub fn new(tm: Term) -> Self {
-        State(Vec::new(), tm, Vec::new())
+        State(Context::new(), tm, Stack::new())
     }
 
     pub fn whnf(self, sig: &Signature) -> State {
         use Term::*;
         let State(mut ctx, mut tm, mut stack) = self;
         loop {
+            trace!("whnf: {}", tm);
             match tm {
                 Type | Kind | Prod(_, _) => break,
                 BVar(x) => match ctx.get(x) {
@@ -47,7 +49,7 @@ impl State {
                 Appl(head, tail) => {
                     tm = *head;
                     for t in tail.into_iter().rev() {
-                        let st = State(ctx.clone(), t, Vec::new());
+                        let st = State(ctx.clone(), t, Stack::new());
                         stack.push(Rc::new(RefCell::new(st)))
                     }
                 }
@@ -65,7 +67,7 @@ impl State {
                         Some((rhs, consumed)) => {
                             trace!("rewrite: {} ... ⟶ {}", s, rhs);
                             tm = rhs;
-                            stack.truncate(stack.len() - consumed)
+                            stack.pop_many(consumed)
                         }
                     }
                 }
@@ -115,12 +117,12 @@ fn psubst2(args: Vec<&Term>) -> impl Fn(usize, usize) -> Option<Term> + '_ {
 impl Rule {
     pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Term> {
         let mut subst = std::collections::HashMap::new();
-        for (pat, rstate) in self.args.iter().zip(stack.iter().rev()) {
+        for (pat, rstate) in self.args.iter().zip(stack.iter()) {
             rstate.replace_with(|state| std::mem::take(state).whnf(sig));
             // TODO: match pattern with state, not term!
             pat.match_term(Term::from(rstate.borrow().clone()), sig, &mut subst)?;
         }
-        let subst: Option<_> = (0..self.ctx.len()).map(|i| subst.get(&Miller(i))).collect();
+        let subst: Option<_> = (0..self.ctx.len()).map(|i| subst.get(&Miller(i))).rev().collect();
         Some(self.rhs.clone().psubst2(subst?))
     }
 }
