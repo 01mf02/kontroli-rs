@@ -122,7 +122,10 @@ impl Rule {
             // TODO: match pattern with state, not term!
             pat.match_term(Term::from(rstate.borrow().clone()), sig, &mut subst)?;
         }
-        let subst: Option<_> = (0..self.ctx.len()).map(|i| subst.get(&Miller(i))).rev().collect();
+        let subst: Option<_> = (0..self.ctx.len())
+            .map(|i| subst.get(&Miller(i)))
+            .rev()
+            .collect();
         Some(self.rhs.clone().psubst2(subst?))
     }
 }
