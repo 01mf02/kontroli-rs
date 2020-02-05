@@ -9,6 +9,7 @@ pub struct SymInfo {
 }
 
 // symbol -> type
+#[derive(Default)]
 pub struct Signature(FnvHashMap<String, SymInfo>);
 
 #[derive(Clone, Debug)]
@@ -91,7 +92,7 @@ impl TryFrom<(DCommand, &Signature)> for Entry {
 
 impl Signature {
     pub fn new() -> Self {
-        Signature(FnvHashMap::default())
+        Default::default()
     }
 
     pub fn get(&self, id: &str) -> Option<&SymInfo> {

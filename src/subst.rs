@@ -1,6 +1,4 @@
 use super::*;
-use lazy_st::Lazy;
-use std::rc::Rc;
 
 impl Term {
     fn subst_box<S>(self, subst: &S, k: usize) -> BTerm
@@ -9,7 +7,7 @@ impl Term {
     {
         Box::new(self.apply_subst(subst, k))
     }
-    fn apply_subst<S>(self, subst: &S, k: usize) -> Term
+    pub fn apply_subst<S>(self, subst: &S, k: usize) -> Term
     where
         S: Fn(usize, usize) -> Option<Term>,
     {
@@ -35,14 +33,6 @@ impl Term {
         }
     }
 
-    pub fn psubst(self, args: &[Rc<Lazy<Term>>]) -> Term {
-        self.apply_subst(&psubst(args), 0)
-    }
-
-    pub fn psubst2(self, args: Vec<&Term>) -> Term {
-        self.apply_subst(&psubst2(args), 0)
-    }
-
     pub fn subst(self, u: &Term) -> Term {
         self.apply_subst(&psubst_single(u), 0)
     }
@@ -55,32 +45,6 @@ fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Option<Term> + '_ {
             u.clone() << k
         } else {
             Term::BVar(n - 1)
-        })
-    }
-}
-
-fn psubst(args: &[Rc<Lazy<Term>>]) -> impl Fn(usize, usize) -> Option<Term> + '_ {
-    move |n: usize, k: usize| {
-        Some({
-            match args.get(n - k) {
-                // TODO: if shifting turns out to be a performance bottleneck,
-                // switch to a shift-memoised version as in Dedukti
-                Some(arg) => (**arg).clone() << k,
-                None => Term::BVar(n - args.len()),
-            }
-        })
-    }
-}
-
-fn psubst2(args: Vec<&Term>) -> impl Fn(usize, usize) -> Option<Term> + '_ {
-    move |n: usize, k: usize| {
-        Some({
-            match args.get(n - k) {
-                // TODO: if shifting turns out to be a performance bottleneck,
-                // switch to a shift-memoised version as in Dedukti
-                Some(arg) => (*arg).clone() << k,
-                None => Term::BVar(n - args.len()),
-            }
         })
     }
 }

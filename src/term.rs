@@ -19,6 +19,12 @@ pub enum Term {
     Prod(Arg, BTerm),
 }
 
+impl Default for Term {
+    fn default() -> Self {
+        Self::Type
+    }
+}
+
 impl PartialEq for Term {
     fn eq(&self, other: &Self) -> bool {
         use Term::*;

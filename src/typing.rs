@@ -3,12 +3,12 @@ use super::*;
 use crate::signature::Signature;
 
 // DB -> type
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Context(Vec<Term>);
 
 impl Context {
     pub fn new() -> Self {
-        Context(Vec::new())
+        Default::default()
     }
 
     fn get_type(&self, n: usize) -> Option<Term> {

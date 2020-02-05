@@ -1,11 +1,15 @@
 use super::*;
 use crate::signature::Signature;
-use lazy_st::{lazy, Lazy};
+use lazy_st::Thunk;
+use std::cell::RefCell;
 use std::rc::Rc;
 
-type Context = Vec<Rc<Lazy<Term>>>;
-type Stack = Vec<Lazy<Term>>;
+pub type RState = Rc<RefCell<State>>;
 
+type Context = Vec<Rc<Thunk<RState, Term>>>;
+type Stack = Vec<RState>;
+
+#[derive(Clone, Default)]
 pub struct State(Context, Term, Stack);
 
 impl State {
@@ -37,14 +41,14 @@ impl State {
                     }
                     Some(p) => {
                         tm = *t;
-                        ctx.push(Rc::new(p));
+                        ctx.push(Rc::new(Thunk::new(p)));
                     }
                 },
                 Appl(head, tail) => {
                     tm = *head;
                     for t in tail.into_iter().rev() {
                         let st = State(ctx.clone(), t, Vec::new());
-                        stack.push(lazy!(Term::from(st)))
+                        stack.push(Rc::new(RefCell::new(st)))
                     }
                 }
                 Symb(s) => {
@@ -72,21 +76,70 @@ impl State {
     }
 }
 
+impl Term {
+    pub fn psubst(self, args: &Context) -> Term {
+        self.apply_subst(&psubst(args), 0)
+    }
+
+    pub fn psubst2(self, args: Vec<&Term>) -> Term {
+        self.apply_subst(&psubst2(args), 0)
+    }
+}
+
+fn psubst(args: &Context) -> impl Fn(usize, usize) -> Option<Term> + '_ {
+    move |n: usize, k: usize| {
+        Some({
+            match args.get(n - k) {
+                // TODO: if shifting turns out to be a performance bottleneck,
+                // switch to a shift-memoised version as in Dedukti
+                Some(arg) => (**arg).clone() << k,
+                None => Term::BVar(n - args.len()),
+            }
+        })
+    }
+}
+
+fn psubst2(args: Vec<&Term>) -> impl Fn(usize, usize) -> Option<Term> + '_ {
+    move |n: usize, k: usize| {
+        Some({
+            match args.get(n - k) {
+                // TODO: if shifting turns out to be a performance bottleneck,
+                // switch to a shift-memoised version as in Dedukti
+                Some(arg) => (*arg).clone() << k,
+                None => Term::BVar(n - args.len()),
+            }
+        })
+    }
+}
+
 impl Rule {
     pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Term> {
         let mut subst = std::collections::HashMap::new();
-        for (pat, tm) in self.args.iter().zip(stack.iter().rev()) {
-            pat.match_term((&**tm).clone(), sig, &mut subst)?;
+        for (pat, rstate) in self.args.iter().zip(stack.iter().rev()) {
+            rstate.replace_with(|state| std::mem::take(state).whnf(sig));
+            // TODO: match pattern with state, not term!
+            pat.match_term(Term::from(rstate.borrow().clone()), sig, &mut subst)?;
         }
         let subst: Option<_> = (0..self.ctx.len()).map(|i| subst.get(&Miller(i))).collect();
         Some(self.rhs.clone().psubst2(subst?))
+    }
+}
+impl lazy_st::Evaluate<Term> for RState {
+    fn evaluate(self) -> Term {
+        Term::from(self)
+    }
+}
+
+impl From<RState> for Term {
+    fn from(s: RState) -> Self {
+        Term::from(s.borrow().clone())
     }
 }
 
 impl From<State> for Term {
     fn from(State(ctx, tm, stack): State) -> Self {
         let t = if ctx.is_empty() { tm } else { tm.psubst(&ctx) };
-        let args = stack.into_iter().map(|la| la.unwrap()).collect();
+        let args = stack.into_iter().map(Term::from).collect();
         t.apply(args)
     }
 }
