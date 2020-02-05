@@ -88,7 +88,10 @@ impl Command {
                 let pat = Pattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
                 let rhs = rhs.scope(sig, &mut ctx.clone())?;
                 let rule = Rule::new(ctx, pat, rhs)?;
-                sig.get_mut(&rule.symbol).expect("rule").rules.push(rule);
+                sig.get_mut(&rule.symbol)
+                    .expect("rule")
+                    .add_rule(rule)
+                    .expect("static");
                 Ok(())
             }
         }

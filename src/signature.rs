@@ -8,6 +8,18 @@ pub struct SymInfo {
     pub rules: Vec<Rule>,
 }
 
+impl SymInfo {
+    pub fn add_rule(&mut self, rule: Rule) -> Result<(), ()> {
+        match self.stat {
+            Staticity::Static => Err(()),
+            Staticity::Definable => {
+                self.rules.push(rule);
+                Ok(())
+            }
+        }
+    }
+}
+
 // symbol -> type
 #[derive(Default)]
 pub struct Signature(FnvHashMap<String, SymInfo>);
@@ -25,8 +37,8 @@ pub enum Entry {
     Definition(Opacity, Term, Term),
 }
 
-impl From<Entry> for SymInfo {
-    fn from(e: Entry) -> Self {
+impl From<(&String, Entry)> for SymInfo {
+    fn from((id, e): (&String, Entry)) -> Self {
         match e {
             Entry::Declaration(stat, typ) => {
                 let rules = Vec::new();
@@ -38,7 +50,16 @@ impl From<Entry> for SymInfo {
                 } else {
                     Staticity::Definable
                 };
-                let rules = if opaque { Vec::new() } else { unimplemented!() };
+                let rules = if opaque {
+                    Vec::new()
+                } else {
+                    vec![Rule {
+                        ctx: Vec::new(),
+                        symbol: id.clone(),
+                        args: Vec::new(),
+                        rhs: tm,
+                    }]
+                };
                 SymInfo { stat, typ, rules }
             }
         }
@@ -108,6 +129,7 @@ impl Signature {
     }
 
     pub fn insert(&mut self, id: String, entry: Entry) -> Option<SymInfo> {
-        self.0.insert(id, SymInfo::from(entry))
+        let info = SymInfo::from((&id, entry));
+        self.0.insert(id, info)
     }
 }
