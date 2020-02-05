@@ -14,6 +14,7 @@ mod reduce;
 mod rule;
 mod scope;
 mod signature;
+mod stack;
 mod subst;
 mod term;
 mod typing;
