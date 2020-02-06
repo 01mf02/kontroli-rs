@@ -1,9 +1,11 @@
 use super::*;
 use crate::rule::Rule;
 use std::convert::TryFrom;
+use std::rc::Rc;
 
 pub struct SymInfo {
     stat: Staticity,
+    pub symbol: Rc<String>,
     pub typ: Term,
     pub rules: Vec<Rule>,
 }
@@ -39,10 +41,16 @@ pub enum Entry {
 
 impl From<(&String, Entry)> for SymInfo {
     fn from((id, e): (&String, Entry)) -> Self {
+        let symbol = Rc::new(id.clone());
         match e {
             Entry::Declaration(stat, typ) => {
                 let rules = Vec::new();
-                SymInfo { stat, typ, rules }
+                SymInfo {
+                    symbol,
+                    stat,
+                    typ,
+                    rules,
+                }
             }
             Entry::Definition(opaque, typ, tm) => {
                 let stat = if opaque {
@@ -55,12 +63,17 @@ impl From<(&String, Entry)> for SymInfo {
                 } else {
                     vec![Rule {
                         ctx: Vec::new(),
-                        symbol: id.clone(),
+                        symbol: Rc::clone(&symbol),
                         args: Vec::new(),
                         rhs: tm,
                     }]
                 };
-                SymInfo { stat, typ, rules }
+                SymInfo {
+                    symbol,
+                    stat,
+                    typ,
+                    rules,
+                }
             }
         }
     }
@@ -122,10 +135,6 @@ impl Signature {
 
     pub fn get_mut(&mut self, id: &str) -> Option<&mut SymInfo> {
         self.0.get_mut(id)
-    }
-
-    pub fn contains_symbol(&self, id: &str) -> bool {
-        self.0.contains_key(id)
     }
 
     pub fn insert(&mut self, id: String, entry: Entry) -> Option<SymInfo> {

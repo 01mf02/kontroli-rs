@@ -56,7 +56,7 @@ fn sterm(i: &[u8]) -> Parse<Term> {
     alt((
         parens(term),
         value(Term::Type, tag("Type")),
-        map(ident, Term::Symb),
+        map(ident, |id| Term::Symb(std::rc::Rc::new(id))),
     ))(i)
 }
 

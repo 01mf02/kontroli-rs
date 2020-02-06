@@ -1,6 +1,7 @@
 use super::*;
 use crate::term::fmt_appl;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Miller(pub usize);
@@ -15,7 +16,7 @@ impl std::fmt::Display for Miller {
 pub enum Pattern {
     MVar(Miller, Vec<DeBruijn>),
     Abst(Option<String>, Box<Pattern>),
-    Symb(String, Vec<Pattern>),
+    Symb(Rc<String>, Vec<Pattern>),
     BVar(DeBruijn, Vec<Pattern>),
 }
 
@@ -55,7 +56,7 @@ impl Pattern {
         }
     }
 
-    fn get_symb_appl(self) -> Option<(String, Vec<Pattern>)> {
+    fn get_symb_appl(self) -> Option<(Rc<String>, Vec<Pattern>)> {
         match self {
             Pattern::Symb(s, args) => Some((s, args)),
             _ => None,
@@ -141,7 +142,7 @@ impl From<Term> for Pattern {
 
 pub struct Rule {
     pub ctx: Vec<(String, Arity)>,
-    pub symbol: String,
+    pub symbol: Rc<String>,
     pub args: Vec<Pattern>,
     pub rhs: Term,
 }

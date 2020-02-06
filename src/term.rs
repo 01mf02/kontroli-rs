@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 #[derive(Clone, Debug)]
 pub struct Arg {
     pub id: Option<String>,
@@ -12,7 +14,7 @@ pub type DeBruijn = usize;
 pub enum Term {
     Kind,
     Type,
-    Symb(String),
+    Symb(Rc<String>),
     BVar(DeBruijn),
     Appl(BTerm, Vec<Term>),
     Abst(Arg, BTerm),
@@ -122,7 +124,7 @@ impl Term {
         }
     }
 
-    pub fn get_symb_appl(self) -> Option<(String, Vec<Term>)> {
+    pub fn get_symb_appl(self) -> Option<(Rc<String>, Vec<Term>)> {
         match self {
             Self::Symb(s) => Some((s, Vec::new())),
             Self::Appl(head, args) => match *head {

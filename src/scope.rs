@@ -1,4 +1,5 @@
 use super::*;
+use std::rc::Rc;
 
 type Bound = Vec<String>;
 
@@ -23,14 +24,12 @@ impl Term {
         match self {
             Kind => Ok(Kind),
             Type => Ok(Type),
-            Symb(s) => match bnd.iter().rev().position(|id| *id == s) {
+            Symb(s) => match bnd.iter().rev().position(|id| *id == *s) {
                 Some(idx) => Ok(BVar(idx)),
                 None => {
-                    if sig.contains_symbol(&s) {
-                        Ok(Symb(s))
-                    } else {
-                        Err(Error::UndeclaredSymbol)
-                    }
+                    let entry = sig.get(&s).ok_or(Error::UndeclaredSymbol)?;
+                    let sym = Rc::clone(&entry.symbol);
+                    Ok(Symb(sym))
                 }
             },
             Appl(head, tail) => {
@@ -90,9 +89,9 @@ impl Pattern {
             args.into_iter().map(|a| a.scope(sig, mvar, bvar)).collect()
         };
         match self {
-            Pattern::Symb(s, args) => match bvar.iter().rev().position(|id| *id == s) {
+            Pattern::Symb(s, args) => match bvar.iter().rev().position(|id| *id == *s) {
                 Some(idx) => Ok(Pattern::BVar(idx, scope_many(args, bvar)?)),
-                None => match mvar.iter().position(|id| *id == s) {
+                None => match mvar.iter().position(|id| *id == *s) {
                     Some(idx) => {
                         let args: Option<Vec<_>> =
                             args.into_iter().map(|a| a.get_de_bruijn()).collect();
@@ -100,11 +99,9 @@ impl Pattern {
                         Ok(Pattern::MVar(Miller(idx), args))
                     }
                     None => {
-                        if sig.contains_symbol(&s) {
-                            Ok(Pattern::Symb(s, scope_many(args, bvar)?))
-                        } else {
-                            Err(Error::UndeclaredSymbol)
-                        }
+                        let entry = sig.get(&s).ok_or(Error::UndeclaredSymbol)?;
+                        let sym = Rc::clone(&entry.symbol);
+                        Ok(Pattern::Symb(sym, scope_many(args, bvar)?))
                     }
                 },
             },
