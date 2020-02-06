@@ -3,17 +3,17 @@ use super::*;
 impl Term {
     fn subst_box<S>(self, subst: &S, k: usize) -> BTerm
     where
-        S: Fn(usize, usize) -> Option<Term>,
+        S: Fn(usize, usize) -> Term,
     {
         Box::new(self.apply_subst(subst, k))
     }
     pub fn apply_subst<S>(self, subst: &S, k: usize) -> Term
     where
-        S: Fn(usize, usize) -> Option<Term>,
+        S: Fn(usize, usize) -> Term,
     {
         use Term::*;
         match self {
-            BVar(n) if n >= k => subst(n, k).unwrap_or(self),
+            BVar(n) if n >= k => subst(n, k),
             Appl(f, args) => {
                 let f2 = f.subst_box(subst, k);
                 let args2 = args.into_iter().map(|a| a.apply_subst(subst, k)).collect();
@@ -39,13 +39,13 @@ impl Term {
 }
 
 // TODO: merge with psubst?
-fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Option<Term> + '_ {
+fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Term + '_ {
     move |n: usize, k: usize| {
-        Some(if n == k {
+        if n == k {
             u.clone() << k
         } else {
             Term::BVar(n - 1)
-        })
+        }
     }
 }
 
@@ -56,7 +56,7 @@ impl core::ops::Shl<usize> for Term {
         if rhs == 0 {
             self
         } else {
-            self.apply_subst(&|n, _k| Some(Term::BVar(n + rhs)), 0)
+            self.apply_subst(&|n, _k| Term::BVar(n + rhs), 0)
         }
     }
 }

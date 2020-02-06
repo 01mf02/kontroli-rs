@@ -88,29 +88,25 @@ impl Term {
     }
 }
 
-fn psubst(args: &Context) -> impl Fn(usize, usize) -> Option<Term> + '_ {
+fn psubst(args: &Context) -> impl Fn(usize, usize) -> Term + '_ {
     move |n: usize, k: usize| {
-        Some({
-            match args.get(n - k) {
-                // TODO: if shifting turns out to be a performance bottleneck,
-                // switch to a shift-memoised version as in Dedukti
-                Some(arg) => (**arg).clone() << k,
-                None => Term::BVar(n - args.len()),
-            }
-        })
+        match args.get(n - k) {
+            // TODO: if shifting turns out to be a performance bottleneck,
+            // switch to a shift-memoised version as in Dedukti
+            Some(arg) => (**arg).clone() << k,
+            None => Term::BVar(n - args.len()),
+        }
     }
 }
 
-fn psubst2(args: Vec<&Term>) -> impl Fn(usize, usize) -> Option<Term> + '_ {
+fn psubst2(args: Vec<&Term>) -> impl Fn(usize, usize) -> Term + '_ {
     move |n: usize, k: usize| {
-        Some({
-            match args.get(n - k) {
-                // TODO: if shifting turns out to be a performance bottleneck,
-                // switch to a shift-memoised version as in Dedukti
-                Some(arg) => (*arg).clone() << k,
-                None => Term::BVar(n - args.len()),
-            }
-        })
+        match args.get(n - k) {
+            // TODO: if shifting turns out to be a performance bottleneck,
+            // switch to a shift-memoised version as in Dedukti
+            Some(arg) => (*arg).clone() << k,
+            None => Term::BVar(n - args.len()),
+        }
     }
 }
 
