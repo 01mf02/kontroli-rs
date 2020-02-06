@@ -1,4 +1,5 @@
 use super::*;
+use pattern::{Miller, Pattern};
 use std::rc::Rc;
 
 type Bound = Vec<String>;

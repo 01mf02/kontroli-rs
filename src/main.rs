@@ -10,6 +10,7 @@ use fnv::FnvHashMap;
 mod command;
 mod parse;
 mod parsebuffer;
+mod pattern;
 mod reduce;
 mod rule;
 mod scope;
@@ -85,7 +86,7 @@ impl Command {
                 Ok(())
             }
             Self::Rule(ctx, lhs, rhs) => {
-                let pat = Pattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
+                let pat = pattern::Pattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
                 let rhs = rhs.scope(sig, &mut ctx.clone())?;
                 let rule = Rule::new(ctx, pat, rhs)?;
                 sig.get_mut(&rule.symbol)

@@ -1,14 +1,15 @@
 use super::*;
 use crate::signature::Signature;
 use lazy_st::Thunk;
+use pattern::Miller;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub type RState = Rc<RefCell<State>>;
 
 // DB -> term
-type Context = crate::stack::Stack<Rc<Thunk<RState, Term>>>;
-type Stack = crate::stack::Stack<RState>;
+type Context = stack::Stack<Rc<Thunk<RState, Term>>>;
+type Stack = stack::Stack<RState>;
 
 #[derive(Clone, Default)]
 pub struct State(Context, Term, Stack);
