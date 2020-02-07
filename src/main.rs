@@ -21,6 +21,7 @@ mod term;
 mod typing;
 
 use crate::signature::Signature;
+use crate::stack::Stack;
 use nom::error::VerboseError;
 use std::convert::TryFrom;
 
@@ -74,7 +75,7 @@ impl command::Command {
         match self {
             Self::DCmd(id, args, dcmd) => {
                 println!("{}", id);
-                let dcmd = dcmd.parametrise(args).scope(sig, &mut Vec::new())?;
+                let dcmd = dcmd.parametrise(args).scope(sig, &mut Stack::new())?;
                 let entry = signature::Entry::try_from((dcmd, &*sig))?;
                 if sig.insert(id, entry).is_some() {
                     panic!("symbol redeclaration");
@@ -82,8 +83,8 @@ impl command::Command {
                 Ok(())
             }
             Self::Rule(ctx, lhs, rhs) => {
-                let pat = prepattern::Prepattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
-                let rhs = rhs.scope(sig, &mut ctx.clone())?;
+                let pat = prepattern::Prepattern::from(*lhs).scope(sig, &Stack::from(ctx.clone()), &mut Stack::new())?;
+                let rhs = rhs.scope(sig, &mut Stack::from(ctx.clone()))?;
                 let rule = rule::Rule::new(ctx, pat, rhs)?;
                 sig.get_mut(&rule.symbol)
                     .expect("rule")

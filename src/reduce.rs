@@ -123,7 +123,6 @@ impl Rule {
         }
         let subst: Option<_> = (0..self.ctx.len())
             .map(|i| subst.get(&Miller(i)))
-            .rev()
             .collect();
         Some(self.rhs.clone().psubst2(subst?))
     }

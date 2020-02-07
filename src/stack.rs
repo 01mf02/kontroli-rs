@@ -55,6 +55,12 @@ impl<A> Default for Stack<A> {
     }
 }
 
+impl<A> From<Vec<A>> for Stack<A> {
+    fn from(v: Vec<A>) -> Self {
+        Self(v)
+    }
+}
+
 impl<A> IntoIterator for Stack<A> {
     type Item = A;
     type IntoIter = std::iter::Rev<std::vec::IntoIter<Self::Item>>;

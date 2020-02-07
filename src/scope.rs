@@ -3,14 +3,15 @@ use crate::pattern::{Miller, Pattern};
 use crate::prepattern::Prepattern;
 use crate::preterm::{Binder, Prearg, Preterm};
 use crate::signature::Signature;
+use crate::stack::Stack;
 use crate::term::{Arg, Term};
 use std::rc::Rc;
 
-type Bound = Vec<String>;
+type Bound = Stack<String>;
 
-pub fn bind<X, A, F>(bnd: &mut Vec<X>, arg: Option<X>, f: F) -> A
+pub fn bind<X, A, F>(bnd: &mut Stack<X>, arg: Option<X>, f: F) -> A
 where
-    F: FnOnce(&mut Vec<X>) -> A,
+    F: FnOnce(&mut Stack<X>) -> A,
 {
     match arg {
         Some(id) => {
@@ -28,7 +29,7 @@ impl Preterm {
         use Preterm::*;
         match self {
             Type => Ok(Term::Type),
-            Symb(s) => match bnd.iter().rev().position(|id| *id == *s) {
+            Symb(s) => match bnd.iter().position(|id| *id == *s) {
                 Some(idx) => Ok(Term::BVar(idx)),
                 None => {
                     let entry = sig.get(&s).ok_or(Error::UndeclaredSymbol)?;
@@ -90,8 +91,7 @@ impl Prepattern {
             Symb(s, args) => {
                 let args: Result<_, _> =
                     args.into_iter().map(|a| a.scope(sig, mvar, bvar)).collect();
-                // TODO: move bvar to Stack
-                match bvar.iter().rev().position(|id| *id == *s) {
+                match bvar.iter().position(|id| *id == *s) {
                     Some(idx) => Ok(Pattern::BVar(idx, args?)),
                     None => match mvar.iter().position(|id| *id == *s) {
                         Some(idx) => {
