@@ -64,61 +64,8 @@ impl Prearg {
     }
 }
 
-impl Term {
-    pub fn scope(self, sig: &Signature, bnd: &mut Bound) -> Result<Self, Error> {
-        use Term::*;
-        match self {
-            Kind => Ok(Kind),
-            Type => Ok(Type),
-            Symb(s) => match bnd.iter().rev().position(|id| *id == *s) {
-                Some(idx) => Ok(BVar(idx)),
-                None => {
-                    let entry = sig.get(&s).ok_or(Error::UndeclaredSymbol)?;
-                    let sym = Rc::clone(&entry.symbol);
-                    Ok(Symb(sym))
-                }
-            },
-            Appl(head, tail) => {
-                let tail: Result<_, _> =
-                    tail.into_iter().map(|tm| Ok(tm.scope(sig, bnd)?)).collect();
-                Ok(Appl(Box::new(head.scope(sig, bnd)?), tail?))
-            }
-            Abst(arg, tm) => {
-                let arg = arg.scope(sig, bnd)?;
-                bind(bnd, arg.id.clone(), |bnd| {
-                    Ok(Abst(arg, Box::new(tm.scope(sig, bnd)?)))
-                })
-            }
-            Prod(arg, tm) => {
-                let arg = arg.scope(sig, bnd)?;
-                bind(bnd, arg.id.clone(), |bnd| {
-                    Ok(Prod(arg, Box::new(tm.scope(sig, bnd)?)))
-                })
-            }
-            BVar(_) => panic!("found bound variable during scoping"),
-        }
-    }
-}
-
-impl Arg {
-    fn scope(self, sig: &Signature, bnd: &mut Bound) -> Result<Arg, Error> {
-        let ty = self
-            .ty
-            .map(|ty| Ok(Box::new(ty.scope(sig, bnd)?)))
-            .transpose()?;
-        Ok(Arg { id: self.id, ty })
-    }
-}
-
 impl PreDCommand {
     pub fn scope(self, sig: &Signature, bnd: &mut Bound) -> Result<DCommand, Error> {
-        self.map_type_err(|tm| Ok(Box::new(tm.scope(sig, bnd)?)))?
-            .map_term_err(|tm| Ok(Box::new(tm.scope(sig, bnd)?)))
-    }
-}
-
-impl DCommand {
-    pub fn scope(self, sig: &Signature, bnd: &mut Bound) -> Result<Self, Error> {
         self.map_type_err(|tm| Ok(Box::new(tm.scope(sig, bnd)?)))?
             .map_term_err(|tm| Ok(Box::new(tm.scope(sig, bnd)?)))
     }

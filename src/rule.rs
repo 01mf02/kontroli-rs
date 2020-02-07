@@ -43,7 +43,6 @@ impl Term {
     fn check_arity(&self, k: usize, arities: &[(String, Arity)]) -> bool {
         match self {
             Self::Kind | Self::Type | Self::BVar(_) | Self::Symb(_) => true,
-            // TODO: can Appl(Appl(.., ..), ..) occur?
             Self::Appl(head, args) => {
                 (match **head {
                     Self::BVar(n) if n >= k => args.len() >= arities.get(n - k).expect("arity").1,
