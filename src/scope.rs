@@ -168,33 +168,3 @@ impl Prepattern {
         }
     }
 }
-
-impl Pattern {
-    pub fn scope(self, sig: &Signature, mvar: &Bound, bvar: &mut Bound) -> Result<Self, Error> {
-        let scope_many = |args: Vec<Pattern>, bvar: &mut Bound| -> Result<Vec<_>, _> {
-            args.into_iter().map(|a| a.scope(sig, mvar, bvar)).collect()
-        };
-        match self {
-            Pattern::Symb(s, args) => match bvar.iter().rev().position(|id| *id == *s) {
-                Some(idx) => Ok(Pattern::BVar(idx, scope_many(args, bvar)?)),
-                None => match mvar.iter().position(|id| *id == *s) {
-                    Some(idx) => {
-                        let args: Option<Vec<_>> =
-                            args.into_iter().map(|a| a.get_de_bruijn()).collect();
-                        let args = args.ok_or(Error::MillerPattern)?;
-                        Ok(Pattern::MVar(Miller(idx), args))
-                    }
-                    None => {
-                        let entry = sig.get(&s).ok_or(Error::UndeclaredSymbol)?;
-                        let sym = Rc::clone(&entry.symbol);
-                        Ok(Pattern::Symb(sym, scope_many(args, bvar)?))
-                    }
-                },
-            },
-            Pattern::Abst(arg, pat) => bind(bvar, arg.clone(), |bvar| {
-                Ok(Pattern::Abst(arg, Box::new(pat.scope(sig, mvar, bvar)?)))
-            }),
-            _ => unimplemented!(),
-        }
-    }
-}
