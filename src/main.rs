@@ -5,12 +5,12 @@ extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
 
-use fnv::FnvHashMap;
-
 mod command;
 mod parse;
 mod parsebuffer;
 mod pattern;
+mod prepattern;
+mod preterm;
 mod reduce;
 mod rule;
 mod scope;
@@ -20,11 +20,7 @@ mod subst;
 mod term;
 mod typing;
 
-use command::*;
-use rule::*;
-use signature::Signature;
-use term::*;
-
+use crate::signature::Signature;
 use nom::error::VerboseError;
 use std::convert::TryFrom;
 
@@ -73,7 +69,7 @@ impl From<rule::Error> for CliError {
     }
 }
 
-impl Command {
+impl command::Command {
     fn handle(self, sig: &mut Signature) -> Result<(), CliError> {
         match self {
             Self::DCmd(id, args, dcmd) => {
@@ -86,9 +82,9 @@ impl Command {
                 Ok(())
             }
             Self::Rule(ctx, lhs, rhs) => {
-                let pat = pattern::Pattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
+                let pat = prepattern::Prepattern::from(*lhs).scope(sig, &ctx, &mut Vec::new())?;
                 let rhs = rhs.scope(sig, &mut ctx.clone())?;
-                let rule = Rule::new(ctx, pat, rhs)?;
+                let rule = rule::Rule::new(ctx, pat, rhs)?;
                 sig.get_mut(&rule.symbol)
                     .expect("rule")
                     .add_rule(rule)

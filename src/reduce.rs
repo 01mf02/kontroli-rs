@@ -1,7 +1,9 @@
-use super::*;
+use crate::pattern::Miller;
+use crate::rule::Rule;
 use crate::signature::Signature;
+use crate::stack;
+use crate::term::{Arg, Term};
 use lazy_st::Thunk;
-use pattern::Miller;
 use std::cell::RefCell;
 use std::rc::Rc;
 

@@ -1,5 +1,8 @@
-use super::*;
+use crate::command::DCommand;
 use crate::rule::Rule;
+use crate::term::{BTerm, Term};
+use crate::typing::{Context, Error};
+use fnv::FnvHashMap;
 use std::convert::TryFrom;
 use std::rc::Rc;
 
@@ -80,10 +83,10 @@ impl From<(&String, Entry)> for SymInfo {
 }
 
 impl Entry {
-    pub fn declare(sig: &Signature, st: Staticity, ty: Term) -> Result<Self, typing::Error> {
-        match ty.infer(&sig, &mut typing::Context::new())? {
+    pub fn declare(sig: &Signature, st: Staticity, ty: Term) -> Result<Self, Error> {
+        match ty.infer(&sig, &mut Context::new())? {
             Term::Kind | Term::Type => Ok(Entry::Declaration(st, ty)),
-            _ => Err(typing::Error::SortExpected),
+            _ => Err(Error::SortExpected),
         }
     }
 
@@ -92,24 +95,24 @@ impl Entry {
         opaque: bool,
         oty: Option<BTerm>,
         tm: Term,
-    ) -> Result<Self, typing::Error> {
+    ) -> Result<Self, Error> {
         let ty = match oty {
-            None => tm.infer(&sig, &mut typing::Context::new())?,
+            None => tm.infer(&sig, &mut Context::new())?,
             Some(ty) => {
-                let _ = ty.infer(&sig, &mut typing::Context::new())?;
-                tm.check(&sig, &mut typing::Context::new(), *ty.clone())?;
+                let _ = ty.infer(&sig, &mut Context::new())?;
+                tm.check(&sig, &mut Context::new(), *ty.clone())?;
                 *ty
             }
         };
         match ty {
-            Term::Kind => Err(typing::Error::UnexpectedKind),
+            Term::Kind => Err(Error::UnexpectedKind),
             _ => Ok(Entry::Definition(opaque, ty, tm)),
         }
     }
 }
 
 impl TryFrom<(DCommand, &Signature)> for Entry {
-    type Error = typing::Error;
+    type Error = Error;
 
     fn try_from((dcmd, sig): (DCommand, &Signature)) -> Result<Self, Self::Error> {
         match dcmd {

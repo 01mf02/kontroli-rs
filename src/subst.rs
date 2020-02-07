@@ -1,4 +1,4 @@
-use super::*;
+use crate::term::{Arg, BTerm, Term};
 
 impl Term {
     fn subst_box<S>(self, subst: &S, k: usize) -> BTerm

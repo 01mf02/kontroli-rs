@@ -1,6 +1,6 @@
-use super::Term::*;
-use super::*;
+use crate::reduce;
 use crate::signature::Signature;
+use crate::term::{Arg, Term};
 
 // DB -> type
 pub type Context = crate::stack::Stack<Term>;
@@ -22,7 +22,7 @@ impl Context {
         F: FnOnce(&mut Context) -> Result<A, Error>,
     {
         match arg.infer(sig, self)? {
-            Type => self.bind(arg, f),
+            Term::Type => self.bind(arg, f),
             _ => Err(Error::BindNoType),
         }
     }
@@ -32,7 +32,7 @@ impl std::fmt::Display for Context {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "[")?;
         for (i, x) in self.iter().enumerate() {
-            write!(f, "{} : {}, ", BVar(i), x.clone() << (i + 1))?;
+            write!(f, "{} : {}, ", Term::BVar(i), x.clone() << (i + 1))?;
         }
         write!(f, "]")
     }
@@ -66,8 +66,9 @@ fn assert_convertible(sig: &Signature, tm1: Term, tm2: Term) -> Result<(), Error
 }
 
 impl Term {
-    pub fn infer(&self, sig: &Signature, ctx: &mut Context) -> Result<Term, Error> {
+    pub fn infer(&self, sig: &Signature, ctx: &mut Context) -> Result<Self, Error> {
         debug!("infer type of {}", self);
+        use Term::*;
         match self {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(Kind),
@@ -109,6 +110,7 @@ impl Term {
 
     pub fn check(&self, sig: &Signature, ctx: &mut Context, ty_exp: Term) -> Result<(), Error> {
         debug!("check {} is of type {} when {}", self, ty_exp, ctx);
+        use Term::*;
         match self {
             Abst(arg, tm) => match ty_exp.whnf(sig) {
                 Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {

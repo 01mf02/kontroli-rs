@@ -1,5 +1,5 @@
-use super::*;
-use pattern::{Arity, Pattern};
+use crate::pattern::{Arity, Pattern};
+use crate::term::{Arg, Term};
 use std::rc::Rc;
 
 pub struct Rule {

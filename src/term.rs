@@ -1,12 +1,9 @@
+use crate::preterm::GArg;
 use std::rc::Rc;
 
-#[derive(Clone, Debug)]
-pub struct Arg {
-    pub id: Option<String>,
-    pub ty: Option<BTerm>,
-}
-
 pub type BTerm = Box<Term>;
+
+pub type Arg = GArg<BTerm>;
 
 pub type DeBruijn = usize;
 
@@ -91,18 +88,7 @@ impl std::fmt::Display for Term {
 }
 
 impl Term {
-    pub fn absts(self, args: Vec<Arg>) -> Term {
-        args.into_iter()
-            .rev()
-            .fold(self, |acc, arg| Term::Abst(arg, Box::new(acc)))
-    }
-    pub fn prods(self, args: Vec<Arg>) -> Term {
-        args.into_iter()
-            .rev()
-            .fold(self, |acc, arg| Term::Prod(arg, Box::new(acc)))
-    }
-
-    pub fn apply(mut self, mut args: Vec<Term>) -> Term {
+    pub fn apply(mut self, mut args: Vec<Self>) -> Self {
         if args.is_empty() {
             self
         } else {
@@ -116,7 +102,7 @@ impl Term {
         }
     }
 
-    pub fn get_symb_appl(self) -> Option<(Rc<String>, Vec<Term>)> {
+    pub fn get_symb_appl(self) -> Option<(Rc<String>, Vec<Self>)> {
         match self {
             Self::Symb(s) => Some((s, Vec::new())),
             Self::Appl(head, args) => match *head {

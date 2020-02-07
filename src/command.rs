@@ -1,10 +1,14 @@
+use crate::preterm::{BPreterm, Prearg, Preterm};
 use crate::term::*;
 
 #[derive(Debug, Clone)]
 pub enum Command {
-    DCmd(String, Vec<Arg>, DCommand),
-    Rule(Vec<String>, BTerm, BTerm),
+    DCmd(String, Vec<Prearg>, PreDCommand),
+    Rule(Vec<String>, BPreterm, BPreterm),
 }
+
+pub type DCommand = GDCommand<BTerm, BTerm>;
+pub type PreDCommand = GDCommand<Box<Preterm>, Box<Preterm>>;
 
 #[derive(Debug, Clone)]
 pub enum GDCommand<Ty, Tm> {
@@ -58,10 +62,8 @@ impl<Ty, Tm> GDCommand<Ty, Tm> {
     }
 }
 
-pub type DCommand = GDCommand<BTerm, BTerm>;
-
-impl DCommand {
-    pub fn parametrise(self, args: Vec<Arg>) -> DCommand {
+impl PreDCommand {
+    pub fn parametrise(self, args: Vec<Prearg>) -> Self {
         self.map_type(|tm| Box::new(tm.prods(args.clone())))
             .map_term(|tm| Box::new(tm.absts(args)))
     }

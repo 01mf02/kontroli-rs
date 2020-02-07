@@ -3,15 +3,15 @@ use nom::{
     bytes::streaming::{tag, take_until, take_while1},
     character::is_alphanumeric,
     character::streaming::{char, multispace0},
-    combinator::{map, opt, value},
+    combinator::{map, map_opt, opt, value},
     error::VerboseError,
     multi::{many0, separated_list},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
 
-use crate::command::*;
-use crate::term::*;
+use crate::command::{Command, GDCommand};
+use crate::preterm::{BPreterm, Binder, Prearg, Preterm};
 
 type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
 
@@ -52,17 +52,17 @@ fn ident(i: &[u8]) -> Parse<String> {
     })(i)
 }
 
-fn sterm(i: &[u8]) -> Parse<Term> {
+fn sterm(i: &[u8]) -> Parse<Preterm> {
     alt((
         parens(term),
-        value(Term::Type, tag("Type")),
-        map(ident, |id| Term::Symb(std::rc::Rc::new(id))),
+        value(Preterm::Type, tag("Type")),
+        map(ident, |id| Preterm::Symb(id)),
     ))(i)
 }
 
-fn appl(i: &[u8]) -> Parse<Term> {
+fn appl(i: &[u8]) -> Parse<Preterm> {
     map(pair(sterm, many0(lexeme(sterm))), |(head, tail)| {
-        Term::apply(head, tail)
+        Preterm::apply(head, tail)
     })(i)
 }
 
@@ -70,43 +70,44 @@ fn maybe_ident(i: &[u8]) -> Parse<Option<String>> {
     alt((map(ident, Some), value(None, char('_'))))(i)
 }
 
-fn of_term(i: &[u8]) -> Parse<BTerm> {
+fn of_term(i: &[u8]) -> Parse<BPreterm> {
     preceded(char(':'), map(lexeme(term), Box::new))(i)
 }
 
-fn is_term(i: &[u8]) -> Parse<BTerm> {
+fn is_term(i: &[u8]) -> Parse<BPreterm> {
     preceded(tag(":="), map(lexeme(term), Box::new))(i)
 }
 
-fn arg(i: &[u8]) -> Parse<Arg> {
-    map(pair(maybe_ident, opt(lexeme(of_term))), |(id, ty)| Arg {
+fn arg(i: &[u8]) -> Parse<Prearg> {
+    map(pair(maybe_ident, opt(lexeme(of_term))), |(id, ty)| Prearg {
         id,
         ty,
     })(i)
 }
 
-fn abst(i: &[u8]) -> Parse<Term> {
-    map(
-        pair(
-            preceded(char('\\'), terminated(lexeme(arg), lexeme(tag("=>")))),
-            lexeme(term),
-        ),
-        |(arg, tm)| Term::Abst(arg, Box::new(tm)),
+fn binder(i: &[u8]) -> Parse<Binder> {
+    alt((value(Binder::Lam, char('\\')), value(Binder::Pi, char('!'))))(i)
+}
+
+fn arrow(i: &[u8]) -> Parse<Binder> {
+    alt((value(Binder::Lam, tag("=>")), value(Binder::Pi, tag("->"))))(i)
+}
+
+fn bind(i: &[u8]) -> Parse<Preterm> {
+    map_opt(
+        tuple((binder, lexeme(arg), lexeme(arrow), lexeme(term))),
+        |(bnd, arg, arr, tm)| {
+            if bnd == arr {
+                Some(Preterm::Bind(bnd, arg, Box::new(tm)))
+            } else {
+                None
+            }
+        },
     )(i)
 }
 
-fn prod(i: &[u8]) -> Parse<Term> {
-    map(
-        pair(
-            preceded(char('!'), terminated(lexeme(arg), lexeme(tag("->")))),
-            lexeme(term),
-        ),
-        |(arg, tm)| Term::Prod(arg, Box::new(tm)),
-    )(i)
-}
-
-fn term(i: &[u8]) -> Parse<Term> {
-    alt((abst, prod, appl))(i)
+fn term(i: &[u8]) -> Parse<Preterm> {
+    alt((bind, appl))(i)
 }
 
 fn dcommand(i: &[u8]) -> Parse<Command> {

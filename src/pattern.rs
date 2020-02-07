@@ -1,5 +1,6 @@
-use super::*;
-use crate::term::fmt_appl;
+use crate::rule::Error;
+use crate::signature::Signature;
+use crate::term::{fmt_appl, DeBruijn, Term};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -115,26 +116,6 @@ impl Pattern {
                     unimplemented!()
                 }
             }
-            _ => unimplemented!(),
-        }
-    }
-}
-
-impl From<Term> for Pattern {
-    fn from(tm: Term) -> Self {
-        use Term::*;
-        match tm {
-            Appl(head, mut args) => match *head {
-                Symb(s) => Self::Symb(s, args.into_iter().map(Self::from).collect()),
-                Appl(head2, mut args2) => {
-                    args2.append(&mut args);
-                    Self::from(Appl(head2, args2))
-                }
-                _ => unimplemented!(),
-            },
-            Symb(s) => Self::Symb(s, Vec::new()),
-            // TODO: warn if arg.type given?
-            Abst(arg, tm) => Self::Abst(arg.id, Box::new(Self::from(*tm))),
             _ => unimplemented!(),
         }
     }
