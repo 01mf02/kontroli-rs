@@ -31,7 +31,7 @@ impl<A> Stack<A> {
     }
 
     pub fn get(&self, n: usize) -> Option<&A> {
-        Some(self.0.iter().rev().nth(n)?)
+        self.iter().nth(n)
     }
 
     pub fn with_pushed<F, Y, E>(&mut self, x: A, f: F) -> Result<Y, E>
