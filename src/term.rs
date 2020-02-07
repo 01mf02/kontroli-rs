@@ -32,7 +32,7 @@ impl PartialEq for Term {
         use Term::*;
         match (self, other) {
             (Kind, Kind) | (Type, Type) => true,
-            (Symb(s1), Symb(s2)) => s1 == s2,
+            (Symb(s1), Symb(s2)) => Rc::ptr_eq(s1, s2),
             (BVar(x1), BVar(x2)) => x1 == x2,
             (Appl(f1, args1), Appl(f2, args2)) => {
                 f1 == f2
@@ -100,14 +100,6 @@ impl Term {
         args.into_iter()
             .rev()
             .fold(self, |acc, arg| Term::Prod(arg, Box::new(acc)))
-    }
-
-    pub fn appl(self, args: Vec<Term>) -> Self {
-        if args.is_empty() {
-            self
-        } else {
-            Term::Appl(Box::new(self), args)
-        }
     }
 
     pub fn apply(mut self, mut args: Vec<Term>) -> Term {
