@@ -20,6 +20,8 @@ mod subst;
 mod term;
 mod typing;
 
+use crate::prepattern::Prepattern;
+use crate::rule::Rule;
 use crate::signature::Signature;
 use crate::stack::Stack;
 use nom::error::VerboseError;
@@ -83,9 +85,10 @@ impl command::Command {
                 Ok(())
             }
             Self::Rule(ctx, lhs, rhs) => {
-                let pat = prepattern::Prepattern::from(*lhs).scope(sig, &Stack::from(ctx.clone()), &mut Stack::new())?;
-                let rhs = rhs.scope(sig, &mut Stack::from(ctx.clone()))?;
-                let rule = rule::Rule::new(ctx, pat, rhs)?;
+                let mut ctxs = Stack::from(ctx.clone());
+                let pat = Prepattern::from(*lhs).scope(sig, &ctxs, &mut Stack::new())?;
+                let rhs = rhs.scope(sig, &mut ctxs)?;
+                let rule = Rule::new(ctx, pat, rhs)?;
                 sig.get_mut(&rule.symbol)
                     .expect("rule")
                     .add_rule(rule)

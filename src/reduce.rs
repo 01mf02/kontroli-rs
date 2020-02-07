@@ -1,4 +1,3 @@
-use crate::pattern::Miller;
 use crate::rule::Rule;
 use crate::signature::Signature;
 use crate::stack;
@@ -86,7 +85,7 @@ impl Term {
         self.apply_subst(&psubst(args), 0)
     }
 
-    pub fn psubst2(self, args: Vec<&Term>) -> Term {
+    pub fn psubst2(self, args: &Vec<Term>) -> Term {
         self.apply_subst(&psubst2(args), 0)
     }
 }
@@ -102,7 +101,7 @@ fn psubst(args: &Context) -> impl Fn(usize, usize) -> Term + '_ {
     }
 }
 
-fn psubst2(args: Vec<&Term>) -> impl Fn(usize, usize) -> Term + '_ {
+fn psubst2(args: &Vec<Term>) -> impl Fn(usize, usize) -> Term + '_ {
     move |n: usize, k: usize| {
         match args.get(n - k) {
             // TODO: if shifting turns out to be a performance bottleneck,
@@ -115,16 +114,14 @@ fn psubst2(args: Vec<&Term>) -> impl Fn(usize, usize) -> Term + '_ {
 
 impl Rule {
     pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Term> {
-        let mut subst = std::collections::HashMap::new();
+        let mut subst = vec![None; self.ctx.len()];
         for (pat, rstate) in self.args.iter().zip(stack.iter()) {
             rstate.replace_with(|state| std::mem::take(state).whnf(sig));
             // TODO: match pattern with state, not term!
             pat.match_term(Term::from(rstate.borrow().clone()), sig, &mut subst)?;
         }
-        let subst: Option<_> = (0..self.ctx.len())
-            .map(|i| subst.get(&Miller(i)))
-            .collect();
-        Some(self.rhs.clone().psubst2(subst?))
+        let subst: Option<_> = subst.into_iter().collect();
+        Some(self.rhs.clone().psubst2(&subst?))
     }
 }
 impl lazy_st::Evaluate<Term> for RState {

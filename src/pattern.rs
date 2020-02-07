@@ -36,7 +36,6 @@ impl std::fmt::Display for Pattern {
 }
 
 pub type Arity = usize;
-pub type Subst = HashMap<Miller, Term>;
 
 // Taken from:
 // https://stackoverflow.com/questions/46766560/how-to-check-if-there-are-duplicates-in-a-slice/46767732#46767732
@@ -75,6 +74,7 @@ impl Pattern {
     }
 
     pub fn arities(&self, mvars: Vec<String>) -> Result<Vec<(String, Arity)>, Error> {
+        // TODO: use Vec instead of HashMap for arities
         let mut arities = HashMap::new();
         for (m, args) in self.mvars() {
             if !all_unique(args.clone()) {
@@ -92,7 +92,12 @@ impl Pattern {
         result.ok_or(Error::MillerUnused)
     }
 
-    pub fn match_term(&self, tm: Term, sig: &Signature, subst: &mut Subst) -> Option<()> {
+    pub fn match_term(
+        &self,
+        tm: Term,
+        sig: &Signature,
+        subst: &mut Vec<Option<Term>>,
+    ) -> Option<()> {
         match self {
             Self::Symb(sp, pats) => {
                 let (st, tms) = tm.whnf(sig).get_symb_appl()?;
@@ -108,9 +113,13 @@ impl Pattern {
             Self::MVar(x, dbs) => {
                 if dbs.is_empty() {
                     // TODO: what if tm is not closed?
-                    match subst.insert(*x, tm) {
-                        None => Some(()),
-                        Some(_) => None,
+                    let y = subst.get_mut(x.0).expect("subst");
+                    match y {
+                        None => {
+                            *y = Some(tm);
+                            Some(())
+                        }
+                        Some(_) => panic!("nonlinearity"),
                     }
                 } else {
                     unimplemented!()

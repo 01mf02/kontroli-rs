@@ -3,6 +3,7 @@ use crate::term::{Arg, Term};
 use std::rc::Rc;
 
 pub struct Rule {
+    // TODO: save ctx as Stack?
     pub ctx: Vec<(String, Arity)>,
     pub symbol: Rc<String>,
     pub args: Vec<Pattern>,
