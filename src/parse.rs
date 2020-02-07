@@ -111,7 +111,7 @@ fn term(i: &[u8]) -> Parse<Term> {
 
 fn dcommand(i: &[u8]) -> Parse<Command> {
     use Command::DCmd;
-    use DCommand::*;
+    use GDCommand::*;
 
     alt((
         preceded(
