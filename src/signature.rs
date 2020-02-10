@@ -8,7 +8,6 @@ use std::rc::Rc;
 
 pub struct SymInfo {
     stat: Staticity,
-    pub symbol: Rc<String>,
     pub typ: Term,
     pub rules: Vec<Rule>,
 }
@@ -49,7 +48,6 @@ impl From<(&String, Entry)> for SymInfo {
             Entry::Declaration(stat, typ) => {
                 let rules = Vec::new();
                 SymInfo {
-                    symbol,
                     stat,
                     typ,
                     rules,
@@ -72,7 +70,6 @@ impl From<(&String, Entry)> for SymInfo {
                     }]
                 };
                 SymInfo {
-                    symbol,
                     stat,
                     typ,
                     rules,
