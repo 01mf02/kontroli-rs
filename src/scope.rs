@@ -69,8 +69,8 @@ impl Prearg {
 
 impl PreDCommand {
     pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<DCommand, Error> {
-        self.map_type_err(|tm| Ok(Box::new(tm.scope(syms, bnd)?)))?
-            .map_term_err(|tm| Ok(Box::new(tm.scope(syms, bnd)?)))
+        self.map_type_err(|tm| Ok(tm.scope(syms, bnd)?))?
+            .map_term_err(|tm| Ok(tm.scope(syms, bnd)?))
     }
 }
 

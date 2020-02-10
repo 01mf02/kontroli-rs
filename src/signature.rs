@@ -1,7 +1,7 @@
 use crate::command::DCommand;
 use crate::rule::Rule;
 use crate::symbol::Symbol;
-use crate::term::{BTerm, Term};
+use crate::term::Term;
 use crate::typing::{Context, Error};
 use fnv::FnvHashMap;
 
@@ -78,15 +78,15 @@ impl Entry {
     pub fn define(
         sig: &Signature,
         opaque: bool,
-        oty: Option<BTerm>,
+        oty: Option<Term>,
         tm: Term,
     ) -> Result<Self, Error> {
         let ty = match oty {
             None => tm.infer(&sig, &mut Context::new())?,
             Some(ty) => {
                 let _ = ty.infer(&sig, &mut Context::new())?;
-                tm.check(&sig, &mut Context::new(), *ty.clone())?;
-                *ty
+                tm.check(&sig, &mut Context::new(), ty.clone())?;
+                ty
             }
         };
         match ty {
@@ -99,13 +99,13 @@ impl Entry {
 impl Entry {
     pub fn new(dcmd: DCommand, sig: &Signature) -> Result<Self, Error> {
         match dcmd {
-            DCommand::Declaration(ty) => Self::declare(&sig, Staticity::Static, *ty),
+            DCommand::Declaration(ty) => Self::declare(&sig, Staticity::Static, ty),
             DCommand::Definition(oty, otm) => match (oty, otm) {
-                (Some(ty), None) => Self::declare(&sig, Staticity::Definable, *ty),
-                (oty, Some(tm)) => Self::define(&sig, false, oty, *tm),
+                (Some(ty), None) => Self::declare(&sig, Staticity::Definable, ty),
+                (oty, Some(tm)) => Self::define(&sig, false, oty, tm),
                 (None, None) => panic!("both type and term are empty"),
             },
-            DCommand::Theorem(ty, tm) => Self::define(&sig, true, Some(ty), *tm),
+            DCommand::Theorem(ty, tm) => Self::define(&sig, true, Some(ty), tm),
         }
     }
 }
