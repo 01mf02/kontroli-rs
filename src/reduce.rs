@@ -14,45 +14,61 @@ type Context = stack::Stack<Rc<Thunk<RState, Term>>>;
 type Stack = stack::Stack<RState>;
 
 #[derive(Clone, Default)]
-pub struct State(Context, Term, Stack);
+pub struct State {
+    ctx: Context,
+    term: Term,
+    stack: Stack,
+}
 
 impl State {
-    pub fn new(tm: Term) -> Self {
-        State(Context::new(), tm, Stack::new())
+    pub fn new(term: Term) -> Self {
+        State {
+            ctx: Context::new(),
+            term,
+            stack: Stack::new(),
+        }
     }
 
     pub fn whnf(self, sig: &Signature) -> Self {
         use Term::*;
-        let State(mut ctx, mut tm, mut stack) = self;
+        let State {
+            mut ctx,
+            mut term,
+            mut stack,
+        } = self;
         loop {
-            trace!("whnf: {}", tm);
-            match tm {
+            trace!("whnf: {}", term);
+            match term {
                 Type | Kind | Prod(_, _) => break,
                 BVar(x) => match ctx.get(x) {
                     Some(ctm) => {
-                        tm = (**ctm).clone();
+                        term = (**ctm).clone();
                         ctx.clear()
                     }
                     None => {
-                        tm = BVar(x - ctx.len());
+                        term = BVar(x - ctx.len());
                         ctx.clear();
                         break;
                     }
                 },
                 Abst(a, t) => match stack.pop() {
                     None => {
-                        tm = Abst(a, t);
+                        term = Abst(a, t);
                         break;
                     }
                     Some(p) => {
-                        tm = *t;
+                        term = *t;
                         ctx.push(Rc::new(Thunk::new(p)));
                     }
                 },
                 Appl(head, tail) => {
-                    tm = *head;
+                    term = *head;
                     for t in tail.into_iter().rev() {
-                        let st = State(ctx.clone(), t, Stack::new());
+                        let st = State {
+                            ctx: ctx.clone(),
+                            term: t,
+                            stack: Stack::new(),
+                        };
                         stack.push(Rc::new(RefCell::new(st)))
                     }
                 }
@@ -64,12 +80,12 @@ impl State {
                         .next()
                     {
                         None => {
-                            tm = Symb(s);
+                            term = Symb(s);
                             break;
                         }
                         Some((subst, rule)) => {
                             trace!("rewrite: {} ... ⟶ {}", s, rule);
-                            tm = rule.rhs.clone();
+                            term = rule.rhs.clone();
                             for i in subst.into_iter().rev() {
                                 ctx.push(Rc::new(Thunk::new(i)))
                             }
@@ -80,7 +96,7 @@ impl State {
             }
         }
 
-        State(ctx, tm, stack)
+        State { ctx, term, stack }
     }
 }
 
@@ -131,10 +147,10 @@ impl Pattern {
             Self::Symb(sp, pats) => {
                 rstate.replace_with(|state| std::mem::take(state).whnf(sig));
                 let state = rstate.borrow();
-                match &state.1 {
+                match &state.term {
                     Term::Symb(st) => {
-                        if sp == st && state.2.len() >= pats.len() {
-                            for (pat, rst) in pats.iter().zip(state.2.clone()) {
+                        if sp == st && state.stack.len() >= pats.len() {
+                            for (pat, rst) in pats.iter().zip(state.stack.clone()) {
                                 pat.match_state(rst, sig, subst)?;
                             }
                             Some(())
@@ -186,9 +202,11 @@ impl From<RState> for Term {
 }
 
 impl From<State> for Term {
-    fn from(State(ctx, tm, stack): State) -> Self {
-        tm.psubst(&ctx)
-            .apply(stack.into_iter().map(Term::from).collect())
+    fn from(state: State) -> Self {
+        state
+            .term
+            .psubst(&state.ctx)
+            .apply(state.stack.into_iter().map(Term::from).collect())
     }
 }
 
