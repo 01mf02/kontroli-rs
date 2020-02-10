@@ -85,7 +85,7 @@ impl Term {
         self.apply_subst(&psubst(args), 0)
     }
 
-    pub fn psubst2(self, args: &Vec<Term>) -> Term {
+    pub fn psubst2(self, args: &[Term]) -> Term {
         self.apply_subst(&psubst2(args), 0)
     }
 }
@@ -120,7 +120,7 @@ impl Rule {
             // TODO: match pattern with state, not term!
             pat.match_term(Term::from(rstate.borrow().clone()), sig, &mut subst)?;
         }
-        let subst: Option<_> = subst.into_iter().collect();
+        let subst: Option<Vec<_>> = subst.into_iter().collect();
         Some(self.rhs.clone().psubst2(&subst?))
     }
 }
