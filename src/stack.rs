@@ -1,3 +1,5 @@
+use std::iter::FromIterator;
+
 #[derive(Clone, Debug)]
 pub struct Stack<A>(Vec<A>);
 
@@ -67,5 +69,11 @@ impl<A> IntoIterator for Stack<A> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter().rev()
+    }
+}
+
+impl<A> FromIterator<A> for Stack<A> {
+    fn from_iter<I: IntoIterator<Item = A>>(iter: I) -> Self {
+        Stack(Vec::from_iter(iter))
     }
 }
