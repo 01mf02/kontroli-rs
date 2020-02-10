@@ -1,5 +1,4 @@
 use crate::rule::Error;
-use crate::signature::Signature;
 use crate::symbol::Symbol;
 use crate::term::{fmt_appl, DeBruijn, Term};
 use std::collections::HashMap;
@@ -91,42 +90,5 @@ impl Pattern {
             .map(|(i, x)| Some((x, *arities.get(&Miller(i))?)))
             .collect();
         result.ok_or(Error::MillerUnused)
-    }
-
-    pub fn match_term(
-        &self,
-        tm: Term,
-        sig: &Signature,
-        subst: &mut Vec<Option<Term>>,
-    ) -> Option<()> {
-        match self {
-            Self::Symb(sp, pats) => {
-                let (st, tms) = tm.whnf(sig).get_symb_appl()?;
-                if *sp == st && tms.len() >= pats.len() {
-                    for (pat, tm) in pats.iter().zip(tms) {
-                        pat.match_term(tm, sig, subst)?;
-                    }
-                    Some(())
-                } else {
-                    None
-                }
-            }
-            Self::MVar(x, dbs) => {
-                if dbs.is_empty() {
-                    // TODO: what if tm is not closed?
-                    let y = subst.get_mut(x.0).expect("subst");
-                    match y {
-                        None => {
-                            *y = Some(tm);
-                            Some(())
-                        }
-                        Some(_) => panic!("nonlinearity"),
-                    }
-                } else {
-                    unimplemented!()
-                }
-            }
-            _ => unimplemented!(),
-        }
     }
 }

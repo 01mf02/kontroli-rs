@@ -1,3 +1,4 @@
+use crate::pattern::Pattern;
 use crate::rule::Rule;
 use crate::signature::Signature;
 use crate::stack;
@@ -20,7 +21,7 @@ impl State {
         State(Context::new(), tm, Stack::new())
     }
 
-    pub fn whnf(self, sig: &Signature) -> State {
+    pub fn whnf(self, sig: &Signature) -> Self {
         use Term::*;
         let State(mut ctx, mut tm, mut stack) = self;
         loop {
@@ -59,17 +60,20 @@ impl State {
                     let rules = &sig.get(&s).expect("symbol info").rules;
                     match rules
                         .iter()
-                        .filter_map(|r| Some((r.match_stack(&stack, sig)?, r.args.len())))
+                        .filter_map(|r| Some((r.match_stack(&stack, sig)?, r)))
                         .next()
                     {
                         None => {
                             tm = Symb(s);
                             break;
                         }
-                        Some((rhs, consumed)) => {
-                            trace!("rewrite: {} ... ⟶ {}", s, rhs);
-                            tm = rhs;
-                            stack.pop_many(consumed)
+                        Some((subst, rule)) => {
+                            trace!("rewrite: {} ... ⟶ {}", s, rule);
+                            tm = rule.rhs.clone();
+                            for i in subst.into_iter().rev() {
+                                ctx.push(Rc::new(Thunk::new(i)))
+                            }
+                            stack.pop_many(rule.args.len());
                         }
                     }
                 }
@@ -116,16 +120,57 @@ fn psubst2(args: &[Term]) -> impl Fn(usize, usize) -> Term + '_ {
     }
 }
 
+impl Pattern {
+    fn match_state(
+        &self,
+        rstate: RState,
+        sig: &Signature,
+        subst: &mut Vec<Option<RState>>,
+    ) -> Option<()> {
+        match self {
+            Self::Symb(sp, pats) => {
+                rstate.replace_with(|state| std::mem::take(state).whnf(sig));
+                let state = rstate.borrow();
+                match &state.1 {
+                    Term::Symb(st) => {
+                        if sp == st && state.2.len() >= pats.len() {
+                            for (pat, rst) in pats.iter().zip(state.2.clone()) {
+                                pat.match_state(rst, sig, subst)?;
+                            }
+                            Some(())
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            Self::MVar(m, dbs) => {
+                if dbs.is_empty() {
+                    let y = subst.get_mut(m.0).expect("subst");
+                    match y {
+                        None => {
+                            *y = Some(rstate);
+                            Some(())
+                        }
+                        Some(_) => panic!("nonlinearity"),
+                    }
+                } else {
+                    todo!()
+                }
+            }
+            _ => todo!(),
+        }
+    }
+}
+
 impl Rule {
-    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Term> {
+    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RState>> {
         let mut subst = vec![None; self.ctx.len()];
         for (pat, rstate) in self.args.iter().zip(stack.iter()) {
-            rstate.replace_with(|state| std::mem::take(state).whnf(sig));
-            // TODO: match pattern with state, not term!
-            pat.match_term(Term::from(rstate.borrow().clone()), sig, &mut subst)?;
+            pat.match_state(rstate.clone(), sig, &mut subst)?;
         }
-        let subst: Option<Vec<_>> = subst.into_iter().collect();
-        Some(self.rhs.clone().psubst2(&subst?))
+        subst.into_iter().collect()
     }
 }
 impl lazy_st::Evaluate<Term> for RState {
