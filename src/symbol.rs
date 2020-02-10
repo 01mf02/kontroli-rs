@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Result};
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -25,8 +25,8 @@ impl PartialEq for Symbol {
 
 impl Eq for Symbol {}
 
-impl Display for Symbol {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
 }

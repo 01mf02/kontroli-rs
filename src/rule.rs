@@ -1,6 +1,7 @@
 use crate::pattern::{Arity, Pattern};
 use crate::symbol::Symbol;
 use crate::term::{Arg, Term};
+use std::fmt;
 
 pub struct Rule {
     // TODO: save ctx as Stack?
@@ -10,8 +11,8 @@ pub struct Rule {
     pub rhs: Term,
 }
 
-impl std::fmt::Display for Rule {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Rule {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let pat = Pattern::Symb(self.symbol.clone(), self.args.clone());
         write!(f, "{} ⟶ {}", &pat, self.rhs)
     }
@@ -26,8 +27,8 @@ pub enum Error {
     NotEnoughArguments,
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "rule error")
     }
 }

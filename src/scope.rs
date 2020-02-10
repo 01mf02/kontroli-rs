@@ -6,6 +6,7 @@ use crate::stack::Stack;
 use crate::symbol::Symbol;
 use crate::term::{Arg, Term};
 use fnv::FnvHashMap;
+use std::fmt;
 
 pub type Symbols = FnvHashMap<String, Symbol>;
 
@@ -81,8 +82,8 @@ pub enum Error {
     Redeclaration,
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "scoping error")
     }
 }

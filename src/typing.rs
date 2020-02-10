@@ -1,6 +1,7 @@
 use crate::reduce;
 use crate::signature::Signature;
 use crate::term::{Arg, Term};
+use std::fmt;
 
 // DB -> type
 pub type Context = crate::stack::Stack<Term>;
@@ -28,8 +29,8 @@ impl Context {
     }
 }
 
-impl std::fmt::Display for Context {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
         for (i, x) in self.iter().enumerate() {
             write!(f, "{} : {}, ", Term::BVar(i), x.clone() << (i + 1))?;
@@ -49,8 +50,8 @@ pub enum Error {
     DomainFreeAbstraction,
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "typing error")
     }
 }

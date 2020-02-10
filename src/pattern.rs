@@ -3,12 +3,13 @@ use crate::signature::Signature;
 use crate::symbol::Symbol;
 use crate::term::{fmt_appl, DeBruijn, Term};
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Miller(pub usize);
 
-impl std::fmt::Display for Miller {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Miller {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "μ{}", self.0)
     }
 }
@@ -21,8 +22,8 @@ pub enum Pattern {
     BVar(DeBruijn, Vec<Pattern>),
 }
 
-impl std::fmt::Display for Pattern {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Pattern {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Symb(s, pats) => fmt_appl(&Term::Symb(s.clone()), pats, f),
             Self::BVar(x, pats) => fmt_appl(&Term::BVar(*x), pats, f),

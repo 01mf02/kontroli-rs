@@ -25,6 +25,7 @@ use crate::rule::Rule;
 use crate::scope::Symbols;
 use crate::signature::Signature;
 use nom::error::VerboseError;
+use std::fmt;
 
 #[derive(Debug)]
 enum CliError {
@@ -34,8 +35,8 @@ enum CliError {
     Rule(rule::Error),
 }
 
-impl std::fmt::Display for CliError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for CliError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Self::Io(ref err) => err.fmt(f),
             Self::Type(ref err) => err.fmt(f),

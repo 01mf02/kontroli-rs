@@ -1,5 +1,6 @@
 use crate::preterm::GArg;
 use crate::symbol::Symbol;
+use std::fmt;
 
 pub type BTerm = Box<Term>;
 
@@ -44,8 +45,8 @@ impl PartialEq for Term {
 }
 impl Eq for Term {}
 
-impl std::fmt::Display for Arg {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Arg {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.id.as_ref().unwrap_or(&"_".to_string()))?;
         if let Some(ty) = self.ty.as_ref() {
             write!(f, " : {}", ty)?;
@@ -54,10 +55,10 @@ impl std::fmt::Display for Arg {
     }
 }
 
-pub fn fmt_appl<H, T>(head: &H, tail: &[T], f: &mut std::fmt::Formatter) -> std::fmt::Result
+pub fn fmt_appl<H, T>(head: &H, tail: &[T], f: &mut fmt::Formatter) -> fmt::Result
 where
-    H: std::fmt::Display,
-    T: std::fmt::Display,
+    H: fmt::Display,
+    T: fmt::Display,
 {
     let parens = !tail.is_empty();
     if parens {
@@ -73,8 +74,8 @@ where
     Ok(())
 }
 
-impl std::fmt::Display for Term {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Term {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Kind => write!(f, "Kind"),
             Self::Type => write!(f, "Type"),
