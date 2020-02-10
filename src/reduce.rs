@@ -82,7 +82,11 @@ impl State {
 
 impl Term {
     pub fn psubst(self, args: &Context) -> Term {
-        self.apply_subst(&psubst(args), 0)
+        if args.is_empty() {
+            self
+        } else {
+            self.apply_subst(&psubst(args), 0)
+        }
     }
 
     pub fn psubst2(self, args: &[Term]) -> Term {
@@ -138,9 +142,8 @@ impl From<RState> for Term {
 
 impl From<State> for Term {
     fn from(State(ctx, tm, stack): State) -> Self {
-        let t = if ctx.is_empty() { tm } else { tm.psubst(&ctx) };
-        let args = stack.into_iter().map(Term::from).collect();
-        t.apply(args)
+        tm.psubst(&ctx)
+            .apply(stack.into_iter().map(Term::from).collect())
     }
 }
 
