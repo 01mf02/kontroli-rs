@@ -17,13 +17,13 @@ mod scope;
 mod signature;
 mod stack;
 mod subst;
+mod symbol;
 mod term;
 mod typing;
 
-use crate::prepattern::Prepattern;
 use crate::rule::Rule;
+use crate::scope::Symbols;
 use crate::signature::Signature;
-use crate::stack::Stack;
 use nom::error::VerboseError;
 use std::convert::TryFrom;
 
@@ -75,19 +75,16 @@ impl From<rule::Error> for CliError {
 impl command::Command {
     fn handle(self, sig: &mut Signature) -> Result<(), CliError> {
         match self {
-            Self::DCmd(id, args, dcmd) => {
-                println!("{}", id);
-                let dcmd = dcmd.parametrise(args).scope(sig, &mut Stack::new())?;
+            Self::DCmd(sym, dcmd) => {
+                println!("{}", sym);
                 let entry = signature::Entry::try_from((dcmd, &*sig))?;
-                if sig.insert(id, entry).is_some() {
+                // TODO: make signature use symbol
+                if sig.insert(sym.get_string(), entry).is_some() {
                     panic!("symbol redeclaration");
                 };
                 Ok(())
             }
-            Self::Rule(ctx, lhs, rhs) => {
-                let mut ctxs = Stack::from(ctx.clone());
-                let pat = Prepattern::from(*lhs).scope(sig, &ctxs, &mut Stack::new())?;
-                let rhs = rhs.scope(sig, &mut ctxs)?;
+            Self::Rule(ctx, pat, rhs) => {
                 let rule = Rule::new(ctx, pat, rhs)?;
                 sig.get_mut(&rule.symbol)
                     .expect("rule")
@@ -109,11 +106,12 @@ fn run(filename: &str) -> Result<(), CliError> {
     };
 
     let mut sig: Signature = Signature::new();
+    let mut syms: Symbols = Default::default();
 
     for entry in pb {
         let i = entry.expect("parse error");
         if let Some(cmd) = i {
-            cmd.handle(&mut sig)?;
+            cmd.scope(&mut syms)?.handle(&mut sig)?;
         }
     }
     Ok(())

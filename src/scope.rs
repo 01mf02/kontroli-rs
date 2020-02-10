@@ -1,11 +1,13 @@
-use crate::command::{DCommand, PreDCommand};
+use crate::command::{Command, DCommand, PreDCommand, Precommand};
 use crate::pattern::{Miller, Pattern};
 use crate::prepattern::Prepattern;
 use crate::preterm::{Binder, Prearg, Preterm};
-use crate::signature::Signature;
 use crate::stack::Stack;
+use crate::symbol::Symbol;
 use crate::term::{Arg, Term};
-use std::rc::Rc;
+use fnv::FnvHashMap;
+
+pub type Symbols = FnvHashMap<String, Symbol>;
 
 type Bound = Stack<String>;
 
@@ -25,26 +27,26 @@ where
 }
 
 impl Preterm {
-    pub fn scope(self, sig: &Signature, bnd: &mut Bound) -> Result<Term, Error> {
+    pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<Term, Error> {
         use Preterm::*;
         match self {
             Type => Ok(Term::Type),
             Symb(s) => match bnd.iter().position(|id| *id == *s) {
                 Some(idx) => Ok(Term::BVar(idx)),
                 None => {
-                    let entry = sig.get(&s).ok_or(Error::UndeclaredSymbol)?;
-                    let sym = Rc::clone(&entry.symbol);
-                    Ok(Term::Symb(sym))
+                    let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol)?;
+                    let sym = Symbol::clone(&entry);
+                    Ok(Term::Symb(sym.get_rc()))
                 }
             },
             Appl(head, tail) => {
-                let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scope(sig, bnd)).collect();
-                Ok(Term::Appl(Box::new(head.scope(sig, bnd)?), tail?))
+                let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scope(syms, bnd)).collect();
+                Ok(Term::Appl(Box::new(head.scope(syms, bnd)?), tail?))
             }
             Bind(binder, arg, tm) => {
-                let arg = arg.scope(sig, bnd)?;
+                let arg = arg.scope(syms, bnd)?;
                 bind(bnd, arg.id.clone(), |bnd| {
-                    let tm = Box::new(tm.scope(sig, bnd)?);
+                    let tm = Box::new(tm.scope(syms, bnd)?);
                     match binder {
                         Binder::Lam => Ok(Term::Abst(arg, tm)),
                         Binder::Pi => Ok(Term::Prod(arg, tm)),
@@ -56,19 +58,19 @@ impl Preterm {
 }
 
 impl Prearg {
-    fn scope(self, sig: &Signature, bnd: &mut Bound) -> Result<Arg, Error> {
+    fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<Arg, Error> {
         let ty = self
             .ty
-            .map(|ty| Ok(Box::new(ty.scope(sig, bnd)?)))
+            .map(|ty| Ok(Box::new(ty.scope(syms, bnd)?)))
             .transpose()?;
         Ok(Arg { id: self.id, ty })
     }
 }
 
 impl PreDCommand {
-    pub fn scope(self, sig: &Signature, bnd: &mut Bound) -> Result<DCommand, Error> {
-        self.map_type_err(|tm| Ok(Box::new(tm.scope(sig, bnd)?)))?
-            .map_term_err(|tm| Ok(Box::new(tm.scope(sig, bnd)?)))
+    pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<DCommand, Error> {
+        self.map_type_err(|tm| Ok(Box::new(tm.scope(syms, bnd)?)))?
+            .map_term_err(|tm| Ok(Box::new(tm.scope(syms, bnd)?)))
     }
 }
 
@@ -76,6 +78,7 @@ impl PreDCommand {
 pub enum Error {
     UndeclaredSymbol,
     MillerPattern,
+    Redeclaration,
 }
 
 impl std::fmt::Display for Error {
@@ -85,12 +88,14 @@ impl std::fmt::Display for Error {
 }
 
 impl Prepattern {
-    pub fn scope(self, sig: &Signature, mvar: &Bound, bvar: &mut Bound) -> Result<Pattern, Error> {
+    pub fn scope(self, syms: &Symbols, mvar: &Bound, bvar: &mut Bound) -> Result<Pattern, Error> {
         use Prepattern::*;
         match self {
             Symb(s, args) => {
-                let args: Result<_, _> =
-                    args.into_iter().map(|a| a.scope(sig, mvar, bvar)).collect();
+                let args: Result<_, _> = args
+                    .into_iter()
+                    .map(|a| a.scope(syms, mvar, bvar))
+                    .collect();
                 match bvar.iter().position(|id| *id == *s) {
                     Some(idx) => Ok(Pattern::BVar(idx, args?)),
                     None => match mvar.iter().position(|id| *id == *s) {
@@ -102,16 +107,38 @@ impl Prepattern {
                             Ok(Pattern::MVar(Miller(idx), args?))
                         }
                         None => {
-                            let entry = sig.get(&s).ok_or(Error::UndeclaredSymbol)?;
-                            let sym = Rc::clone(&entry.symbol);
-                            Ok(Pattern::Symb(sym, args?))
+                            let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol)?;
+                            let sym = Symbol::clone(&entry);
+                            // TODO: make pattern use symbol
+                            Ok(Pattern::Symb(sym.get_rc(), args?))
                         }
                     },
                 }
             }
             Abst(arg, pat) => bind(bvar, arg.clone(), |bvar| {
-                Ok(Pattern::Abst(arg, Box::new(pat.scope(sig, mvar, bvar)?)))
+                Ok(Pattern::Abst(arg, Box::new(pat.scope(syms, mvar, bvar)?)))
             }),
+        }
+    }
+}
+
+impl Precommand {
+    pub fn scope(self, syms: &mut Symbols) -> Result<Command, Error> {
+        match self {
+            Self::DCmd(id, args, dcmd) => {
+                let dcmd = dcmd.parametrise(args).scope(syms, &mut Stack::new())?;
+                let sym = Symbol::new(id.clone());
+                if syms.insert(id, Symbol::clone(&sym)).is_some() {
+                    return Err(Error::Redeclaration);
+                };
+                Ok(Command::DCmd(sym, dcmd))
+            }
+            Self::Rule(ctx, lhs, rhs) => {
+                let mut ctxs = Stack::from(ctx.clone());
+                let pat = Prepattern::from(*lhs).scope(syms, &ctxs, &mut Stack::new())?;
+                let rhs = rhs.scope(syms, &mut ctxs)?;
+                Ok(Command::Rule(ctx, pat, rhs))
+            }
         }
     }
 }

@@ -1,14 +1,22 @@
-use crate::preterm::{BPreterm, Prearg, Preterm};
+use crate::pattern::Pattern;
+use crate::preterm::{BPreterm, Prearg};
+use crate::symbol::Symbol;
+use crate::term::Term;
 use crate::term::*;
 
 #[derive(Debug, Clone)]
-pub enum Command {
+pub enum Precommand {
     DCmd(String, Vec<Prearg>, PreDCommand),
     Rule(Vec<String>, BPreterm, BPreterm),
 }
 
+pub enum Command {
+    DCmd(Symbol, DCommand),
+    Rule(Vec<String>, Pattern, Term),
+}
+
 pub type DCommand = GDCommand<BTerm, BTerm>;
-pub type PreDCommand = GDCommand<Box<Preterm>, Box<Preterm>>;
+pub type PreDCommand = GDCommand<BPreterm, BPreterm>;
 
 #[derive(Debug, Clone)]
 pub enum GDCommand<Ty, Tm> {

@@ -10,7 +10,7 @@ use nom::{
     IResult,
 };
 
-use crate::command::{Command, GDCommand};
+use crate::command::{GDCommand, Precommand};
 use crate::preterm::{BPreterm, Binder, Prearg, Preterm};
 
 type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
@@ -56,7 +56,7 @@ fn sterm(i: &[u8]) -> Parse<Preterm> {
     alt((
         parens(term),
         value(Preterm::Type, tag("Type")),
-        map(ident, |id| Preterm::Symb(id)),
+        map(ident, Preterm::Symb),
     ))(i)
 }
 
@@ -110,9 +110,9 @@ fn term(i: &[u8]) -> Parse<Preterm> {
     alt((bind, appl))(i)
 }
 
-fn dcommand(i: &[u8]) -> Parse<Command> {
-    use Command::DCmd;
+fn dcommand(i: &[u8]) -> Parse<Precommand> {
     use GDCommand::*;
+    use Precommand::DCmd;
 
     alt((
         preceded(
@@ -146,7 +146,7 @@ fn dcommand(i: &[u8]) -> Parse<Command> {
     ))(i)
 }
 
-fn rule(i: &[u8]) -> Parse<Command> {
+fn rule(i: &[u8]) -> Parse<Precommand> {
     map(
         tuple((
             preceded(
@@ -160,16 +160,16 @@ fn rule(i: &[u8]) -> Parse<Command> {
             lexeme(tag("-->")),
             lexeme(term),
         )),
-        |(vars, lhs, _, rhs)| Command::Rule(vars, Box::new(lhs), Box::new(rhs)),
+        |(vars, lhs, _, rhs)| Precommand::Rule(vars, Box::new(lhs), Box::new(rhs)),
     )(i)
 }
 
-fn command(i: &[u8]) -> Parse<Command> {
+fn command(i: &[u8]) -> Parse<Precommand> {
     alt((dcommand, rule))(i)
 }
 
 // parse whitespace or commands
-pub fn parse_toplevel(i: &[u8]) -> Parse<Option<Command>> {
+pub fn parse_toplevel(i: &[u8]) -> Parse<Option<Precommand>> {
     alt((
         value(None, nom::character::complete::multispace1),
         value(None, comment),
