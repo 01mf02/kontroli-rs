@@ -36,7 +36,7 @@ impl Preterm {
                 None => {
                     let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol)?;
                     let sym = Symbol::clone(&entry);
-                    Ok(Term::Symb(sym.get_rc()))
+                    Ok(Term::Symb(sym))
                 }
             },
             Appl(head, tail) => {
@@ -109,8 +109,7 @@ impl Prepattern {
                         None => {
                             let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol)?;
                             let sym = Symbol::clone(&entry);
-                            // TODO: make pattern use symbol
-                            Ok(Pattern::Symb(sym.get_rc(), args?))
+                            Ok(Pattern::Symb(sym, args?))
                         }
                     },
                 }

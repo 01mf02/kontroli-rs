@@ -1,5 +1,5 @@
 use crate::preterm::GArg;
-use std::rc::Rc;
+use crate::symbol::Symbol;
 
 pub type BTerm = Box<Term>;
 
@@ -11,7 +11,7 @@ pub type DeBruijn = usize;
 pub enum Term {
     Kind,
     Type,
-    Symb(Rc<String>),
+    Symb(Symbol),
     BVar(DeBruijn),
     Appl(BTerm, Vec<Term>),
     Abst(Arg, BTerm),
@@ -29,7 +29,7 @@ impl PartialEq for Term {
         use Term::*;
         match (self, other) {
             (Kind, Kind) | (Type, Type) => true,
-            (Symb(s1), Symb(s2)) => Rc::ptr_eq(s1, s2),
+            (Symb(s1), Symb(s2)) => s1 == s2,
             (BVar(x1), BVar(x2)) => x1 == x2,
             (Appl(f1, args1), Appl(f2, args2)) => {
                 f1 == f2
@@ -102,7 +102,7 @@ impl Term {
         }
     }
 
-    pub fn get_symb_appl(self) -> Option<(Rc<String>, Vec<Self>)> {
+    pub fn get_symb_appl(self) -> Option<(Symbol, Vec<Self>)> {
         match self {
             Self::Symb(s) => Some((s, Vec::new())),
             Self::Appl(head, args) => match *head {

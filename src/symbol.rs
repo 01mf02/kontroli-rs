@@ -9,16 +9,6 @@ impl Symbol {
     pub fn new(s: String) -> Self {
         Self(Rc::new(s))
     }
-
-    // TODO: remove
-    pub fn get_rc(self) -> Rc<String> {
-        self.0
-    }
-
-    // TODO: remove
-    pub fn get_string(self) -> String {
-        (*self.0).clone()
-    }
 }
 
 impl Hash for Symbol {

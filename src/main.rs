@@ -25,7 +25,6 @@ use crate::rule::Rule;
 use crate::scope::Symbols;
 use crate::signature::Signature;
 use nom::error::VerboseError;
-use std::convert::TryFrom;
 
 #[derive(Debug)]
 enum CliError {
@@ -77,9 +76,9 @@ impl command::Command {
         match self {
             Self::DCmd(sym, dcmd) => {
                 println!("{}", sym);
-                let entry = signature::Entry::try_from((dcmd, &*sig))?;
-                // TODO: make signature use symbol
-                if sig.insert(sym.get_string(), entry).is_some() {
+                let entry = signature::Entry::new(dcmd, &*sig)?;
+                let info = signature::SymInfo::new(&sym, entry);
+                if sig.insert(sym, info).is_some() {
                     panic!("symbol redeclaration");
                 };
                 Ok(())
@@ -105,7 +104,7 @@ fn run(filename: &str) -> Result<(), CliError> {
         fail: |e: nom::Err<VerboseError<&[u8]>>| format!("{:#?}", e),
     };
 
-    let mut sig: Signature = Signature::new();
+    let mut sig: Signature = Default::default();
     let mut syms: Symbols = Default::default();
 
     for entry in pb {

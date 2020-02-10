@@ -1,8 +1,8 @@
 use crate::rule::Error;
 use crate::signature::Signature;
+use crate::symbol::Symbol;
 use crate::term::{fmt_appl, DeBruijn, Term};
 use std::collections::HashMap;
-use std::rc::Rc;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Miller(pub usize);
@@ -17,7 +17,7 @@ impl std::fmt::Display for Miller {
 pub enum Pattern {
     MVar(Miller, Vec<DeBruijn>),
     Abst(Option<String>, Box<Pattern>),
-    Symb(Rc<String>, Vec<Pattern>),
+    Symb(Symbol, Vec<Pattern>),
     BVar(DeBruijn, Vec<Pattern>),
 }
 
@@ -56,7 +56,7 @@ impl Pattern {
         }
     }
 
-    pub fn get_symb_appl(self) -> Option<(Rc<String>, Vec<Pattern>)> {
+    pub fn get_symb_appl(self) -> Option<(Symbol, Vec<Pattern>)> {
         match self {
             Pattern::Symb(s, args) => Some((s, args)),
             _ => None,

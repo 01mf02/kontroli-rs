@@ -1,10 +1,11 @@
 use crate::command::DCommand;
 use crate::rule::Rule;
+use crate::symbol::Symbol;
 use crate::term::{BTerm, Term};
 use crate::typing::{Context, Error};
 use fnv::FnvHashMap;
-use std::convert::TryFrom;
-use std::rc::Rc;
+
+pub type Signature = FnvHashMap<Symbol, SymInfo>;
 
 pub struct SymInfo {
     stat: Staticity,
@@ -24,10 +25,6 @@ impl SymInfo {
     }
 }
 
-// symbol -> type
-#[derive(Default)]
-pub struct Signature(FnvHashMap<String, SymInfo>);
-
 #[derive(Clone, Debug)]
 pub enum Staticity {
     Static,
@@ -41,17 +38,12 @@ pub enum Entry {
     Definition(Opacity, Term, Term),
 }
 
-impl From<(&String, Entry)> for SymInfo {
-    fn from((id, e): (&String, Entry)) -> Self {
-        let symbol = Rc::new(id.clone());
+impl SymInfo {
+    pub fn new(sym: &Symbol, e: Entry) -> Self {
         match e {
             Entry::Declaration(stat, typ) => {
                 let rules = Vec::new();
-                SymInfo {
-                    stat,
-                    typ,
-                    rules,
-                }
+                SymInfo { stat, typ, rules }
             }
             Entry::Definition(opaque, typ, tm) => {
                 let stat = if opaque {
@@ -63,17 +55,13 @@ impl From<(&String, Entry)> for SymInfo {
                     Vec::new()
                 } else {
                     vec![Rule {
+                        symbol: Symbol::clone(sym),
                         ctx: Vec::new(),
-                        symbol: Rc::clone(&symbol),
                         args: Vec::new(),
                         rhs: tm,
                     }]
                 };
-                SymInfo {
-                    stat,
-                    typ,
-                    rules,
-                }
+                SymInfo { stat, typ, rules }
             }
         }
     }
@@ -108,10 +96,8 @@ impl Entry {
     }
 }
 
-impl TryFrom<(DCommand, &Signature)> for Entry {
-    type Error = Error;
-
-    fn try_from((dcmd, sig): (DCommand, &Signature)) -> Result<Self, Self::Error> {
+impl Entry {
+    pub fn new(dcmd: DCommand, sig: &Signature) -> Result<Self, Error> {
         match dcmd {
             DCommand::Declaration(ty) => Self::declare(&sig, Staticity::Static, *ty),
             DCommand::Definition(oty, otm) => match (oty, otm) {
@@ -121,24 +107,5 @@ impl TryFrom<(DCommand, &Signature)> for Entry {
             },
             DCommand::Theorem(ty, tm) => Self::define(&sig, true, Some(ty), *tm),
         }
-    }
-}
-
-impl Signature {
-    pub fn new() -> Self {
-        Default::default()
-    }
-
-    pub fn get(&self, id: &str) -> Option<&SymInfo> {
-        self.0.get(id)
-    }
-
-    pub fn get_mut(&mut self, id: &str) -> Option<&mut SymInfo> {
-        self.0.get_mut(id)
-    }
-
-    pub fn insert(&mut self, id: String, entry: Entry) -> Option<SymInfo> {
-        let info = SymInfo::from((&id, entry));
-        self.0.insert(id, info)
     }
 }
