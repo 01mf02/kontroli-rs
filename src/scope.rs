@@ -90,6 +90,10 @@ impl fmt::Display for Error {
 impl Prepattern {
     pub fn scope(self, syms: &Symbols, mvar: &Bound, bvar: &mut Bound) -> Result<Pattern, Error> {
         match self {
+            Self::Symb(s, args) if s == "_" => {
+                assert!(args.is_empty());
+                Ok(Pattern::Joker)
+            }
             Self::Symb(s, args) => {
                 let args: Result<_, _> = args
                     .into_iter()

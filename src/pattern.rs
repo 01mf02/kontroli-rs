@@ -19,6 +19,7 @@ pub enum Pattern {
     Abst(Option<String>, Box<Pattern>),
     Symb(Symbol, Vec<Pattern>),
     BVar(DeBruijn, Vec<Pattern>),
+    Joker,
 }
 
 impl fmt::Display for Pattern {
@@ -31,6 +32,7 @@ impl fmt::Display for Pattern {
                 fmt_appl(m, &tail, f)
             }
             Self::Abst(arg, tm) => unimplemented!(),
+            Self::Joker => write!(f, "_"),
         }
     }
 }
@@ -70,6 +72,7 @@ impl Pattern {
             Self::Symb(_, pats) | Self::BVar(_, pats) => {
                 Box::new(pats.iter().map(|p| p.mvars()).flatten())
             }
+            Self::Joker => Box::new(std::iter::empty()),
         }
     }
 

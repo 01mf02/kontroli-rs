@@ -174,7 +174,8 @@ impl Pattern {
                 } else {
                     todo!()
                 }
-            }
+            },
+            Self::Joker => Some(()),
             _ => todo!(),
         }
     }
