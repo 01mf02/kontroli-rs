@@ -29,10 +29,9 @@ where
 
 impl Preterm {
     pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<Term, Error> {
-        use Preterm::*;
         match self {
-            Type => Ok(Term::Type),
-            Symb(s) => match bnd.iter().position(|id| *id == *s) {
+            Self::Type => Ok(Term::Type),
+            Self::Symb(s) => match bnd.iter().position(|id| *id == *s) {
                 Some(idx) => Ok(Term::BVar(idx)),
                 None => {
                     let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
@@ -40,11 +39,11 @@ impl Preterm {
                     Ok(Term::Symb(sym))
                 }
             },
-            Appl(head, tail) => {
+            Self::Appl(head, tail) => {
                 let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scope(syms, bnd)).collect();
                 Ok(Term::Appl(Box::new(head.scope(syms, bnd)?), tail?))
             }
-            Bind(binder, arg, tm) => {
+            Self::Bind(binder, arg, tm) => {
                 let arg = arg.scope(syms, bnd)?;
                 bind(bnd, arg.id.clone(), |bnd| {
                     let tm = Box::new(tm.scope(syms, bnd)?);
@@ -90,9 +89,8 @@ impl fmt::Display for Error {
 
 impl Prepattern {
     pub fn scope(self, syms: &Symbols, mvar: &Bound, bvar: &mut Bound) -> Result<Pattern, Error> {
-        use Prepattern::*;
         match self {
-            Symb(s, args) => {
+            Self::Symb(s, args) => {
                 let args: Result<_, _> = args
                     .into_iter()
                     .map(|a| a.scope(syms, mvar, bvar))
@@ -115,7 +113,7 @@ impl Prepattern {
                     },
                 }
             }
-            Abst(arg, pat) => bind(bvar, arg.clone(), |bvar| {
+            Self::Abst(arg, pat) => bind(bvar, arg.clone(), |bvar| {
                 Ok(Pattern::Abst(arg, Box::new(pat.scope(syms, mvar, bvar)?)))
             }),
         }
