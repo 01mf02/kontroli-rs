@@ -99,7 +99,7 @@ impl command::Command {
 fn run(filename: &str) -> Result<(), CliError> {
     use parsebuffer::ParseBuffer;
     let pb: ParseBuffer<_, _, _> = ParseBuffer {
-        buf: circular::Buffer::with_capacity(1024 * 1024),
+        buf: circular::Buffer::with_capacity(64* 1024 * 1024),
         read: std::fs::File::open(filename)?,
         parse: parse::parse_toplevel,
         fail: |e: nom::Err<VerboseError<&[u8]>>| format!("{:#?}", e),
