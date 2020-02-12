@@ -42,8 +42,9 @@ fn bracket_ident(i: &[u8]) -> Parse<&[u8]> {
 }
 
 fn normal_ident(i: &[u8]) -> Parse<&[u8]> {
-    // 0x5F is '_'
-    take_while1(|c| is_alphanumeric(c) || c == 0x5F)(i)
+    // 0x27 is: '
+    // 0x5F is: _
+    take_while1(|c| is_alphanumeric(c) || c == 0x5F || c == 0x27)(i)
 }
 
 fn ident(i: &[u8]) -> Parse<String> {
