@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn terms() {
-        let pt = terminated(term, lexeme(char('.')));
+        let pt = terminated(Preterm::parse, lexeme(char('.')));
         assert!(pt(b"x.").is_ok());
         assert!(pt(b"! x -> x.").is_ok());
         assert!(pt(br"\ x => x.").is_ok());
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn commands() {
-        let pc = terminated(command, lexeme(char('.')));
+        let pc = terminated(Precommand::parse, lexeme(char('.')));
         assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.").is_ok());
         assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).".as_bytes()).is_ok());
         assert!(pc(br"def x := \ x : Type Type => {|x|}.").is_ok());
