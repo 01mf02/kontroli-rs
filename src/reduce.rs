@@ -184,23 +184,28 @@ impl Rule {
             .zip(stack.iter())
             .map(|(pat, rstate)| pat.match_state(rstate.clone(), sig))
             .flatten();
-        let mut subst = vec![None; self.ctx.len()];
+        let mut subst = vec![vec![]; self.ctx.len()];
         for i in it {
             let (m, st1) = i?;
-            let y = subst.get_mut(m.0).expect("subst");
-            match y {
-                None => *y = Some(st1),
-                // nonlinearity
-                Some(st2) => {
+            subst.get_mut(m.0).expect("subst").push(st1)
+        }
+        subst
+            .into_iter()
+            .map(|s| {
+                let mut it = s.into_iter();
+                let st1 = it.next()?;
+                for stn in it {
+                    // nonlinearity
+                    // TODO: evaluate st1 only once!
                     st1.replace_with(|state| std::mem::take(state).whnf(sig));
-                    st2.replace_with(|state| std::mem::take(state).whnf(sig));
-                    if !convertible(&sig, Term::from(st1), Term::from(st2.clone())) {
+                    stn.replace_with(|state| std::mem::take(state).whnf(sig));
+                    if !convertible(&sig, Term::from(st1.clone()), Term::from(stn.clone())) {
                         return None;
                     }
                 }
-            }
-        }
-        subst.into_iter().collect()
+                Some(st1)
+            })
+            .collect()
     }
 }
 impl lazy_st::Evaluate<Term> for RState {
