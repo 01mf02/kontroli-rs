@@ -11,7 +11,7 @@ use nom::{
 };
 
 use crate::command::{GDCommand, Precommand};
-use crate::preterm::{BPreterm, Binder, Prearg, Preterm};
+use crate::preterm::{Binder, Prearg, Preterm};
 
 type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
 
@@ -52,120 +52,148 @@ fn ident(i: &[u8]) -> Parse<String> {
     })(i)
 }
 
-fn sterm(i: &[u8]) -> Parse<Preterm> {
-    alt((
-        parens(term),
-        value(Preterm::Type, tag("Type")),
-        map(ident, Preterm::Symb),
-    ))(i)
-}
-
-fn appl(i: &[u8]) -> Parse<Preterm> {
-    map(pair(sterm, many0(lexeme(sterm))), |(head, tail)| {
-        Preterm::apply(head, tail)
-    })(i)
-}
-
 fn maybe_ident(i: &[u8]) -> Parse<Option<String>> {
     alt((map(ident, Some), value(None, char('_'))))(i)
 }
 
-fn of_term(i: &[u8]) -> Parse<BPreterm> {
-    preceded(char(':'), map(lexeme(term), Box::new))(i)
+impl Prearg {
+    fn parse(i: &[u8]) -> Parse<Self> {
+        map(pair(maybe_ident, opt(lexeme(Preterm::of))), |(id, ty)| {
+            Self { id, ty }
+        })(i)
+    }
 }
 
-fn is_term(i: &[u8]) -> Parse<BPreterm> {
-    preceded(tag(":="), map(lexeme(term), Box::new))(i)
+impl Binder {
+    fn pre(i: &[u8]) -> Parse<Self> {
+        alt((value(Self::Lam, char('\\')), value(Self::Pi, char('!'))))(i)
+    }
+
+    fn post(i: &[u8]) -> Parse<Self> {
+        alt((value(Self::Lam, tag("=>")), value(Self::Pi, tag("->"))))(i)
+    }
+
+    fn parse<'a, O1, O2, F, G>(f: F, g: G) -> impl Fn(&'a [u8]) -> Parse<(Self, O1, O2)>
+    where
+        F: Fn(&'a [u8]) -> Parse<'a, O1>,
+        G: Fn(&'a [u8]) -> Parse<'a, O2>,
+    {
+        map_opt(
+            tuple((Self::pre, lexeme(f), lexeme(Self::post), lexeme(g))),
+            |(bnd, x, arr, y)| {
+                if bnd == arr {
+                    Some((bnd, x, y))
+                } else {
+                    None
+                }
+            },
+        )
+    }
 }
 
-fn arg(i: &[u8]) -> Parse<Prearg> {
-    map(pair(maybe_ident, opt(lexeme(of_term))), |(id, ty)| Prearg {
-        id,
-        ty,
-    })(i)
+impl Preterm {
+    fn of(i: &[u8]) -> Parse<Box<Self>> {
+        preceded(char(':'), map(lexeme(Self::parse), Box::new))(i)
+    }
+
+    fn is(i: &[u8]) -> Parse<Box<Self>> {
+        preceded(tag(":="), map(lexeme(Self::parse), Box::new))(i)
+    }
+
+    fn sterm(i: &[u8]) -> Parse<Self> {
+        alt((
+            parens(Self::parse),
+            value(Self::Type, tag("Type")),
+            map(ident, Self::Symb),
+        ))(i)
+    }
+
+    fn appl(i: &[u8]) -> Parse<Self> {
+        map(
+            pair(Self::sterm, many0(lexeme(Self::sterm))),
+            |(head, tail)| Self::apply(head, tail),
+        )(i)
+    }
+
+    fn bind(i: &[u8]) -> Parse<Self> {
+        map(
+            Binder::parse(Prearg::parse, Self::parse),
+            |(bnd, arg, tm)| Self::Bind(bnd, arg, Box::new(tm)),
+        )(i)
+    }
+
+    fn parse(i: &[u8]) -> Parse<Self> {
+        alt((Self::bind, Self::appl))(i)
+    }
 }
 
-fn binder(i: &[u8]) -> Parse<Binder> {
-    alt((value(Binder::Lam, char('\\')), value(Binder::Pi, char('!'))))(i)
-}
-
-fn arrow(i: &[u8]) -> Parse<Binder> {
-    alt((value(Binder::Lam, tag("=>")), value(Binder::Pi, tag("->"))))(i)
-}
-
-fn bind(i: &[u8]) -> Parse<Preterm> {
-    map_opt(
-        tuple((binder, lexeme(arg), lexeme(arrow), lexeme(term))),
-        |(bnd, arg, arr, tm)| {
-            if bnd == arr {
-                Some(Preterm::Bind(bnd, arg, Box::new(tm)))
-            } else {
-                None
-            }
-        },
-    )(i)
-}
-
-fn term(i: &[u8]) -> Parse<Preterm> {
-    alt((bind, appl))(i)
-}
-
-fn dcommand(i: &[u8]) -> Parse<Precommand> {
-    use GDCommand::*;
-    use Precommand::DCmd;
-
-    alt((
+impl Precommand {
+    fn definition(i: &[u8]) -> Parse<Self> {
         preceded(
             tag("def"),
             map(
                 tuple((
                     lexeme(ident),
-                    many0(lexeme(parens(arg))),
-                    opt(lexeme(of_term)),
-                    opt(lexeme(is_term)),
+                    many0(lexeme(parens(Prearg::parse))),
+                    opt(lexeme(Preterm::of)),
+                    opt(lexeme(Preterm::is)),
                 )),
-                |(id, params, ty, tm)| DCmd(id, params, Definition(ty, tm)),
+                |(id, params, ty, tm)| Self::DCmd(id, params, GDCommand::Definition(ty, tm)),
             ),
-        ),
+        )(i)
+    }
+
+    fn theorem(i: &[u8]) -> Parse<Self> {
         preceded(
             tag("thm"),
             map(
                 tuple((
                     lexeme(ident),
-                    many0(lexeme(parens(arg))),
-                    lexeme(of_term),
-                    lexeme(is_term),
+                    many0(lexeme(parens(Prearg::parse))),
+                    lexeme(Preterm::of),
+                    lexeme(Preterm::is),
                 )),
-                |(id, params, ty, tm)| DCmd(id, params, Theorem(ty, tm)),
+                |(id, params, ty, tm)| Self::DCmd(id, params, GDCommand::Theorem(ty, tm)),
             ),
-        ),
+        )(i)
+    }
+
+    fn declaration(i: &[u8]) -> Parse<Self> {
         map(
-            tuple((ident, many0(lexeme(parens(arg))), lexeme(of_term))),
-            |(id, params, ty)| DCmd(id, params, Declaration(ty)),
-        ),
-    ))(i)
-}
+            tuple((
+                ident,
+                many0(lexeme(parens(Prearg::parse))),
+                lexeme(Preterm::of),
+            )),
+            |(id, params, ty)| Self::DCmd(id, params, GDCommand::Declaration(ty)),
+        )(i)
+    }
 
-fn rule(i: &[u8]) -> Parse<Precommand> {
-    map(
-        tuple((
-            preceded(
-                char('['),
-                terminated(
-                    separated_list(lexeme(char(',')), lexeme(ident)),
-                    lexeme(char(']')),
+    fn dcmd(i: &[u8]) -> Parse<Self> {
+        alt((Self::definition, Self::theorem, Self::declaration))(i)
+    }
+
+    fn rule(i: &[u8]) -> Parse<Self> {
+        map(
+            tuple((
+                preceded(
+                    char('['),
+                    terminated(
+                        separated_list(lexeme(char(',')), lexeme(ident)),
+                        lexeme(char(']')),
+                    ),
                 ),
-            ),
-            lexeme(term),
-            lexeme(tag("-->")),
-            lexeme(term),
-        )),
-        |(vars, lhs, _, rhs)| Precommand::Rule(vars, Box::new(lhs), Box::new(rhs)),
-    )(i)
-}
+                lexeme(Preterm::parse),
+                lexeme(tag("-->")),
+                lexeme(Preterm::parse),
+            )),
+            |(vars, lhs, _, rhs)| Self::Rule(vars, Box::new(lhs), Box::new(rhs)),
+        )(i)
+    }
 
-fn command(i: &[u8]) -> Parse<Precommand> {
-    alt((dcommand, rule))(i)
+    fn parse(i: &[u8]) -> Parse<Self> {
+        alt((Self::dcmd, Self::rule))(i)
+    }
 }
 
 // parse whitespace or commands
@@ -173,7 +201,7 @@ pub fn parse_toplevel(i: &[u8]) -> Parse<Option<Precommand>> {
     alt((
         value(None, nom::character::complete::multispace1),
         value(None, comment),
-        map(terminated(command, lexeme(char('.'))), Some),
+        map(terminated(Precommand::parse, lexeme(char('.'))), Some),
     ))(i)
 }
 
