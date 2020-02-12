@@ -35,7 +35,7 @@ impl Preterm {
             Symb(s) => match bnd.iter().position(|id| *id == *s) {
                 Some(idx) => Ok(Term::BVar(idx)),
                 None => {
-                    let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol)?;
+                    let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
                     let sym = Symbol::clone(&entry);
                     Ok(Term::Symb(sym))
                 }
@@ -77,7 +77,7 @@ impl PreDCommand {
 
 #[derive(Debug)]
 pub enum Error {
-    UndeclaredSymbol,
+    UndeclaredSymbol(String),
     MillerPattern,
     Redeclaration,
 }
@@ -108,7 +108,7 @@ impl Prepattern {
                             Ok(Pattern::MVar(Miller(idx), args?))
                         }
                         None => {
-                            let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol)?;
+                            let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
                             let sym = Symbol::clone(&entry);
                             Ok(Pattern::Symb(sym, args?))
                         }
