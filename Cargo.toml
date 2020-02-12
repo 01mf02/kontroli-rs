@@ -11,3 +11,6 @@ fnv = "1.0.3"
 lazy-st = { git = "https://github.com/01mf02/lazy-st", rev = "cb357e1" }
 pretty_env_logger = "0.4"
 log = "0.4.8"
+
+[profile.dev]
+opt-level = 3
