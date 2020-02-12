@@ -1,3 +1,4 @@
+use crate::pattern::Miller;
 use crate::pattern::Pattern;
 use crate::rule::Rule;
 use crate::signature::Signature;
@@ -137,12 +138,11 @@ fn psubst2(args: &[Term]) -> impl Fn(usize, usize) -> Term + '_ {
 }
 
 impl Pattern {
-    fn match_state(
-        &self,
+    fn match_state<'a>(
+        &'a self,
         rstate: RState,
-        sig: &Signature,
-        subst: &mut Vec<Option<RState>>,
-    ) -> Option<()> {
+        sig: &'a Signature,
+    ) -> Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a> {
         match self {
             Self::Symb(sp, pats) => {
                 rstate.replace_with(|state| std::mem::take(state).whnf(sig));
@@ -150,32 +150,27 @@ impl Pattern {
                 match &state.term {
                     Term::Symb(st) => {
                         if sp == st && state.stack.len() >= pats.len() {
-                            for (pat, rst) in pats.iter().zip(state.stack.clone()) {
-                                pat.match_state(rst, sig, subst)?;
-                            }
-                            Some(())
+                            Box::new(
+                                pats.iter()
+                                    .zip(state.stack.clone())
+                                    .map(move |(pat, rst)| pat.match_state(rst, sig))
+                                    .flatten(),
+                            )
                         } else {
-                            None
+                            Box::new(std::iter::once(None))
                         }
                     }
-                    _ => None,
+                    _ => Box::new(std::iter::once(None)),
                 }
             }
             Self::MVar(m, dbs) => {
                 if dbs.is_empty() {
-                    let y = subst.get_mut(m.0).expect("subst");
-                    match y {
-                        None => {
-                            *y = Some(rstate);
-                            Some(())
-                        }
-                        Some(_) => panic!("nonlinearity"),
-                    }
+                    Box::new(std::iter::once(Some((*m, rstate))))
                 } else {
                     todo!()
                 }
-            },
-            Self::Joker => Some(()),
+            }
+            Self::Joker => Box::new(std::iter::empty()),
             _ => todo!(),
         }
     }
@@ -183,9 +178,27 @@ impl Pattern {
 
 impl Rule {
     pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RState>> {
+        let it = self
+            .args
+            .iter()
+            .zip(stack.iter())
+            .map(|(pat, rstate)| pat.match_state(rstate.clone(), sig))
+            .flatten();
         let mut subst = vec![None; self.ctx.len()];
-        for (pat, rstate) in self.args.iter().zip(stack.iter()) {
-            pat.match_state(rstate.clone(), sig, &mut subst)?;
+        for i in it {
+            let (m, st1) = i?;
+            let y = subst.get_mut(m.0).expect("subst");
+            match y {
+                None => *y = Some(st1),
+                // nonlinearity
+                Some(st2) => {
+                    st1.replace_with(|state| std::mem::take(state).whnf(sig));
+                    st2.replace_with(|state| std::mem::take(state).whnf(sig));
+                    if !convertible(&sig, Term::from(st1), Term::from(st2.clone())) {
+                        return None;
+                    }
+                }
+            }
         }
         subst.into_iter().collect()
     }
