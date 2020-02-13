@@ -8,8 +8,23 @@ use lazy_st::Thunk;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub type RTTerm = Rc<Thunk<RState, Term>>;
+#[derive(Clone)]
+pub struct RTTerm(Rc<Thunk<RState, Term>>);
 pub type RState = Rc<RefCell<State>>;
+
+impl RTTerm {
+    fn new(st: RState) -> Self {
+        Self(Rc::new(Thunk::new(st)))
+    }
+}
+
+impl std::ops::Deref for RTTerm {
+    type Target = Term;
+
+    fn deref(&self) -> &Self::Target {
+        &**self.0
+    }
+}
 
 // DB -> term
 type Context = stack::Stack<RTTerm>;
@@ -60,7 +75,7 @@ impl State {
                     }
                     Some(p) => {
                         term = *t;
-                        ctx.push(Rc::new(Thunk::new(p)));
+                        ctx.push(RTTerm::new(p));
                     }
                 },
                 Appl(head, tail) => {
@@ -183,7 +198,7 @@ fn nonlinearity(s: Vec<RTTerm>, sig: &Signature) -> Option<RTTerm> {
     let st1 = iter.next()?;
     // nonlinearity
     for stn in iter {
-        if !convertible(&sig, (**st1).clone(), (**stn).clone()) {
+        if !convertible(&sig, (*st1).clone(), (*stn).clone()) {
             return None;
         }
     }
@@ -201,10 +216,7 @@ impl Rule {
         let mut subst = vec![vec![]; self.ctx.len()];
         for i in iter {
             let (m, st1) = i?;
-            subst
-                .get_mut(m.0)
-                .expect("subst")
-                .push(Rc::new(Thunk::new(st1)))
+            subst.get_mut(m.0).expect("subst").push(RTTerm::new(st1))
         }
         subst.into_iter().map(|s| nonlinearity(s, sig)).collect()
     }
