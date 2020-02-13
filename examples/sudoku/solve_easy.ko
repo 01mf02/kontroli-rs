@@ -1,0 +1,12 @@
+def sudoku :=
+c (l X X X   2 6 X   7 X 1)
+  (l 6 8 X   X 7 X   X 9 X)
+  (l 1 9 X   X X 4   5 X X)
+
+  (l 8 2 X   1 X X   X 4 X)
+  (l X X 4   6 X 2   9 X X)
+  (l X 5 X   X X 3   X 2 8)
+
+  (l X X 9   3 X X   X 7 4)
+  (l X 4 X   X 5 X   X 3 6)
+  (l 7 X 3   X 1 8   X X X).
