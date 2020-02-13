@@ -8,10 +8,11 @@ use lazy_st::Thunk;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+pub type RTTerm = Rc<Thunk<RState, Term>>;
 pub type RState = Rc<RefCell<State>>;
 
 // DB -> term
-type Context = stack::Stack<Rc<Thunk<RState, Term>>>;
+type Context = stack::Stack<RTTerm>;
 type Stack = stack::Stack<RState>;
 
 #[derive(Clone, Default)]
@@ -88,7 +89,7 @@ impl State {
                             trace!("rewrite: {} ... ⟶ {}", s, rule);
                             term = rule.rhs.clone();
                             for i in subst.into_iter().rev() {
-                                ctx.push(Rc::new(Thunk::new(i)))
+                                ctx.push(i)
                             }
                             stack.pop_many(rule.args.len());
                         }
@@ -176,38 +177,39 @@ impl Pattern {
     }
 }
 
+fn nonlinearity(s: Vec<RTTerm>, sig: &Signature) -> Option<RTTerm> {
+    let mut iter = s.into_iter();
+    // assure that at least one term was matched
+    let st1 = iter.next()?;
+    // nonlinearity
+    for stn in iter {
+        if !convertible(&sig, (**st1).clone(), (**stn).clone()) {
+            return None;
+        }
+    }
+    Some(st1)
+}
+
 impl Rule {
-    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RState>> {
-        let it = self
+    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RTTerm>> {
+        let iter = self
             .args
             .iter()
             .zip(stack.iter())
             .map(|(pat, rstate)| pat.match_state(rstate.clone(), sig))
             .flatten();
         let mut subst = vec![vec![]; self.ctx.len()];
-        for i in it {
+        for i in iter {
             let (m, st1) = i?;
-            subst.get_mut(m.0).expect("subst").push(st1)
+            subst
+                .get_mut(m.0)
+                .expect("subst")
+                .push(Rc::new(Thunk::new(st1)))
         }
-        subst
-            .into_iter()
-            .map(|s| {
-                let mut it = s.into_iter();
-                let st1 = it.next()?;
-                for stn in it {
-                    // nonlinearity
-                    // TODO: evaluate st1 only once!
-                    st1.replace_with(|state| std::mem::take(state).whnf(sig));
-                    stn.replace_with(|state| std::mem::take(state).whnf(sig));
-                    if !convertible(&sig, Term::from(st1.clone()), Term::from(stn.clone())) {
-                        return None;
-                    }
-                }
-                Some(st1)
-            })
-            .collect()
+        subst.into_iter().map(|s| nonlinearity(s, sig)).collect()
     }
 }
+
 impl lazy_st::Evaluate<Term> for RState {
     fn evaluate(self) -> Term {
         Term::from(self)
