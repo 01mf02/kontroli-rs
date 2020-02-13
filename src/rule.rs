@@ -22,9 +22,9 @@ impl fmt::Display for Rule {
 pub enum Error {
     AVariableIsNotAPattern,
     MillerPattern,
-    NonLinearPattern,
     MillerUnused,
     NotEnoughArguments,
+    NonLinearNonEqArguments,
 }
 
 impl fmt::Display for Error {

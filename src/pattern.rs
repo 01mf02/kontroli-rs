@@ -83,8 +83,10 @@ impl Pattern {
             if !all_unique(args.clone()) {
                 return Err(Error::MillerPattern);
             }
-            if arities.insert(*m, args.len()).is_some() {
-                return Err(Error::NonLinearPattern);
+            match arities.insert(*m, args.len()) {
+                Some(ar) if ar != args.len() =>
+                    return Err(Error::NonLinearNonEqArguments),
+                _ => (),
             }
         }
         let result: Option<Vec<_>> = mvars
