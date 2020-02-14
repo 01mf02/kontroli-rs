@@ -84,8 +84,7 @@ impl Pattern {
                 return Err(Error::MillerPattern);
             }
             match arities.insert(*m, args.len()) {
-                Some(ar) if ar != args.len() =>
-                    return Err(Error::NonLinearNonEqArguments),
+                Some(ar) if ar != args.len() => return Err(Error::NonLinearNonEqArguments),
                 _ => (),
             }
         }
