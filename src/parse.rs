@@ -74,7 +74,15 @@ impl Binder {
         alt((value(Self::Lam, tag("=>")), value(Self::Pi, tag("->"))))(i)
     }
 
-    fn parse<'a, O1, O2, F, G>(f: F, g: G) -> impl Fn(&'a [u8]) -> Parse<(Self, O1, O2)>
+    fn parse_unnamed<'a, O1, O2, F, G>(f: F, g: G) -> impl Fn(&'a [u8]) -> Parse<(O1, Self, O2)>
+    where
+        F: Fn(&'a [u8]) -> Parse<'a, O1>,
+        G: Fn(&'a [u8]) -> Parse<'a, O2>,
+    {
+        preceded(char(':'), tuple((lexeme(f), lexeme(Self::post), lexeme(g))))
+    }
+
+    fn parse_named<'a, O1, O2, F, G>(f: F, g: G) -> impl Fn(&'a [u8]) -> Parse<(Self, O1, O2)>
     where
         F: Fn(&'a [u8]) -> Parse<'a, O1>,
         G: Fn(&'a [u8]) -> Parse<'a, O2>,
@@ -116,15 +124,25 @@ impl Preterm {
         )(i)
     }
 
-    fn bind(i: &[u8]) -> Parse<Self> {
+    fn bind_unnamed(i: &[u8]) -> Parse<Self> {
         map(
-            Binder::parse(Prearg::parse, Self::parse),
+            Binder::parse_unnamed(Self::appl, Self::parse),
+            |(ty, bnd, tm)| {
+                let ty = Some(Box::new(ty));
+                Self::Bind(bnd, Prearg { id: None, ty }, Box::new(tm))
+            },
+        )(i)
+    }
+
+    fn bind_named(i: &[u8]) -> Parse<Self> {
+        map(
+            Binder::parse_named(Prearg::parse, Self::parse),
             |(bnd, arg, tm)| Self::Bind(bnd, arg, Box::new(tm)),
         )(i)
     }
 
     fn parse(i: &[u8]) -> Parse<Self> {
-        alt((Self::bind, Self::appl))(i)
+        alt((Self::bind_named, Self::appl, Self::bind_unnamed))(i)
     }
 }
 
@@ -214,6 +232,8 @@ mod tests {
     fn terms() {
         let pt = terminated(Preterm::parse, lexeme(char('.')));
         assert!(pt(b"x.").is_ok());
+        assert!(pt(b":x -> x.").is_ok());
+        assert!(pt(b":vec n -> vec (succ n).").is_ok());
         assert!(pt(b"! x -> x.").is_ok());
         assert!(pt(br"\ x => x.").is_ok());
         assert!(pt(b"! A : eta {|prop|type|} -> eps ({|Pure.eq|const|} {|prop|type|} ({|Pure.prop|const|} A) A).").is_ok());
