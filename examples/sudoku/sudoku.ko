@@ -11,7 +11,7 @@ ind : Type.
 9 : ind.
 X : ind.
 
-def P : !_: ind -> ind.
+def P : :ind -> ind.
 [] P 1 --> X.
 [] P 2 --> 1.
 [] P 3 --> 2.
@@ -22,7 +22,7 @@ def P : !_: ind -> ind.
 [] P 8 --> 7.
 [] P 9 --> 8.
 
-def S : !_: ind -> ind.
+def S : :ind -> ind.
 [] S 1 --> 2.
 [] S 2 --> 3.
 [] S 3 --> 4.
@@ -33,7 +33,7 @@ def S : !_: ind -> ind.
 [] S 8 --> 9.
 [] S 9 --> X.
 
-def trunc3 : !_: ind -> ind.
+def trunc3 : :ind -> ind.
 []  trunc3 1 --> 1.
 []  trunc3 2 --> 1.
 []  trunc3 3 --> 1.
@@ -48,19 +48,19 @@ bool : Type.
 T : bool.
 F : bool.
 
-def and : !_: bool -> !_: bool -> bool.
+def and : :bool -> :bool -> bool.
 [x] and T x --> x.
 [x] and F x --> F.
 
-def or : !_: bool -> !_: bool -> bool.
+def or : :bool -> :bool -> bool.
 [x] or T x --> T.
 [x] or F x --> x.
 
-def not : !_: bool -> bool.
+def not : :bool -> bool.
 [] not T --> F.
 [] not F --> T.
 
-def eq : !_: ind -> !_: ind -> bool.
+def eq : :ind -> :ind -> bool.
 [x]   eq x x --> T.
 [x,y] eq x y --> F.
 
@@ -68,12 +68,12 @@ def eq : !_: ind -> !_: ind -> bool.
 
 
 line : Type.
-l : !_: ind -> !_: ind -> !_: ind -> !_: ind -> !_: ind -> !_: ind -> !_: ind -> !_: ind -> !_: ind -> line.
+l : :ind -> :ind -> :ind -> :ind -> :ind -> :ind -> :ind -> :ind -> :ind -> line.
 
 def sudo : Type.
-def c : !_: line -> !_: line -> !_: line -> !_: line -> !_: line -> !_: line -> !_: line -> !_: line -> !_: line -> sudo.
+def c : :line -> :line -> :line -> :line -> :line -> :line -> :line -> :line -> :line -> sudo.
 
-def getl : !_: ind -> !_: line -> ind.
+def getl : :ind -> :line -> ind.
 [x] getl 1 (l x _ _ _ _ _ _ _ _) --> x.
 [x] getl 2 (l _ x _ _ _ _ _ _ _) --> x.
 [x] getl 3 (l _ _ x _ _ _ _ _ _) --> x.
@@ -84,7 +84,7 @@ def getl : !_: ind -> !_: line -> ind.
 [x] getl 8 (l _ _ _ _ _ _ _ x _) --> x.
 [x] getl 9 (l _ _ _ _ _ _ _ _ x) --> x.
 
-def getc : !_: ind -> !_: sudo -> line.
+def getc : :ind -> :sudo -> line.
 [x] getc 1 (c x _ _ _ _ _ _ _ _) --> x.
 [x] getc 2 (c _ x _ _ _ _ _ _ _) --> x.
 [x] getc 3 (c _ _ x _ _ _ _ _ _) --> x.
@@ -98,7 +98,7 @@ def getc : !_: ind -> !_: sudo -> line.
 
 
 
-def setl : !_: ind -> !_: ind -> !_: line -> line.
+def setl : :ind -> :ind -> :line -> line.
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 1 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l k  x2 x3 x4 x5 x6 x7 x8 x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 2 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 k  x3 x4 x5 x6 x7 x8 x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 3 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 k  x4 x5 x6 x7 x8 x9).
@@ -109,7 +109,7 @@ def setl : !_: ind -> !_: ind -> !_: line -> line.
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 8 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 x6 x7 k  x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 9 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 x6 x7 x8 k ).
 
-def setc : !_: ind -> !_: (!_: line -> line) -> !_: sudo -> sudo.
+def setc : :ind -> :(:line -> line) -> :sudo -> sudo.
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 1 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c (k x1) x2 x3 x4 x5 x6 x7 x8 x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 2 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 (k x2) x3 x4 x5 x6 x7 x8 x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 3 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 (k x3) x4 x5 x6 x7 x8 x9).
@@ -127,28 +127,28 @@ def E : line := l X X X X X X X X X.
 def empty_sudo : sudo := c E E E E E E E E E.
 
 
-def get : !_: ind -> !_: ind -> !_: sudo -> ind.
+def get : :ind -> :ind -> :sudo -> ind.
 [i,j,s] get i j s --> getl j (getc i s).
 
-def set : !_: ind -> !_: ind -> !_: ind -> !_: sudo -> sudo.
+def set : :ind -> :ind -> :ind -> :sudo -> sudo.
 [i,j,k,s] set i j k s --> setc i (setl j k) s.
 
 
-def exists' : !_: (!_: ind -> bool) -> !_: ind -> bool.
+def exists' : :(:ind -> bool) -> :ind -> bool.
 [f  ] exists' f X --> F.
 [f,i] exists' f i --> or (f i) (exists' f (S i)).
 
-def exists : !_: (!_: ind -> bool) -> bool := \ f => exists' f 1.
+def exists : :(:ind -> bool) -> bool := \ f => exists' f 1.
 
 
 
-def mem_line : !_: ind -> !_: ind -> !_: ind -> !_: sudo -> bool.
+def mem_line : :ind -> :ind -> :ind -> :sudo -> bool.
 [i,j,k,s] mem_line i j k s --> exists (\ i':ind => eq (get i' j s) k).
 
-def mem_col  : !_: ind -> !_: ind -> !_: ind -> !_: sudo -> bool.
+def mem_col  : :ind -> :ind -> :ind -> :sudo -> bool.
 [i,j,k,s] mem_col i j k s --> exists (\ j':ind => eq (get i j' s) k).
 
-def mem_squ  : !_: ind -> !_: ind -> !_: ind -> !_: sudo -> bool.
+def mem_squ  : :ind -> :ind -> :ind -> :sudo -> bool.
 [i,j,k,s] mem_squ i j k s -->
   (\ i':ind =>
    \ j':ind =>
@@ -165,7 +165,7 @@ def mem_squ  : !_: ind -> !_: ind -> !_: ind -> !_: sudo -> bool.
   (trunc3 i) (trunc3 j).
 
 
-def check : !_: ind -> !_: ind -> !_: ind -> !_: sudo -> bool :=
+def check : :ind -> :ind -> :ind -> :sudo -> bool :=
 \ i => \ j => \ k => \ s =>
      and (not (mem_line i j k s))
    ( and (not (mem_col  i j k s))
@@ -173,19 +173,19 @@ def check : !_: ind -> !_: ind -> !_: ind -> !_: sudo -> bool :=
 
 
 solution : Type.
-success : !_: sudo -> solution.
+success : :sudo -> solution.
 fail : solution.
 
 
-def ite : !_: bool -> !_: solution -> !_: solution -> solution.
+def ite : :bool -> :solution -> :solution -> solution.
 [x] ite T x _ --> x.
 [x] ite F _ x --> x.
 
-def iffail : !_: solution -> !_: solution -> solution.
+def iffail : :solution -> :solution -> solution.
 [x] iffail (success x) _ --> success x.
 [d] iffail fail     d --> d.
 
-def solve : !_: ind -> !_: ind -> !_: ind -> !_: sudo -> solution.
+def solve : :ind -> :ind -> :ind -> :sudo -> solution.
 [i,s]     solve i X _ s --> solve (S i) 1 1 s.
 [  s]     solve X _ _ s --> success s.
 [i,j,s]   solve i j X s --> fail.
@@ -203,4 +203,4 @@ def solve : !_: ind -> !_: ind -> !_: ind -> !_: sudo -> solution.
     (solve i (S j) 1 s).
 
 
-def solve_sudo : !_: sudo -> solution := \ s => solve 1 1 1 s.
+def solve_sudo : :sudo -> solution := \ s => solve 1 1 1 s.
