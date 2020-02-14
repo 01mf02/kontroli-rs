@@ -102,15 +102,4 @@ impl Term {
             }
         }
     }
-
-    pub fn get_symb_appl(self) -> Option<(Symbol, Vec<Self>)> {
-        match self {
-            Self::Symb(s) => Some((s, Vec::new())),
-            Self::Appl(head, args) => match *head {
-                Self::Symb(s) => Some((s, args)),
-                _ => None,
-            },
-            _ => None,
-        }
-    }
 }
