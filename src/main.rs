@@ -96,22 +96,22 @@ impl command::Command {
     }
 }
 
-fn run(filename: &str) -> Result<(), CliError> {
+fn run<R>(read: R, syms: &mut Symbols, sig: &mut Signature) -> Result<(), CliError>
+where
+    R: std::io::Read,
+{
     use parsebuffer::ParseBuffer;
     let pb: ParseBuffer<_, _, _> = ParseBuffer {
         buf: circular::Buffer::with_capacity(64 * 1024 * 1024),
-        read: std::fs::File::open(filename)?,
+        read,
         parse: parse::parse_toplevel,
         fail: |e: nom::Err<VerboseError<&[u8]>>| format!("{:#?}", e),
     };
 
-    let mut sig: Signature = Default::default();
-    let mut syms: Symbols = Default::default();
-
     for entry in pb {
         let i = entry.expect("parse error");
         if let Some(cmd) = i {
-            cmd.scope(&mut syms)?.handle(&mut sig)?;
+            cmd.scope(syms)?.handle(sig)?;
         }
     }
     Ok(())
@@ -120,11 +120,19 @@ fn run(filename: &str) -> Result<(), CliError> {
 fn main() -> Result<(), CliError> {
     pretty_env_logger::init();
 
+    let mut sig: Signature = Default::default();
+    let mut syms: Symbols = Default::default();
+
     let mut args = std::env::args();
     let _ = args.next().expect("first arg is program path");
-    let filename = args
-        .next()
-        .expect("please pass a file path as first argument");
-    run(&filename)?;
+
+    if args.len() == 0 {
+        run(std::io::stdin(), &mut syms, &mut sig)?;
+    } else {
+        for filename in args {
+            let file = std::fs::File::open(filename)?;
+            run(file, &mut syms, &mut sig)?;
+        }
+    }
     Ok(())
 }
