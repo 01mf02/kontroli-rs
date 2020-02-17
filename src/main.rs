@@ -25,11 +25,11 @@ use crate::rule::Rule;
 use crate::scope::Symbols;
 use crate::signature::Signature;
 use nom::error::VerboseError;
-use std::fmt;
+use std::{fmt, io};
 
 #[derive(Debug)]
 enum CliError {
-    Io(std::io::Error),
+    Io(io::Error),
     Type(typing::Error),
     Scope(scope::Error),
     Rule(rule::Error),
@@ -48,8 +48,8 @@ impl fmt::Display for CliError {
 
 impl std::error::Error for CliError {}
 
-impl From<std::io::Error> for CliError {
-    fn from(err: std::io::Error) -> Self {
+impl From<io::Error> for CliError {
+    fn from(err: io::Error) -> Self {
         Self::Io(err)
     }
 }
@@ -98,7 +98,7 @@ impl command::Command {
 
 fn run<R>(read: R, syms: &mut Symbols, sig: &mut Signature) -> Result<(), CliError>
 where
-    R: std::io::Read,
+    R: io::Read,
 {
     use parsebuffer::ParseBuffer;
     let pb: ParseBuffer<_, _, _> = ParseBuffer {
@@ -127,7 +127,7 @@ fn main() -> Result<(), CliError> {
     let _ = args.next().expect("first arg is program path");
 
     if args.len() == 0 {
-        run(std::io::stdin(), &mut syms, &mut sig)?;
+        run(io::stdin(), &mut syms, &mut sig)?;
     } else {
         for filename in args {
             let file = std::fs::File::open(filename)?;
