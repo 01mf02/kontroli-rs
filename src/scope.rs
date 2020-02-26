@@ -4,7 +4,7 @@ use crate::prepattern::Prepattern;
 use crate::preterm::{Binder, Prearg, Preterm};
 use crate::stack::Stack;
 use crate::symbol::Symbol;
-use crate::term::{Arg, Term};
+use crate::term::{Arg, RTerm, Term};
 use fnv::FnvHashMap;
 use std::fmt;
 
@@ -28,6 +28,10 @@ where
 }
 
 impl Preterm {
+    pub fn scoper(self, syms: &Symbols, bnd: &mut Bound) -> Result<RTerm, Error> {
+        Ok(RTerm::new(self.scope(syms, bnd)?))
+    }
+
     pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<Term, Error> {
         match self {
             Self::Type => Ok(Term::Type),
@@ -40,13 +44,13 @@ impl Preterm {
                 }
             },
             Self::Appl(head, tail) => {
-                let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scope(syms, bnd)).collect();
-                Ok(Term::Appl(Box::new(head.scope(syms, bnd)?), tail?))
+                let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scoper(syms, bnd)).collect();
+                Ok(Term::Appl(head.scoper(syms, bnd)?, tail?))
             }
             Self::Bind(binder, arg, tm) => {
                 let arg = arg.scope(syms, bnd)?;
                 bind(bnd, arg.id.clone(), |bnd| {
-                    let tm = Box::new(tm.scope(syms, bnd)?);
+                    let tm = tm.scoper(syms, bnd)?;
                     match binder {
                         Binder::Lam => Ok(Term::Abst(arg, tm)),
                         Binder::Pi => Ok(Term::Prod(arg, tm)),
@@ -61,7 +65,7 @@ impl Prearg {
     fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<Arg, Error> {
         let ty = self
             .ty
-            .map(|ty| Ok(Box::new(ty.scope(syms, bnd)?)))
+            .map(|ty| Ok(RTerm::new(ty.scope(syms, bnd)?)))
             .transpose()?;
         Ok(Arg { id: self.id, ty })
     }
@@ -69,8 +73,8 @@ impl Prearg {
 
 impl PreDCommand {
     pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<DCommand, Error> {
-        self.map_type_err(|tm| Ok(tm.scope(syms, bnd)?))?
-            .map_term_err(|tm| Ok(tm.scope(syms, bnd)?))
+        self.map_type_err(|tm| tm.scoper(syms, bnd))?
+            .map_term_err(|tm| tm.scoper(syms, bnd))
     }
 }
 
@@ -138,7 +142,7 @@ impl Precommand {
             Self::Rule(ctx, lhs, rhs) => {
                 let mut ctxs = Stack::from(ctx.clone());
                 let pat = Prepattern::from(*lhs).scope(syms, &ctxs, &mut Stack::new())?;
-                let rhs = rhs.scope(syms, &mut ctxs)?;
+                let rhs = rhs.scoper(syms, &mut ctxs)?;
                 Ok(Command::Rule(ctx, pat, rhs))
             }
         }

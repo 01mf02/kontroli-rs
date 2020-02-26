@@ -1,7 +1,9 @@
+// TODO: split into precommand?
+
 use crate::pattern::Pattern;
 use crate::preterm::{BPreterm, Prearg};
 use crate::symbol::Symbol;
-use crate::term::Term;
+use crate::term::RTerm;
 
 #[derive(Debug, Clone)]
 pub enum Precommand {
@@ -11,10 +13,10 @@ pub enum Precommand {
 
 pub enum Command {
     DCmd(Symbol, DCommand),
-    Rule(Vec<String>, Pattern, Term),
+    Rule(Vec<String>, Pattern, RTerm),
 }
 
-pub type DCommand = GDCommand<Term, Term>;
+pub type DCommand = GDCommand<RTerm, RTerm>;
 pub type PreDCommand = GDCommand<BPreterm, BPreterm>;
 
 #[derive(Debug, Clone)]

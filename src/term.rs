@@ -1,10 +1,12 @@
 use crate::preterm::GArg;
 use crate::symbol::Symbol;
 use std::fmt;
+use std::rc::Rc;
 
-pub type BTerm = Box<Term>;
+#[derive(Debug, Clone)]
+pub struct RTerm(Rc<Term>);
 
-pub type Arg = GArg<BTerm>;
+pub type Arg = GArg<RTerm>;
 
 pub type DeBruijn = usize;
 
@@ -14,9 +16,9 @@ pub enum Term {
     Type,
     Symb(Symbol),
     BVar(DeBruijn),
-    Appl(BTerm, Vec<Term>),
-    Abst(Arg, BTerm),
-    Prod(Arg, BTerm),
+    Appl(RTerm, Vec<RTerm>),
+    Abst(Arg, RTerm),
+    Prod(Arg, RTerm),
 }
 
 impl Default for Term {
@@ -24,6 +26,25 @@ impl Default for Term {
         Self::Type
     }
 }
+
+impl Default for RTerm {
+    fn default() -> Self {
+        Self(Rc::new(Default::default()))
+    }
+}
+
+impl RTerm {
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl PartialEq for RTerm {
+    fn eq(&self, other: &Self) -> bool {
+        self.ptr_eq(other) || *self.0 == *other.0
+    }
+}
+impl Eq for RTerm {}
 
 impl PartialEq for Term {
     fn eq(&self, other: &Self) -> bool {
@@ -55,6 +76,26 @@ impl fmt::Display for Arg {
     }
 }
 
+impl fmt::Display for Term {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Kind => write!(f, "Kind"),
+            Self::Type => write!(f, "Type"),
+            Self::Symb(s) => write!(f, "{}", s),
+            Self::BVar(x) => write!(f, "β{}", x),
+            Self::Appl(head, tail) => fmt_appl(head, tail, f),
+            Self::Abst(arg, tm) => write!(f, "(λ {}. {})", arg, tm),
+            Self::Prod(arg, tm) => write!(f, "(Π {}. {})", arg, tm),
+        }
+    }
+}
+
+impl fmt::Display for RTerm {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
 pub fn fmt_appl<H, T>(head: &H, tail: &[T], f: &mut fmt::Formatter) -> fmt::Result
 where
     H: fmt::Display,
@@ -74,32 +115,31 @@ where
     Ok(())
 }
 
-impl fmt::Display for Term {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Kind => write!(f, "Kind"),
-            Self::Type => write!(f, "Type"),
-            Self::Symb(s) => write!(f, "{}", s),
-            Self::BVar(x) => write!(f, "β{}", x),
-            Self::Appl(head, tail) => fmt_appl(head, tail, f),
-            Self::Abst(arg, tm) => write!(f, "(λ {}. {})", arg, tm),
-            Self::Prod(arg, tm) => write!(f, "(Π {}. {})", arg, tm),
+impl RTerm {
+    pub fn new(t: Term) -> Self {
+        Self(Rc::new(t))
+    }
+
+    pub fn apply(self, mut args: Vec<RTerm>) -> Self {
+        if args.is_empty() {
+            self
+        } else {
+            match &*self {
+                Term::Appl(tm, args1) => {
+                    let mut args1 = args1.clone();
+                    args1.append(&mut args);
+                    RTerm::new(Term::Appl(tm.clone(), args1))
+                }
+                _ => RTerm::new(Term::Appl(self, args)),
+            }
         }
     }
 }
 
-impl Term {
-    pub fn apply(mut self, mut args: Vec<Self>) -> Self {
-        if args.is_empty() {
-            self
-        } else {
-            match self {
-                Self::Appl(_, ref mut args1) => {
-                    args1.append(&mut args);
-                    self
-                }
-                _ => Self::Appl(Box::new(self), args),
-            }
-        }
+impl std::ops::Deref for RTerm {
+    type Target = Term;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
     }
 }

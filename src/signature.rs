@@ -1,7 +1,7 @@
 use crate::command::DCommand;
 use crate::rule::Rule;
 use crate::symbol::Symbol;
-use crate::term::Term;
+use crate::term::{RTerm, Term};
 use crate::typing::{Context, Error};
 use fnv::FnvHashMap;
 
@@ -9,7 +9,7 @@ pub type Signature = FnvHashMap<Symbol, SymInfo>;
 
 pub struct SymInfo {
     stat: Staticity,
-    pub typ: Term,
+    pub typ: RTerm,
     pub rules: Vec<Rule>,
 }
 
@@ -34,8 +34,8 @@ pub enum Staticity {
 type Opacity = bool;
 
 pub enum Entry {
-    Declaration(Staticity, Term),
-    Definition(Opacity, Term, Term),
+    Declaration(Staticity, RTerm),
+    Definition(Opacity, RTerm, RTerm),
 }
 
 impl SymInfo {
@@ -68,8 +68,8 @@ impl SymInfo {
 }
 
 impl Entry {
-    pub fn declare(sig: &Signature, st: Staticity, ty: Term) -> Result<Self, Error> {
-        match ty.infer(&sig, &mut Context::new())? {
+    pub fn declare(sig: &Signature, st: Staticity, ty: RTerm) -> Result<Self, Error> {
+        match &*ty.infer(&sig, &mut Context::new())? {
             Term::Kind | Term::Type => Ok(Entry::Declaration(st, ty)),
             _ => Err(Error::SortExpected),
         }
@@ -78,8 +78,8 @@ impl Entry {
     pub fn define(
         sig: &Signature,
         opaque: bool,
-        oty: Option<Term>,
-        tm: Term,
+        oty: Option<RTerm>,
+        tm: RTerm,
     ) -> Result<Self, Error> {
         let ty = match oty {
             None => tm.infer(&sig, &mut Context::new())?,
@@ -89,7 +89,7 @@ impl Entry {
                 ty
             }
         };
-        match ty {
+        match &*ty {
             Term::Kind => Err(Error::UnexpectedKind),
             _ => Ok(Entry::Definition(opaque, ty, tm)),
         }

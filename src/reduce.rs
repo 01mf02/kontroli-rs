@@ -1,15 +1,14 @@
-use crate::pattern::Miller;
-use crate::pattern::Pattern;
+use crate::pattern::{Miller, Pattern};
 use crate::rule::Rule;
 use crate::signature::Signature;
 use crate::stack;
-use crate::term::{Arg, Term};
+use crate::term::{Arg, RTerm, Term};
 use lazy_st::Thunk;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Clone)]
-pub struct RTTerm(Rc<Thunk<RState, Term>>);
+pub struct RTTerm(Rc<Thunk<RState, RTerm>>);
 pub type RState = Rc<RefCell<State>>;
 
 impl RTTerm {
@@ -19,7 +18,7 @@ impl RTTerm {
 }
 
 impl std::ops::Deref for RTTerm {
-    type Target = Term;
+    type Target = RTerm;
 
     fn deref(&self) -> &Self::Target {
         &**self.0
@@ -33,12 +32,12 @@ type Stack = stack::Stack<RState>;
 #[derive(Clone, Default)]
 pub struct State {
     ctx: Context,
-    term: Term,
+    term: RTerm,
     stack: Stack,
 }
 
 impl State {
-    pub fn new(term: Term) -> Self {
+    pub fn new(term: RTerm) -> Self {
         State {
             ctx: Context::new(),
             term,
@@ -55,39 +54,38 @@ impl State {
         } = self;
         loop {
             trace!("whnf: {}", term);
-            match term {
+            match &*term {
                 Type | Kind | Prod(_, _) => break,
-                BVar(x) => match ctx.get(x) {
+                BVar(x) => match ctx.get(*x) {
                     Some(ctm) => {
                         term = (**ctm).clone();
                         ctx.clear()
                     }
                     None => {
-                        term = BVar(x - ctx.len());
-                        ctx.clear();
+                        if !ctx.is_empty() {
+                            term = RTerm::new(BVar(x - ctx.len()));
+                            ctx.clear();
+                        }
                         break;
                     }
                 },
                 Abst(a, t) => match stack.pop() {
-                    None => {
-                        term = Abst(a, t);
-                        break;
-                    }
+                    None => break,
                     Some(p) => {
-                        term = *t;
+                        term = t.clone();
                         ctx.push(RTTerm::new(p));
                     }
                 },
                 Appl(head, tail) => {
-                    term = *head;
-                    for t in tail.into_iter().rev() {
+                    for t in tail.iter().rev() {
                         let st = State {
                             ctx: ctx.clone(),
-                            term: t,
+                            term: t.clone(),
                             stack: Stack::new(),
                         };
                         stack.push(Rc::new(RefCell::new(st)))
                     }
+                    term = head.clone();
                 }
                 Symb(s) => {
                     let rules = &sig.get(&s).expect("symbol info").rules;
@@ -96,10 +94,7 @@ impl State {
                         .filter_map(|r| Some((r.match_stack(&stack, sig)?, r)))
                         .next()
                     {
-                        None => {
-                            term = Symb(s);
-                            break;
-                        }
+                        None => break,
                         Some((subst, rule)) => {
                             trace!("rewrite: {} ... ⟶ {}", s, rule);
                             term = rule.rhs.clone();
@@ -117,41 +112,26 @@ impl State {
     }
 }
 
-impl Term {
-    pub fn psubst(self, args: &Context) -> Term {
+impl RTerm {
+    pub fn psubst(self, args: &Context) -> Self {
         if args.is_empty() {
             self
         } else {
             self.apply_subst(&psubst(args), 0)
         }
     }
-
-    pub fn psubst2(self, args: &[Term]) -> Term {
-        self.apply_subst(&psubst2(args), 0)
-    }
 }
 
+// TODO: find out how often k is 0,
+// and if it is often 0, then make the closure return RTerm
 fn psubst(args: &Context) -> impl Fn(usize, usize) -> Term + '_ {
-    move |n: usize, k: usize| {
-        match args.get(n - k) {
-            // TODO: if shifting turns out to be a performance bottleneck,
-            // switch to a shift-memoised version as in Dedukti
-            Some(arg) => (**arg).clone() << k,
-            None => Term::BVar(n - args.len()),
-        }
+    move |n: usize, k: usize| match args.get(n - k) {
+        Some(arg) => (***arg).clone() << k,
+        None => Term::BVar(n - args.len()),
     }
 }
 
-fn psubst2(args: &[Term]) -> impl Fn(usize, usize) -> Term + '_ {
-    move |n: usize, k: usize| {
-        match args.get(n - k) {
-            // TODO: if shifting turns out to be a performance bottleneck,
-            // switch to a shift-memoised version as in Dedukti
-            Some(arg) => (*arg).clone() << k,
-            None => Term::BVar(n - args.len()),
-        }
-    }
-}
+// TODO: move to "matching.rs"?
 
 impl Pattern {
     fn match_state<'a>(
@@ -163,7 +143,7 @@ impl Pattern {
             Self::Symb(sp, pats) => {
                 rstate.replace_with(|state| std::mem::take(state).whnf(sig));
                 let state = rstate.borrow();
-                match &state.term {
+                match &*state.term {
                     Term::Symb(st) => {
                         if sp == st && state.stack.len() >= pats.len() {
                             Box::new(
@@ -186,6 +166,7 @@ impl Pattern {
                     todo!()
                 }
             }
+            // TODO: really empty?
             Self::Joker => Box::new(std::iter::empty()),
             _ => todo!(),
         }
@@ -222,60 +203,65 @@ impl Rule {
     }
 }
 
-impl lazy_st::Evaluate<Term> for RState {
-    fn evaluate(self) -> Term {
-        Term::from(self)
+impl lazy_st::Evaluate<RTerm> for RState {
+    fn evaluate(self) -> RTerm {
+        RTerm::from(self)
     }
 }
 
-impl From<RState> for Term {
+impl From<RState> for RTerm {
     fn from(s: RState) -> Self {
-        Term::from(s.borrow().clone())
+        RTerm::from(s.borrow().clone())
     }
 }
 
-impl From<State> for Term {
+impl From<State> for RTerm {
     fn from(state: State) -> Self {
         state
             .term
             .psubst(&state.ctx)
-            .apply(state.stack.into_iter().map(Term::from).collect())
+            .apply(state.stack.into_iter().map(Self::from).collect())
     }
 }
 
-impl Term {
+impl RTerm {
     pub fn whnf(self, sig: &Signature) -> Self {
         trace!("whnf of {}", self);
-        Term::from(State::new(self).whnf(sig))
+        Self::from(State::new(self).whnf(sig))
     }
 }
 
 const ETA: bool = true;
 
-fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
+fn conversion_step(cn: (RTerm, RTerm), cns: &mut Vec<(RTerm, RTerm)>) -> bool {
     use Term::*;
 
-    match cn {
+    let (cn1, cn2) = cn;
+    match (&*cn1, &*cn2) {
         (Kind, Kind) | (Type, Type) => true,
         (Symb(s1), Symb(s2)) => s1 == s2,
         (BVar(v1), BVar(v2)) => v1 == v2,
         (Abst(_, t1), Abst(_, t2)) => {
-            cns.push((*t1, *t2));
+            cns.push((t1.clone(), t2.clone()));
             true
         }
         (Prod(Arg { ty: Some(ty1), .. }, tm1), Prod(Arg { ty: Some(ty2), .. }, tm2)) => {
-            cns.push((*ty1, *ty2));
-            cns.push((*tm1, *tm2));
+            cns.push((ty1.clone(), ty2.clone()));
+            cns.push((tm1.clone(), tm2.clone()));
             true
         }
+        // TODO: make this nicer
         (a, Abst(_, b)) | (Abst(_, b), a) if ETA => {
-            cns.push((*b, (a << 1).apply(vec![BVar(0)])));
+            cns.push((
+                b.clone(),
+                (RTerm::new(a.clone()) << 1).apply(vec![RTerm::new(BVar(0))]),
+            ));
             true
         }
         (Appl(f1, args1), Appl(f2, args2)) => {
             if args1.len() == args2.len() {
-                cns.push((*f1, *f2));
-                cns.extend(args1.into_iter().zip(args2));
+                cns.push((f1.clone(), f2.clone()));
+                cns.extend(args1.clone().into_iter().zip(args2.clone()));
                 true
             } else {
                 false
@@ -285,7 +271,7 @@ fn conversion_step(cn: (Term, Term), cns: &mut Vec<(Term, Term)>) -> bool {
     }
 }
 
-pub fn convertible(sig: &Signature, tm1: Term, tm2: Term) -> bool {
+pub fn convertible(sig: &Signature, tm1: RTerm, tm2: RTerm) -> bool {
     let mut cns = vec![(tm1, tm2)];
     loop {
         match cns.pop() {

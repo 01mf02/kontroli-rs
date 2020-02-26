@@ -1,3 +1,5 @@
+// TODO: rename to lifo?
+
 use std::iter::FromIterator;
 
 #[derive(Clone, Debug)]

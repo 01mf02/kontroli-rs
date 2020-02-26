@@ -1,28 +1,28 @@
 use crate::reduce;
 use crate::signature::Signature;
-use crate::term::{Arg, Term};
+use crate::term::{Arg, RTerm, Term};
 use std::fmt;
 
 // DB -> type
-pub type Context = crate::stack::Stack<Term>;
+pub type Context = crate::stack::Stack<RTerm>;
 
 impl Context {
-    fn get_type(&self, n: usize) -> Option<Term> {
+    fn get_type(&self, n: usize) -> Option<RTerm> {
         Some(self.get(n)?.clone() << (n + 1))
     }
 
-    fn bind<A, F>(&mut self, arg: Term, f: F) -> Result<A, Error>
+    fn bind<A, F>(&mut self, arg: RTerm, f: F) -> Result<A, Error>
     where
         F: FnOnce(&mut Context) -> Result<A, Error>,
     {
         self.with_pushed(arg, f)
     }
 
-    fn bind_of_type<A, F>(&mut self, sig: &Signature, arg: Term, f: F) -> Result<A, Error>
+    fn bind_of_type<A, F>(&mut self, sig: &Signature, arg: RTerm, f: F) -> Result<A, Error>
     where
         F: FnOnce(&mut Context) -> Result<A, Error>,
     {
-        match arg.infer(sig, self)? {
+        match &*arg.clone().infer(sig, self)? {
             Term::Type => self.bind(arg, f),
             _ => Err(Error::BindNoType),
         }
@@ -58,7 +58,7 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-fn assert_convertible(sig: &Signature, tm1: Term, tm2: Term) -> Result<(), Error> {
+fn assert_convertible(sig: &Signature, tm1: RTerm, tm2: RTerm) -> Result<(), Error> {
     if reduce::convertible(sig, tm1, tm2) {
         Ok(())
     } else {
@@ -67,39 +67,41 @@ fn assert_convertible(sig: &Signature, tm1: Term, tm2: Term) -> Result<(), Error
 }
 
 impl Term {
-    pub fn infer(&self, sig: &Signature, ctx: &mut Context) -> Result<Self, Error> {
+    pub fn infer(&self, sig: &Signature, ctx: &mut Context) -> Result<RTerm, Error> {
         debug!("infer type of {}", self);
         use Term::*;
         match self {
             Kind => Err(Error::KindNotTypable),
-            Type => Ok(Kind),
+            Type => Ok(RTerm::new(Kind)),
             Symb(s) => Ok(sig.get(&s).unwrap().typ.clone()),
             BVar(x) => Ok(ctx.get_type(*x).unwrap()),
             Appl(f, args) => {
                 args.iter()
-                    .try_fold(f.infer(sig, ctx)?, |ty, arg| match ty.whnf(sig) {
+                    .try_fold(f.infer(sig, ctx)?, |ty, arg| match &*ty.whnf(sig) {
                         Prod(Arg { ty: Some(a), .. }, b) => {
-                            arg.check(sig, ctx, *a)?;
-                            Ok(b.subst(&arg))
+                            arg.check(sig, ctx, a.clone())?;
+                            Ok(b.clone().subst(&arg))
                         }
                         _ => Err(Error::ProductExpected),
                     })
             }
             Abst(Arg { id, ty: Some(ty) }, tm) => {
-                match ctx.bind_of_type(sig, *ty.clone(), |ctx| tm.infer(sig, ctx))? {
+                let tm_ty = ctx.bind_of_type(sig, ty.clone(), |ctx| tm.infer(sig, ctx))?;
+                match &*tm_ty {
                     Kind => Err(Error::UnexpectedKind),
-                    tm_ty => Ok(Prod(
+                    _ => Ok(RTerm::new(Prod(
                         Arg {
                             id: id.clone(),
                             ty: Some(ty.clone()),
                         },
-                        Box::new(tm_ty),
-                    )),
+                        tm_ty,
+                    ))),
                 }
             }
             Prod(Arg { ty: Some(ty), .. }, tm) => {
-                match ctx.bind_of_type(sig, *ty.clone(), |ctx| tm.infer(sig, ctx))? {
-                    tm_ty @ Kind | tm_ty @ Type => Ok(tm_ty),
+                let tm_ty = ctx.bind_of_type(sig, ty.clone(), |ctx| tm.infer(sig, ctx))?;
+                match &*tm_ty {
+                    Kind | Type => Ok(tm_ty),
                     _ => Err(Error::SortExpected),
                 }
             }
@@ -109,20 +111,20 @@ impl Term {
         }
     }
 
-    pub fn check(&self, sig: &Signature, ctx: &mut Context, ty_exp: Term) -> Result<(), Error> {
+    pub fn check(&self, sig: &Signature, ctx: &mut Context, ty_exp: RTerm) -> Result<(), Error> {
         debug!("check {} is of type {} when {}", self, ty_exp, ctx);
         use Term::*;
         match self {
-            Abst(arg, tm) => match ty_exp.whnf(sig) {
+            Abst(arg, tm) => match &*ty_exp.whnf(sig) {
                 Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {
                     match arg.ty.clone() {
                         None => Ok(()),
                         Some(ty_a_exp) => {
                             let _ = ty_a_exp.infer(sig, ctx)?;
-                            assert_convertible(sig, *ty_a_exp, *ty_a.clone())
+                            assert_convertible(sig, ty_a_exp, ty_a.clone())
                         }
                     }?;
-                    ctx.bind(*ty_a, |ctx| tm.check(sig, ctx, *ty_b))
+                    ctx.bind(ty_a.clone(), |ctx| tm.check(sig, ctx, ty_b.clone()))
                 }
                 _ => Err(Error::ProductExpected),
             },

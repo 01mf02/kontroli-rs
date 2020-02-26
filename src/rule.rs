@@ -1,6 +1,6 @@
 use crate::pattern::{Arity, Pattern};
 use crate::symbol::Symbol;
-use crate::term::{Arg, Term};
+use crate::term::{Arg, RTerm, Term};
 use std::fmt;
 
 pub struct Rule {
@@ -8,7 +8,7 @@ pub struct Rule {
     pub ctx: Vec<(String, Arity)>,
     pub symbol: Symbol,
     pub args: Vec<Pattern>,
-    pub rhs: Term,
+    pub rhs: RTerm,
 }
 
 impl fmt::Display for Rule {
@@ -59,7 +59,7 @@ impl Term {
 }
 
 impl Rule {
-    pub fn new(ctx: Vec<String>, pat: Pattern, rhs: Term) -> Result<Self, Error> {
+    pub fn new(ctx: Vec<String>, pat: Pattern, rhs: RTerm) -> Result<Self, Error> {
         let ctx = pat.arities(ctx)?;
         let (symbol, args) = pat.get_symb_appl().ok_or(Error::AVariableIsNotAPattern)?;
         if !rhs.check_arity(0, &ctx) {
