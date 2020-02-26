@@ -9,6 +9,7 @@ mod command;
 mod parse;
 mod parsebuffer;
 mod pattern;
+mod precommand;
 mod prepattern;
 mod preterm;
 mod reduce;

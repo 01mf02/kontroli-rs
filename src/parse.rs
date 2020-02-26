@@ -10,7 +10,7 @@ use nom::{
     IResult,
 };
 
-use crate::command::{GDCommand, Precommand};
+use crate::precommand::{GDCommand, Precommand};
 use crate::preterm::{Binder, Prearg, Preterm};
 
 type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;

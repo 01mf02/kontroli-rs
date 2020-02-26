@@ -1,5 +1,6 @@
-use crate::command::{Command, DCommand, PreDCommand, Precommand};
+use crate::command::{Command, DCommand};
 use crate::pattern::{Miller, Pattern};
+use crate::precommand::{PreDCommand, Precommand};
 use crate::prepattern::Prepattern;
 use crate::preterm::{Binder, Prearg, Preterm};
 use crate::stack::Stack;
