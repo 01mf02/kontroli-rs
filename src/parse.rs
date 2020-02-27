@@ -37,20 +37,37 @@ where
     delimited(char('('), lexeme(inner), lexeme(char(')')))
 }
 
-fn bracket_ident(i: &[u8]) -> Parse<&[u8]> {
-    delimited(tag("{|"), take_until("|}"), tag("|}"))(i)
+pub fn string_from_u8(i: &[u8]) -> String {
+    std::str::from_utf8(i).map(String::from).unwrap()
 }
 
-fn normal_ident(i: &[u8]) -> Parse<&[u8]> {
+fn bracket_string(s: String) -> String {
+    // this is fast because of:
+    // <https://github.com/hoodie/concatenation_benchmarks-rs>
+    let mut result = String::with_capacity(s.len() + 4);
+    result.push_str("{|");
+    result.push_str(&s);
+    result.push_str("|}");
+    result
+}
+
+fn bracket_ident(i: &[u8]) -> Parse<String> {
+    map(delimited(tag("{|"), take_until("|}"), tag("|}")), |id| {
+        bracket_string(string_from_u8(id))
+    })(i)
+}
+
+fn normal_ident(i: &[u8]) -> Parse<String> {
     // 0x27 is: '
     // 0x5F is: _
-    take_while1(|c| is_alphanumeric(c) || c == 0x5F || c == 0x27)(i)
+    map(
+        take_while1(|c| is_alphanumeric(c) || c == 0x5F || c == 0x27),
+        string_from_u8,
+    )(i)
 }
 
 fn ident(i: &[u8]) -> Parse<String> {
-    map(alt((bracket_ident, normal_ident)), |id| {
-        std::str::from_utf8(id).map(String::from).unwrap()
-    })(i)
+    alt((bracket_ident, normal_ident))(i)
 }
 
 fn maybe_ident(i: &[u8]) -> Parse<Option<String>> {
