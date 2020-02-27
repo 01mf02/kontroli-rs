@@ -1,58 +1,56 @@
 use crate::term::{Arg, RTerm, Term};
 
-impl RTerm {
-    pub fn apply_subst<S>(self, subst: &S, k: usize) -> Self
+impl Arg {
+    pub fn apply_subst<S>(&self, subst: &S, k: usize) -> Self
     where
-        S: Fn(usize, usize) -> Term,
+        S: Fn(usize, usize) -> RTerm,
     {
-        let tm = (*self).clone().apply_subst(subst, k);
-        // TODO: compare only the topmost pointers?
-        if tm == *self {
-            self
-        } else {
-            RTerm::new(tm)
+        Self {
+            id: self.id.clone(),
+            ty: self.ty.as_ref().map(|a| a.clone().apply_subst(subst, k)),
         }
-    }
-
-    pub fn subst(self, u: &Term) -> Self {
-        self.apply_subst(&psubst_single(u), 0)
     }
 }
 
-impl Term {
+impl RTerm {
     pub fn apply_subst<S>(self, subst: &S, k: usize) -> Self
     where
-        S: Fn(usize, usize) -> Term,
+        S: Fn(usize, usize) -> RTerm,
     {
-        match self {
-            Self::BVar(n) if n >= k => subst(n, k),
-            Self::Appl(f, args) => {
-                let f2 = f.apply_subst(subst, k);
-                let args2 = args.into_iter().map(|a| a.apply_subst(subst, k)).collect();
-                Self::Appl(f2, args2)
+        // TODO: only create new RTerm if something has changed
+        match &*self {
+            Term::BVar(n) if *n >= k => subst(*n, k),
+            Term::Appl(f, args) => {
+                let f2 = f.clone().apply_subst(subst, k);
+                let args2 = args
+                    .iter()
+                    .map(|a| a.clone().apply_subst(subst, k))
+                    .collect();
+                RTerm::new(Term::Appl(f2, args2))
             }
-            Self::Abst(arg, f) => {
-                let ty = arg.ty.map(|a| a.apply_subst(subst, k));
-                let f = f.apply_subst(subst, k + 1);
-                Self::Abst(Arg { id: arg.id, ty }, f)
+            Term::Abst(arg, f) => {
+                let f2 = f.clone().apply_subst(subst, k + 1);
+                RTerm::new(Term::Abst(arg.apply_subst(subst, k), f2))
             }
-            Self::Prod(arg, f) => {
-                let ty = arg.ty.map(|a| a.apply_subst(subst, k));
-                let f = f.apply_subst(subst, k + 1);
-                Self::Prod(Arg { id: arg.id, ty }, f)
+            Term::Prod(arg, f) => {
+                let f2 = f.clone().apply_subst(subst, k + 1);
+                RTerm::new(Term::Prod(arg.apply_subst(subst, k), f2))
             }
             _ => self,
         }
     }
+
+    pub fn subst(self, u: &RTerm) -> Self {
+        self.apply_subst(&psubst_single(u), 0)
+    }
 }
 
-// TODO: merge with psubst?
-fn psubst_single(u: &Term) -> impl Fn(usize, usize) -> Term + '_ {
+fn psubst_single(u: &RTerm) -> impl Fn(usize, usize) -> RTerm + '_ {
     move |n: usize, k: usize| {
         if n == k {
             u.clone() << k
         } else {
-            Term::BVar(n - 1)
+            RTerm::new(Term::BVar(n - 1))
         }
     }
 }
@@ -64,20 +62,7 @@ impl core::ops::Shl<usize> for RTerm {
         if rhs == 0 {
             self
         } else {
-            self.apply_subst(&|n, _k| Term::BVar(n + rhs), 0)
-        }
-    }
-}
-
-// TODO: eliminate this in the long run?
-impl core::ops::Shl<usize> for Term {
-    type Output = Self;
-
-    fn shl(self, rhs: usize) -> Self::Output {
-        if rhs == 0 {
-            self
-        } else {
-            self.apply_subst(&|n, _k| Term::BVar(n + rhs), 0)
+            self.apply_subst(&|n, _k| RTerm::new(Term::BVar(n + rhs)), 0)
         }
     }
 }

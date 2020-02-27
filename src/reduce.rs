@@ -122,12 +122,10 @@ impl RTerm {
     }
 }
 
-// TODO: find out how often k is 0,
-// and if it is often 0, then make the closure return RTerm
-fn psubst(args: &Context) -> impl Fn(usize, usize) -> Term + '_ {
+fn psubst(args: &Context) -> impl Fn(usize, usize) -> RTerm + '_ {
     move |n: usize, k: usize| match args.get(n - k) {
-        Some(arg) => (***arg).clone() << k,
-        None => Term::BVar(n - args.len()),
+        Some(arg) => (**arg).clone() << k,
+        None => RTerm::new(Term::BVar(n - args.len())),
     }
 }
 
