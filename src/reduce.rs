@@ -8,8 +8,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Clone)]
-pub struct RTTerm(Rc<Thunk<RState, RTerm>>);
-pub type RState = Rc<RefCell<State>>;
+struct RTTerm(Rc<Thunk<RState, RTerm>>);
+type RState = Rc<RefCell<State>>;
 
 impl RTTerm {
     fn new(st: RState) -> Self {
@@ -30,7 +30,7 @@ type Context = stack::Stack<RTTerm>;
 type Stack = stack::Stack<RState>;
 
 #[derive(Clone, Default)]
-pub struct State {
+struct State {
     ctx: Context,
     term: RTerm,
     stack: Stack,
@@ -113,7 +113,7 @@ impl State {
 }
 
 impl RTerm {
-    pub fn psubst(self, args: &Context) -> Self {
+    fn psubst(self, args: &Context) -> Self {
         if args.is_empty() {
             self
         } else {
@@ -185,7 +185,7 @@ fn nonlinearity(s: Vec<RTTerm>, sig: &Signature) -> Option<RTTerm> {
 }
 
 impl Rule {
-    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RTTerm>> {
+    fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RTTerm>> {
         let iter = self
             .args
             .iter()
