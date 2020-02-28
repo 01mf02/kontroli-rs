@@ -3,14 +3,14 @@ use crate::symbol::Symbol;
 use std::fmt;
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RTerm(Rc<Term>);
 
 pub type Arg = GArg<RTerm>;
 
 pub type DeBruijn = usize;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Term {
     Kind,
     Type,
@@ -27,44 +27,11 @@ impl Default for Term {
     }
 }
 
-impl Default for RTerm {
-    fn default() -> Self {
-        Self(Rc::new(Default::default()))
-    }
-}
-
 impl RTerm {
     pub fn ptr_eq(&self, other: &Self) -> bool {
         Rc::ptr_eq(&self.0, &other.0)
     }
 }
-
-impl PartialEq for RTerm {
-    fn eq(&self, other: &Self) -> bool {
-        self.ptr_eq(other) || *self.0 == *other.0
-    }
-}
-impl Eq for RTerm {}
-
-impl PartialEq for Term {
-    fn eq(&self, other: &Self) -> bool {
-        use Term::*;
-        match (self, other) {
-            (Kind, Kind) | (Type, Type) => true,
-            (Symb(s1), Symb(s2)) => s1 == s2,
-            (BVar(x1), BVar(x2)) => x1 == x2,
-            (Appl(f1, args1), Appl(f2, args2)) => {
-                f1 == f2
-                    && args1.len() == args2.len()
-                    && args1.iter().zip(args2).all(|(t1, t2)| t1 == t2)
-            }
-            (Abst(_, tm1), Abst(_, tm2)) => tm1 == tm2,
-            (Prod(arg1, tm1), Prod(arg2, tm2)) => arg1.ty == arg2.ty && tm1 == tm2,
-            (_, _) => false,
-        }
-    }
-}
-impl Eq for Term {}
 
 impl fmt::Display for Arg {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
