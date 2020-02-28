@@ -85,8 +85,11 @@ impl Entry {
             None => tm.infer(&sig, &mut Context::new())?,
             Some(ty) => {
                 let _ = ty.infer(&sig, &mut Context::new())?;
-                tm.check(&sig, &mut Context::new(), ty.clone())?;
-                ty
+                if tm.check(&sig, &mut Context::new(), ty.clone())? {
+                    ty
+                } else {
+                    return Err(Error::Unconvertible);
+                }
             }
         };
         match &*ty {

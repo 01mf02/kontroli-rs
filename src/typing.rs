@@ -1,4 +1,4 @@
-use crate::reduce;
+use crate::reduce::convertible;
 use crate::signature::Signature;
 use crate::term::{Arg, RTerm, Term};
 use std::fmt;
@@ -58,15 +58,22 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-fn assert_convertible(sig: &Signature, tm1: RTerm, tm2: RTerm) -> Result<(), Error> {
-    if reduce::convertible(sig, tm1, tm2) {
-        Ok(())
-    } else {
-        Err(Error::Unconvertible)
+impl Arg {
+    /// Check whether the bound variable's type (if present)
+    /// has a proper type and is convertible with the given type.
+    fn check(&self, sig: &Signature, ctx: &mut Context, ty_exp: &RTerm) -> Result<bool, Error> {
+        match self.ty.clone() {
+            None => Ok(true),
+            Some(ty) => {
+                let _ = ty.infer(sig, ctx)?;
+                Ok(convertible(sig, ty, ty_exp.clone()))
+            }
+        }
     }
 }
 
 impl Term {
+    /// Infer the type of the term.
     pub fn infer(&self, sig: &Signature, ctx: &mut Context) -> Result<RTerm, Error> {
         debug!("infer type of {}", self);
         use Term::*;
@@ -79,8 +86,11 @@ impl Term {
                 args.iter()
                     .try_fold(f.infer(sig, ctx)?, |ty, arg| match &*ty.whnf(sig) {
                         Prod(Arg { ty: Some(a), .. }, b) => {
-                            arg.check(sig, ctx, a.clone())?;
-                            Ok(b.clone().subst(&arg))
+                            if arg.check(sig, ctx, a.clone())? {
+                                Ok(b.clone().subst(&arg))
+                            } else {
+                                Err(Error::Unconvertible)
+                            }
                         }
                         _ => Err(Error::ProductExpected),
                     })
@@ -111,27 +121,20 @@ impl Term {
         }
     }
 
-    pub fn check(&self, sig: &Signature, ctx: &mut Context, ty_exp: RTerm) -> Result<(), Error> {
+    /// Check whether the term is of a given type.
+    pub fn check(&self, sig: &Signature, ctx: &mut Context, ty_exp: RTerm) -> Result<bool, Error> {
         debug!("check {} is of type {} when {}", self, ty_exp, ctx);
         use Term::*;
         match self {
             Abst(arg, tm) => match &*ty_exp.whnf(sig) {
-                Prod(Arg { ty: Some(ty_a), .. }, ty_b) => {
-                    match arg.ty.clone() {
-                        None => Ok(()),
-                        Some(ty_a_exp) => {
-                            let _ = ty_a_exp.infer(sig, ctx)?;
-                            assert_convertible(sig, ty_a_exp, ty_a.clone())
-                        }
-                    }?;
-                    ctx.bind(ty_a.clone(), |ctx| tm.check(sig, ctx, ty_b.clone()))
-                }
+                Prod(Arg { ty: Some(ty_a), .. }, ty_b) => Ok(arg.check(sig, ctx, ty_a)?
+                    && ctx.bind(ty_a.clone(), |ctx| tm.check(sig, ctx, ty_b.clone()))?),
                 _ => Err(Error::ProductExpected),
             },
             _ => {
                 let ty_inf = self.infer(sig, ctx)?;
                 debug!("checking convertibility: {} ~ {}", ty_inf, ty_exp);
-                assert_convertible(sig, ty_inf, ty_exp)
+                Ok(convertible(sig, ty_inf, ty_exp))
             }
         }
     }
