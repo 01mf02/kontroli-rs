@@ -99,13 +99,11 @@ impl Term {
                 let tm_ty = ctx.bind_of_type(sig, ty.clone(), |ctx| tm.infer(sig, ctx))?;
                 match &*tm_ty {
                     Kind => Err(Error::UnexpectedKind),
-                    _ => Ok(RTerm::new(Prod(
-                        Arg {
-                            id: id.clone(),
-                            ty: Some(ty.clone()),
-                        },
-                        tm_ty,
-                    ))),
+                    _ => {
+                        let id = id.clone();
+                        let ty = Some(ty.clone());
+                        Ok(RTerm::new(Prod(Arg { id, ty }, tm_ty)))
+                    }
                 }
             }
             Prod(Arg { ty: Some(ty), .. }, tm) => {
