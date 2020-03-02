@@ -11,7 +11,7 @@ pub fn line_column<'a>(input: &'a [u8], substring: &'a [u8]) -> (usize, &'a [u8]
     let prefix = &input.as_bytes()[..offset];
 
     // Count the number of newlines in the first `offset` bytes of input
-    let line_number = prefix.iter().filter(|&&b| b == b'\n').count() + 1;
+    let line_number = bytecount::count(prefix, b'\n') + 1;
 
     // Find the line that includes the subslice:
     // Find the *last* newline before the substring starts
