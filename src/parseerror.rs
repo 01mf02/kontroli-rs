@@ -93,11 +93,7 @@ fn write_error_line_column(
 }
 
 /// transforms a `VerboseError` into a trace with input position information
-pub fn write_error(
-    f: &mut fmt::Formatter,
-    input: &[u8],
-    e: VerboseError<&[u8]>,
-) -> fmt::Result {
+pub fn write_error(f: &mut fmt::Formatter, input: &[u8], e: VerboseError<&[u8]>) -> fmt::Result {
     use std::io::BufRead;
 
     for (i, (substring, kind)) in e.errors.iter().enumerate() {
