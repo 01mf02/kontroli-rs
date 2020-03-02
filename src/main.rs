@@ -8,6 +8,7 @@ extern crate log;
 mod command;
 mod parse;
 mod parsebuffer;
+mod parseerror;
 mod pattern;
 mod precommand;
 mod prepattern;
