@@ -1,3 +1,5 @@
+//! A typechecker for the lambda-Pi calculus modulo rewriting.
+
 extern crate circular;
 extern crate lazy_st;
 extern crate nom;
@@ -26,8 +28,12 @@ mod typing;
 use crate::rule::Rule;
 use crate::scope::Symbols;
 use crate::signature::Signature;
+use byte_unit::{Byte, ByteError};
 use nom::error::VerboseError;
+use std::convert::TryInto;
+use std::path::PathBuf;
 use std::{fmt, io};
+use structopt::StructOpt;
 
 #[derive(Debug)]
 enum CliError {
@@ -74,6 +80,44 @@ impl From<rule::Error> for CliError {
     }
 }
 
+#[derive(Debug)]
+struct MyByteError(ByteError);
+
+impl ToString for MyByteError {
+    fn to_string(&self) -> String {
+        "byte error".to_string()
+    }
+}
+
+fn parse_byte<S: AsRef<str>>(s: S) -> Result<Byte, MyByteError> {
+    Byte::from_str(s).map_err(MyByteError)
+}
+
+#[derive(Debug, StructOpt)]
+/// A typechecker for the lambda-Pi calculus modulo rewriting
+struct Opt {
+    /// Reduce terms modulo eta
+    #[structopt(long)]
+    eta: bool,
+
+    /// Only parse, neither scope nor typecheck
+    #[structopt(long)]
+    no_scope: bool,
+
+    /// Only parse and scope, do not typecheck
+    #[structopt(long)]
+    no_check: bool,
+
+    /// Size of the parse buffer
+    #[structopt(long, default_value = "64MB", parse(try_from_str = parse_byte))]
+    buffer: Byte,
+    //#[structopt(long, default_value = "1024")]
+    //buffer: usize,
+    /// Files to process (cumulative)
+    #[structopt(name = "FILE")]
+    files: Vec<PathBuf>,
+}
+
 impl command::Command {
     fn handle(self, sig: &mut Signature) -> Result<(), CliError> {
         match self {
@@ -98,13 +142,13 @@ impl command::Command {
     }
 }
 
-fn run<R>(read: R, syms: &mut Symbols, sig: &mut Signature) -> Result<(), CliError>
+fn run<R>(read: R, opt: &Opt, syms: &mut Symbols, sig: &mut Signature) -> Result<(), CliError>
 where
     R: io::Read,
 {
     use parsebuffer::ParseBuffer;
     let pb: ParseBuffer<_, _, _> = ParseBuffer {
-        buf: circular::Buffer::with_capacity(64 * 1024 * 1024),
+        buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
         parse: parse::parse_toplevel,
         fail: |e: nom::Err<VerboseError<&[u8]>>| format!("{:#?}", e),
@@ -125,15 +169,14 @@ fn main() -> Result<(), CliError> {
     let mut sig: Signature = Default::default();
     let mut syms: Symbols = Default::default();
 
-    let mut args = std::env::args();
-    let _ = args.next().expect("first arg is program path");
+    let opt = Opt::from_args();
 
-    if args.len() == 0 {
-        run(io::stdin(), &mut syms, &mut sig)?;
+    if opt.files.len() == 0 {
+        run(io::stdin(), &opt, &mut syms, &mut sig)?;
     } else {
-        for filename in args {
+        for filename in &opt.files {
             let file = std::fs::File::open(filename)?;
-            run(file, &mut syms, &mut sig)?;
+            run(file, &opt, &mut syms, &mut sig)?;
         }
     }
     Ok(())
