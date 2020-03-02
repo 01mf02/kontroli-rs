@@ -164,7 +164,6 @@ impl Pattern {
                     todo!()
                 }
             }
-            // TODO: really empty?
             Self::Joker => Box::new(std::iter::empty()),
             _ => todo!(),
         }
