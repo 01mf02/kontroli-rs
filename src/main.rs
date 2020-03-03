@@ -134,7 +134,10 @@ where
     for entry in pb {
         let i = entry.expect("parse error");
         if let Some(cmd) = i {
-            handle(cmd.scope(syms)?, sig)?;
+            if opt.no_scope { continue; }
+            let cmd = cmd.scope(syms)?;
+            if opt.no_check { continue; }
+            handle(cmd, sig)?;
         }
     }
     Ok(())
