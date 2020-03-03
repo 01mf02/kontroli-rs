@@ -1,3 +1,5 @@
+//! Type checking for the lambda-Pi calculus modulo rewriting.
+
 extern crate circular;
 extern crate lazy_st;
 extern crate nom;
