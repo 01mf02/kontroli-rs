@@ -1,3 +1,5 @@
+//! Conversion from preterms to terms, from prepatterns to prepatterns etc.
+
 use crate::command::{Command, DCommand};
 use crate::pattern::{Miller, Pattern};
 use crate::precommand::{PreDCommand, Precommand};

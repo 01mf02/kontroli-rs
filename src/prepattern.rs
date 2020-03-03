@@ -1,3 +1,5 @@
+//! Rewrite patterns not distinguishing bound and unbound symbols.
+
 use crate::preterm::{Binder, Preterm};
 
 pub enum Prepattern {

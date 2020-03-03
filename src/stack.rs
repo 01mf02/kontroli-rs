@@ -1,3 +1,4 @@
+//! A `Vec` that is iterated from the last to the first pushed element.
 // TODO: rename to lifo?
 
 use std::iter::FromIterator;

@@ -1,3 +1,5 @@
+//! Reduction to weak head normal form (WHNF), including rewriting.
+
 use crate::pattern::{Miller, Pattern};
 use crate::rule::Rule;
 use crate::signature::Signature;

@@ -1,3 +1,5 @@
+//! Terms and shared terms.
+
 use crate::preterm::GArg;
 use crate::symbol::Symbol;
 use std::fmt;

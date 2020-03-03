@@ -1,3 +1,5 @@
+//! Rewrite rules.
+
 use crate::pattern::{Arity, Pattern};
 use crate::symbol::Symbol;
 use crate::term::{Arg, RTerm, Term};

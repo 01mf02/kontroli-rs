@@ -1,3 +1,5 @@
+//! Rewrite patterns à la Miller.
+
 use crate::rule::Error;
 use crate::symbol::Symbol;
 use crate::term::{fmt_appl, DeBruijn, Term};

@@ -1,3 +1,5 @@
+//! Map from symbols to their types and associated rewrite rules.
+
 use crate::command::DCommand;
 use crate::rule::Rule;
 use crate::symbol::Symbol;

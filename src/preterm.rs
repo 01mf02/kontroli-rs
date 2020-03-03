@@ -1,3 +1,5 @@
+//! Unshared terms, not distinguishing bound and unbound symbols.
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Binder {
     Lam,

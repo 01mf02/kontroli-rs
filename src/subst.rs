@@ -1,3 +1,5 @@
+//! Substitution and shifting for terms.
+
 use crate::term::{Arg, RTerm, Term};
 
 impl Arg {

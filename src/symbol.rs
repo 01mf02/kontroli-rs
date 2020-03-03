@@ -1,3 +1,5 @@
+//! A shared string with fast hashing and equality check.
+
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;

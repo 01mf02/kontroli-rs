@@ -1,3 +1,5 @@
+//! Type checking and type inference for terms.
+
 use crate::reduce::convertible;
 use crate::signature::Signature;
 use crate::term::{Arg, RTerm, Term};
