@@ -64,7 +64,10 @@ struct MyByteError(ByteError);
 
 impl ToString for MyByteError {
     fn to_string(&self) -> String {
-        "byte error".to_string()
+        match &self.0 {
+            ByteError::ValueIncorrect(s) => "Incorrect byte value: ".to_owned() + &s.clone(),
+            ByteError::UnitIncorrect(s) => "Incorrect byte unit: ".to_owned() + &s.clone(),
+        }
     }
 }
 
@@ -134,9 +137,13 @@ where
     for entry in pb {
         let i = entry.expect("parse error");
         if let Some(cmd) = i {
-            if opt.no_scope { continue; }
+            if opt.no_scope {
+                continue;
+            }
             let cmd = cmd.scope(syms)?;
-            if opt.no_check { continue; }
+            if opt.no_check {
+                continue;
+            }
             handle(cmd, sig)?;
         }
     }
