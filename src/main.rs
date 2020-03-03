@@ -7,7 +7,7 @@ use kontroli::command::Command;
 use kontroli::rule::Rule;
 use kontroli::scope::Symbols;
 use kontroli::signature::Signature;
-use kontroli::{command, parse, parsebuffer, rule, scope, signature, typing};
+use kontroli::{parse, parsebuffer, rule, scope, signature, typing};
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::path::PathBuf;
@@ -148,7 +148,7 @@ fn main() -> Result<(), CliError> {
 
     let opt = Opt::from_args();
 
-    if opt.files.len() == 0 {
+    if opt.files.is_empty() {
         run(io::stdin(), &opt, &mut syms, &mut sig)?;
     } else {
         for filename in &opt.files {
