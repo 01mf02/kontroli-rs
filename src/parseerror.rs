@@ -3,6 +3,17 @@ use std::fmt;
 
 /// obtain the line number, the following input and the column number
 /// of a substring in a string
+///
+/// ~~~
+/// # use kontroli::parseerror::line_column;
+/// let input = "The next line\nfails HERE before\nthe last line.".as_bytes();
+/// let substring = &input[20..24];
+/// let (line_number, line, column_number) = line_column(input, substring);
+/// assert_eq!(line_number, 2);
+/// assert_eq!(line, "fails HERE before\nthe last line.".as_bytes());
+/// assert_eq!(column_number, 7);
+/// assert_eq!(&line[column_number-1 .. column_number-1+4], "HERE".as_bytes());
+/// ~~~
 pub fn line_column<'a>(input: &'a [u8], substring: &'a [u8]) -> (usize, &'a [u8], usize) {
     use nom::{AsBytes, Offset};
 
