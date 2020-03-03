@@ -1,34 +1,13 @@
 //! A typechecker for the lambda-Pi calculus modulo rewriting.
 
-extern crate circular;
-extern crate lazy_st;
-extern crate nom;
 extern crate pretty_env_logger;
-#[macro_use]
-extern crate log;
 
-mod command;
-mod parse;
-mod parsebuffer;
-mod parseerror;
-mod pattern;
-mod precommand;
-mod prepattern;
-mod preterm;
-mod reduce;
-mod rule;
-mod scope;
-mod signature;
-mod stack;
-mod subst;
-mod symbol;
-mod term;
-mod typing;
-
-use crate::rule::Rule;
-use crate::scope::Symbols;
-use crate::signature::Signature;
 use byte_unit::{Byte, ByteError};
+use kontroli::command::Command;
+use kontroli::rule::Rule;
+use kontroli::scope::Symbols;
+use kontroli::signature::Signature;
+use kontroli::{command, parse, parsebuffer, rule, scope, signature, typing};
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::path::PathBuf;
@@ -118,26 +97,24 @@ struct Opt {
     files: Vec<PathBuf>,
 }
 
-impl command::Command {
-    fn handle(self, sig: &mut Signature) -> Result<(), CliError> {
-        match self {
-            Self::DCmd(sym, dcmd) => {
-                println!("{}", sym);
-                let entry = signature::Entry::new(dcmd, &*sig)?;
-                let info = signature::SymInfo::new(&sym, entry);
-                if sig.insert(sym, info).is_some() {
-                    panic!("symbol redeclaration");
-                };
-                Ok(())
-            }
-            Self::Rule(ctx, pat, rhs) => {
-                let rule = Rule::new(ctx, pat, rhs)?;
-                sig.get_mut(&rule.symbol)
-                    .expect("rule")
-                    .add_rule(rule)
-                    .expect("static");
-                Ok(())
-            }
+fn handle(cmd: Command, sig: &mut Signature) -> Result<(), CliError> {
+    match cmd {
+        Command::DCmd(sym, dcmd) => {
+            println!("{}", sym);
+            let entry = signature::Entry::new(dcmd, &*sig)?;
+            let info = signature::SymInfo::new(&sym, entry);
+            if sig.insert(sym, info).is_some() {
+                panic!("symbol redeclaration");
+            };
+            Ok(())
+        }
+        Command::Rule(ctx, pat, rhs) => {
+            let rule = Rule::new(ctx, pat, rhs)?;
+            sig.get_mut(&rule.symbol)
+                .expect("rule")
+                .add_rule(rule)
+                .expect("static");
+            Ok(())
         }
     }
 }
@@ -157,7 +134,7 @@ where
     for entry in pb {
         let i = entry.expect("parse error");
         if let Some(cmd) = i {
-            cmd.scope(syms)?.handle(sig)?;
+            handle(cmd.scope(syms)?, sig)?;
         }
     }
     Ok(())
