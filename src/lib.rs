@@ -13,6 +13,7 @@ pub mod parseerror;
 pub mod pattern;
 pub mod precommand;
 pub mod prepattern;
+pub mod prerule;
 pub mod preterm;
 pub mod reduce;
 pub mod rule;

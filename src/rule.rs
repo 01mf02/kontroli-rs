@@ -1,21 +1,17 @@
 //! Rewrite rules.
 
-use crate::pattern::{Arity, Pattern};
-use crate::symbol::Symbol;
+use crate::pattern::{Arity, Pattern, TopPattern, NoTopPattern};
+use crate::prerule::GRule;
 use crate::term::{Arg, RTerm, Term};
+use std::convert::TryFrom;
 use std::fmt;
 
-pub struct Rule {
-    // TODO: save ctx as Stack?
-    pub ctx: Vec<(String, Arity)>,
-    pub symbol: Symbol,
-    pub args: Vec<Pattern>,
-    pub rhs: RTerm,
-}
+pub type UncheckedRule = GRule<String, Pattern, RTerm>;
+pub type Rule = GRule<(String, Arity), TopPattern, RTerm>;
 
 impl fmt::Display for Rule {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let pat = Pattern::Symb(self.symbol.clone(), self.args.clone());
+        let pat = Pattern::from(self.lhs.clone());
         write!(f, "{} ⟶ {}", &pat, self.rhs)
     }
 }
@@ -27,6 +23,12 @@ pub enum Error {
     MillerUnused,
     NotEnoughArguments,
     NonLinearNonEqArguments,
+}
+
+impl From<NoTopPattern> for Error {
+    fn from(_: NoTopPattern) -> Self {
+        Self::AVariableIsNotAPattern
+    }
 }
 
 impl fmt::Display for Error {
@@ -60,18 +62,16 @@ impl Term {
     }
 }
 
-impl Rule {
-    pub fn new(ctx: Vec<String>, pat: Pattern, rhs: RTerm) -> Result<Self, Error> {
-        let ctx = pat.arities(ctx)?;
-        let (symbol, args) = pat.get_symb_appl().ok_or(Error::AVariableIsNotAPattern)?;
-        if !rhs.check_arity(0, &ctx) {
+impl TryFrom<UncheckedRule> for Rule {
+    type Error = Error;
+
+    fn try_from(unchecked: UncheckedRule) -> Result<Self, Error> {
+        let ctx = unchecked.lhs.arities(unchecked.ctx)?;
+        let lhs = TopPattern::try_from(unchecked.lhs)?;
+        if !unchecked.rhs.check_arity(0, &ctx) {
             return Err(Error::NotEnoughArguments);
         }
-        Ok(Rule {
-            ctx,
-            symbol,
-            args,
-            rhs,
-        })
+        let rhs = unchecked.rhs;
+        Ok(Rule { ctx, lhs, rhs })
     }
 }

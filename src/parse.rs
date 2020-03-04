@@ -11,10 +11,15 @@ use nom::{
 };
 
 use crate::precommand::{GDCommand, Precommand};
+use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
 use std::convert::TryFrom;
 
 type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
+
+trait Parser {
+    fn parse(i: &[u8]) -> Parse<Self> where Self: std::marker::Sized;
+}
 
 fn comment(i: &[u8]) -> Parse<&[u8]> {
     delimited(tag("(;"), take_until(";)"), tag(";)"))(i)
@@ -82,7 +87,7 @@ fn maybe_ident(i: &[u8]) -> Parse<Option<String>> {
     alt((map(ident, Some), value(None, char('_'))))(i)
 }
 
-impl Prearg {
+impl Parser for Prearg {
     fn parse(i: &[u8]) -> Parse<Self> {
         map(pair(maybe_ident, opt(lexeme(Preterm::of))), |(id, ty)| {
             Self { id, ty }
@@ -165,9 +170,31 @@ impl Preterm {
             |(bnd, arg, tm)| Self::Bind(bnd, arg, Box::new(tm)),
         )(i)
     }
+}
 
-    pub fn parse(i: &[u8]) -> Parse<Self> {
+impl Parser for Preterm {
+    fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::bind_named, Self::appl, Self::bind_unnamed))(i)
+    }
+}
+
+impl Parser for Prerule {
+    fn parse(i: &[u8]) -> Parse<Self> {
+        map(
+            tuple((
+                preceded(
+                    char('['),
+                    terminated(
+                        separated_list(lexeme(char(',')), lexeme(ident)),
+                        lexeme(char(']')),
+                    ),
+                ),
+                lexeme(Preterm::parse),
+                lexeme(tag("-->")),
+                lexeme(Preterm::parse),
+            )),
+            |(ctx, lhs, _, rhs)| Prerule { ctx, lhs, rhs },
+        )(i)
     }
 }
 
@@ -216,27 +243,20 @@ impl Precommand {
     fn dcmd(i: &[u8]) -> Parse<Self> {
         alt((Self::definition, Self::theorem, Self::declaration))(i)
     }
+}
 
-    fn rule(i: &[u8]) -> Parse<Self> {
-        map(
-            tuple((
-                preceded(
-                    char('['),
-                    terminated(
-                        separated_list(lexeme(char(',')), lexeme(ident)),
-                        lexeme(char(']')),
-                    ),
-                ),
-                lexeme(Preterm::parse),
-                lexeme(tag("-->")),
-                lexeme(Preterm::parse),
-            )),
-            |(vars, lhs, _, rhs)| Self::Rule(vars, Box::new(lhs), Box::new(rhs)),
-        )(i)
+impl Parser for Precommand {
+    fn parse(i: &[u8]) -> Parse<Self> {
+        alt((Self::dcmd, map(Prerule::parse, Self::Rule)))(i)
     }
+}
 
-    pub fn parse(i: &[u8]) -> Parse<Self> {
-        alt((Self::dcmd, Self::rule))(i)
+// TODO: reduce code duplication
+impl<'a> TryFrom<&'a str> for Prerule {
+    type Error = nom::Err<VerboseError<&'a [u8]>>;
+
+    fn try_from(i: &'a str) -> Result<Self, Self::Error> {
+        phrase(Self::parse)(i.as_bytes()).map(|(_i, o)| o)
     }
 }
 
@@ -244,10 +264,9 @@ impl<'a> TryFrom<&'a str> for Preterm {
     type Error = nom::Err<VerboseError<&'a [u8]>>;
 
     fn try_from(i: &'a str) -> Result<Self, Self::Error> {
-        phrase(Self::parse)(i.as_bytes()).map(|(i, o)| o)
+        phrase(Self::parse)(i.as_bytes()).map(|(_i, o)| o)
     }
 }
-
 
 // parse whitespace or commands
 pub fn parse_toplevel(i: &[u8]) -> Parse<Option<Precommand>> {

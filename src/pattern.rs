@@ -4,6 +4,7 @@ use crate::rule::Error;
 use crate::symbol::Symbol;
 use crate::term::{fmt_appl, DeBruijn, Term};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fmt;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
@@ -22,6 +23,38 @@ pub enum Pattern {
     Symb(Symbol, Vec<Pattern>),
     BVar(DeBruijn, Vec<Pattern>),
     Joker,
+}
+
+#[derive(Clone)]
+pub struct TopPattern {
+    pub symbol: Symbol,
+    pub args: Vec<Pattern>,
+}
+
+impl From<Symbol> for TopPattern {
+    fn from(symbol: Symbol) -> Self {
+        let args = Vec::new();
+        Self { symbol, args }
+    }
+}
+
+impl From<TopPattern> for Pattern {
+    fn from(tp: TopPattern) -> Self {
+        Self::Symb(tp.symbol, tp.args)
+    }
+}
+
+pub struct NoTopPattern;
+
+impl TryFrom<Pattern> for TopPattern {
+    type Error = NoTopPattern;
+
+    fn try_from(p: Pattern) -> Result<Self, Self::Error> {
+        match p {
+            Pattern::Symb(symbol, args) => Ok(TopPattern { symbol, args }),
+            _ => Err(NoTopPattern),
+        }
+    }
 }
 
 impl fmt::Display for Pattern {
@@ -56,13 +89,6 @@ impl Pattern {
     pub fn get_de_bruijn(self) -> Option<DeBruijn> {
         match self {
             Pattern::BVar(idx, args) if args.is_empty() => Some(idx),
-            _ => None,
-        }
-    }
-
-    pub fn get_symb_appl(self) -> Option<(Symbol, Vec<Pattern>)> {
-        match self {
-            Pattern::Symb(s, args) => Some((s, args)),
             _ => None,
         }
     }

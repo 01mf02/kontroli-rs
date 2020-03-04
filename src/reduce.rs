@@ -10,8 +10,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Clone)]
-struct RTTerm(Rc<Thunk<RState, RTerm>>);
-type RState = Rc<RefCell<State>>;
+pub struct RTTerm(Rc<Thunk<RState, RTerm>>);
+pub type RState = Rc<RefCell<State>>;
 
 impl RTTerm {
     fn new(st: RState) -> Self {
@@ -32,10 +32,10 @@ type Context = stack::Stack<RTTerm>;
 type Stack = stack::Stack<RState>;
 
 #[derive(Clone, Default)]
-struct State {
-    ctx: Context,
-    term: RTerm,
-    stack: Stack,
+pub struct State {
+    pub ctx: Context,
+    pub term: RTerm,
+    pub stack: Stack,
 }
 
 impl State {
@@ -103,7 +103,7 @@ impl State {
                             for i in subst.into_iter().rev() {
                                 ctx.push(i)
                             }
-                            stack.pop_many(rule.args.len());
+                            stack.pop_many(rule.lhs.args.len());
                         }
                     }
                 }
@@ -186,8 +186,28 @@ fn nonlinearity(s: Vec<RTTerm>, sig: &Signature) -> Option<RTTerm> {
 }
 
 impl Rule {
-    fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RTTerm>> {
+    /// ~~~
+    /// # use kontroli::prerule::Prerule;
+    /// # use kontroli::preterm::Preterm;
+    /// # use kontroli::reduce::State;
+    /// # use kontroli::rule::Rule;
+    /// # use kontroli::scope::Symbols;
+    /// # use kontroli::symbol::Symbol;
+    /// # use kontroli::term::RTerm;
+    /// # use std::convert::TryFrom;
+    /// let syms: Symbols = ["f", "g", "h"].iter().map(|s| s.to_string()).map(|s| (s.clone(), Symbol::new(s))).collect();
+    /// let rule = "[A] f A --> A.";
+    /// let term = "f g h.";
+    /// let result = "g h.";
+    /// let rule = Rule::try_from(Prerule::try_from(rule).unwrap().scope(&syms).unwrap()).unwrap();
+    /// let term = Preterm::try_from(term).unwrap().scope_closed(&syms).unwrap();
+    /// // TODO: make RTerm::from and State::from!
+    /// let stack = State::new(RTerm::new(term)).stack;
+    /// let matches = rule.match_stack(&stack, &Default::default());
+    /// ~~~
+    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RTTerm>> {
         let iter = self
+            .lhs
             .args
             .iter()
             .zip(stack.iter())

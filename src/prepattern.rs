@@ -2,6 +2,7 @@
 
 use crate::preterm::{Binder, Preterm};
 
+#[derive(Clone)]
 pub enum Prepattern {
     Abst(Option<String>, Box<Prepattern>),
     Symb(String, Vec<Prepattern>),

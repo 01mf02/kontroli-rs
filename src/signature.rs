@@ -1,6 +1,7 @@
 //! Map from symbols to their types and associated rewrite rules.
 
 use crate::command::DCommand;
+use crate::pattern::TopPattern;
 use crate::rule::Rule;
 use crate::symbol::Symbol;
 use crate::term::{RTerm, Term};
@@ -57,9 +58,8 @@ impl SymInfo {
                     Vec::new()
                 } else {
                     vec![Rule {
-                        symbol: Symbol::clone(sym),
                         ctx: Vec::new(),
-                        args: Vec::new(),
+                        lhs: TopPattern::from(Symbol::clone(sym)),
                         rhs: tm,
                     }]
                 };

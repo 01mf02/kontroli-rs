@@ -1,9 +1,10 @@
+use crate::prerule::Prerule;
 use crate::preterm::{BPreterm, Prearg};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Precommand {
     DCmd(String, Vec<Prearg>, PreDCommand),
-    Rule(Vec<String>, BPreterm, BPreterm),
+    Rule(Prerule),
 }
 
 pub type PreDCommand = GDCommand<BPreterm, BPreterm>;

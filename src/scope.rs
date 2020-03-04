@@ -4,7 +4,9 @@ use crate::command::{Command, DCommand};
 use crate::pattern::{Miller, Pattern};
 use crate::precommand::{PreDCommand, Precommand};
 use crate::prepattern::Prepattern;
+use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
+use crate::rule::UncheckedRule;
 use crate::stack::Stack;
 use crate::symbol::Symbol;
 use crate::term::{Arg, RTerm, Term};
@@ -31,7 +33,7 @@ where
 }
 
 impl Preterm {
-    pub fn scoper(self, syms: &Symbols, bnd: &mut Bound) -> Result<RTerm, Error> {
+    fn scoper(self, syms: &Symbols, bnd: &mut Bound) -> Result<RTerm, Error> {
         Ok(RTerm::new(self.scope(syms, bnd)?))
     }
 
@@ -62,6 +64,10 @@ impl Preterm {
             }
         }
     }
+
+    pub fn scope_closed(self, syms: &Symbols) -> Result<Term, Error> {
+        self.scope(syms, &mut Stack::new())
+    }
 }
 
 impl Prearg {
@@ -75,9 +81,10 @@ impl Prearg {
 }
 
 impl PreDCommand {
-    pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<DCommand, Error> {
-        self.map_type_err(|tm| tm.scoper(syms, bnd))?
-            .map_term_err(|tm| tm.scoper(syms, bnd))
+    pub fn scope(self, syms: &Symbols) -> Result<DCommand, Error> {
+        let mut bnd = Stack::new();
+        self.map_type_err(|tm| tm.scoper(syms, &mut bnd))?
+            .map_term_err(|tm| tm.scoper(syms, &mut bnd))
     }
 }
 
@@ -129,25 +136,34 @@ impl Prepattern {
             }),
         }
     }
+
+    pub fn scope_closed(self, syms: &Symbols, mvar: &Bound) -> Result<Pattern, Error> {
+        self.scope(syms, mvar, &mut Stack::new())
+    }
+}
+
+impl Prerule {
+    pub fn scope(self, syms: &Symbols) -> Result<UncheckedRule, Error> {
+        let mut ctxs = Stack::from(self.ctx.clone());
+        let ctx = self.ctx;
+        let lhs = Prepattern::from(self.lhs).scope_closed(syms, &ctxs)?;
+        let rhs = self.rhs.scoper(syms, &mut ctxs)?;
+        Ok(UncheckedRule { ctx, lhs, rhs })
+    }
 }
 
 impl Precommand {
     pub fn scope(self, syms: &mut Symbols) -> Result<Command, Error> {
         match self {
             Self::DCmd(id, args, dcmd) => {
-                let dcmd = dcmd.parametrise(args).scope(syms, &mut Stack::new())?;
+                let dcmd = dcmd.parametrise(args).scope(syms)?;
                 let sym = Symbol::new(id.clone());
                 if syms.insert(id, Symbol::clone(&sym)).is_some() {
                     return Err(Error::Redeclaration);
                 };
                 Ok(Command::DCmd(sym, dcmd))
             }
-            Self::Rule(ctx, lhs, rhs) => {
-                let mut ctxs = Stack::from(ctx.clone());
-                let pat = Prepattern::from(*lhs).scope(syms, &ctxs, &mut Stack::new())?;
-                let rhs = rhs.scoper(syms, &mut ctxs)?;
-                Ok(Command::Rule(ctx, pat, rhs))
-            }
+            Self::Rule(prerule) => Ok(Command::Rule(prerule.scope(syms)?)),
         }
     }
 }

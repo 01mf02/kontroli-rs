@@ -9,7 +9,7 @@ use kontroli::scope::Symbols;
 use kontroli::signature::Signature;
 use kontroli::{parse, parsebuffer, rule, scope, signature, typing};
 use nom::error::VerboseError;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::path::PathBuf;
 use std::{fmt, io};
 use structopt::StructOpt;
@@ -111,9 +111,9 @@ fn handle(cmd: Command, sig: &mut Signature) -> Result<(), CliError> {
             };
             Ok(())
         }
-        Command::Rule(ctx, pat, rhs) => {
-            let rule = Rule::new(ctx, pat, rhs)?;
-            sig.get_mut(&rule.symbol)
+        Command::Rule(unchecked) => {
+            let rule: Rule = Rule::try_from(unchecked)?;
+            sig.get_mut(&rule.lhs.symbol)
                 .expect("rule")
                 .add_rule(rule)
                 .expect("static");
