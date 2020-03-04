@@ -12,6 +12,7 @@ use nom::{
 
 use crate::precommand::{GDCommand, Precommand};
 use crate::preterm::{Binder, Prearg, Preterm};
+use std::convert::TryFrom;
 
 type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
 
@@ -35,6 +36,13 @@ where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
 {
     delimited(char('('), lexeme(inner), lexeme(char(')')))
+}
+
+fn phrase<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
+where
+    F: Fn(&'a [u8]) -> Parse<'a, O1>,
+{
+    terminated(inner, lexeme(char('.')))
 }
 
 pub fn string_from_u8(i: &[u8]) -> String {
@@ -158,7 +166,7 @@ impl Preterm {
         )(i)
     }
 
-    fn parse(i: &[u8]) -> Parse<Self> {
+    pub fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::bind_named, Self::appl, Self::bind_unnamed))(i)
     }
 }
@@ -227,17 +235,26 @@ impl Precommand {
         )(i)
     }
 
-    fn parse(i: &[u8]) -> Parse<Self> {
+    pub fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::dcmd, Self::rule))(i)
     }
 }
+
+impl<'a> TryFrom<&'a str> for Preterm {
+    type Error = nom::Err<VerboseError<&'a [u8]>>;
+
+    fn try_from(i: &'a str) -> Result<Self, Self::Error> {
+        phrase(Self::parse)(i.as_bytes()).map(|(i, o)| o)
+    }
+}
+
 
 // parse whitespace or commands
 pub fn parse_toplevel(i: &[u8]) -> Parse<Option<Precommand>> {
     alt((
         value(None, nom::character::complete::multispace1),
         value(None, comment),
-        map(terminated(Precommand::parse, lexeme(char('.'))), Some),
+        map(phrase(Precommand::parse), Some),
     ))(i)
 }
 
@@ -247,7 +264,7 @@ mod tests {
 
     #[test]
     fn terms() {
-        let pt = terminated(Preterm::parse, lexeme(char('.')));
+        let pt = phrase(Preterm::parse);
         assert!(pt(b"x.").is_ok());
         assert!(pt(b":x -> x.").is_ok());
         assert!(pt(b":vec n -> vec (succ n).").is_ok());
@@ -258,7 +275,7 @@ mod tests {
 
     #[test]
     fn commands() {
-        let pc = terminated(Precommand::parse, lexeme(char('.')));
+        let pc = phrase(Precommand::parse);
         assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.").is_ok());
         assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).".as_bytes()).is_ok());
         assert!(pc(br"def x := \ x : Type Type => {|x|}.").is_ok());
