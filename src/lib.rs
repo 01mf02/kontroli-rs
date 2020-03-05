@@ -22,5 +22,6 @@ pub mod signature;
 pub mod stack;
 pub mod subst;
 pub mod symbol;
+pub mod symbols;
 pub mod term;
 pub mod typing;

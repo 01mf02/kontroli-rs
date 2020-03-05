@@ -18,7 +18,9 @@ use std::convert::TryFrom;
 type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
 
 trait Parser {
-    fn parse(i: &[u8]) -> Parse<Self> where Self: std::marker::Sized;
+    fn parse(i: &[u8]) -> Parse<Self>
+    where
+        Self: std::marker::Sized;
 }
 
 fn comment(i: &[u8]) -> Parse<&[u8]> {

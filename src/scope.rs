@@ -9,11 +9,9 @@ use crate::preterm::{Binder, Prearg, Preterm};
 use crate::rule::UncheckedRule;
 use crate::stack::Stack;
 use crate::symbol::Symbol;
+use crate::symbols::Symbols;
 use crate::term::{Arg, RTerm, Term};
-use fnv::FnvHashMap;
 use std::fmt;
-
-pub type Symbols = FnvHashMap<String, Symbol>;
 
 type Bound = Stack<String>;
 

@@ -1,6 +1,6 @@
 //! Rewrite rules.
 
-use crate::pattern::{Arity, Pattern, TopPattern, NoTopPattern};
+use crate::pattern::{Arity, NoTopPattern, Pattern, TopPattern};
 use crate::prerule::GRule;
 use crate::term::{Arg, RTerm, Term};
 use std::convert::TryFrom;

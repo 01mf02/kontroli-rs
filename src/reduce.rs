@@ -191,11 +191,11 @@ impl Rule {
     /// # use kontroli::preterm::Preterm;
     /// # use kontroli::reduce::State;
     /// # use kontroli::rule::Rule;
-    /// # use kontroli::scope::Symbols;
     /// # use kontroli::symbol::Symbol;
+    /// # use kontroli::symbols::Symbols;
     /// # use kontroli::term::RTerm;
     /// # use std::convert::TryFrom;
-    /// let syms: Symbols = ["f", "g", "h"].iter().map(|s| s.to_string()).map(|s| (s.clone(), Symbol::new(s))).collect();
+    /// let syms: Symbols = vec!("f", "g", "h").into_iter().collect();
     /// let rule = "[A] f A --> A.";
     /// let term = "f g h.";
     /// let result = "g h.";
