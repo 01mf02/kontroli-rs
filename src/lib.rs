@@ -25,3 +25,13 @@ pub mod symbol;
 pub mod symbols;
 pub mod term;
 pub mod typing;
+
+pub use pattern::Pattern;
+pub use prepattern::Prepattern;
+pub use prerule::Prerule;
+pub use preterm::Preterm;
+pub use rule::Rule;
+pub use signature::Signature;
+pub use symbol::Symbol;
+pub use symbols::Symbols;
+pub use term::{Term, RTerm};
