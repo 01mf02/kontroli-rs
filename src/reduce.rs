@@ -17,12 +17,8 @@ impl RTTerm {
     fn new(st: RState) -> Self {
         Self(Rc::new(Thunk::new(st)))
     }
-}
 
-impl std::ops::Deref for RTTerm {
-    type Target = RTerm;
-
-    fn deref(&self) -> &Self::Target {
+    pub fn force(&self) -> &RTerm {
         &**self.0
     }
 }
@@ -60,7 +56,7 @@ impl State {
                 Type | Kind | Prod(_, _) => break,
                 BVar(x) => match ctx.get(*x) {
                     Some(ctm) => {
-                        term = (**ctm).clone();
+                        term = ctm.force().clone();
                         ctx.clear()
                     }
                     None => {
@@ -89,24 +85,30 @@ impl State {
                     }
                     term = head.clone();
                 }
-                Symb(s) => {
-                    let rules = &sig.get(&s).expect("symbol info").rules;
-                    match rules
-                        .iter()
-                        .filter_map(|r| Some((r.match_stack(&stack, sig)?, r)))
-                        .next()
-                    {
-                        None => break,
-                        Some((subst, rule)) => {
-                            trace!("rewrite: {} ... ⟶ {}", s, rule);
-                            term = rule.rhs.clone();
-                            for i in subst.into_iter().rev() {
-                                ctx.push(i)
+                Symb(s) => match &sig.get(&s) {
+                    // we did not find an entry for our symbol in the signature
+                    // (this should never happen in actual type checking,
+                    // but it is useful for tests)
+                    None => break,
+                    Some(entry) => {
+                        match entry
+                            .rules
+                            .iter()
+                            .filter_map(|r| Some((r.match_stack(&stack, sig)?, r)))
+                            .next()
+                        {
+                            None => break,
+                            Some((subst, rule)) => {
+                                trace!("rewrite: {} ... ⟶ {}", s, rule);
+                                term = rule.rhs.clone();
+                                for i in subst.into_iter().rev() {
+                                    ctx.push(i)
+                                }
+                                stack.pop_many(rule.lhs.args.len());
                             }
-                            stack.pop_many(rule.lhs.args.len());
                         }
                     }
-                }
+                },
             }
         }
 
@@ -126,7 +128,7 @@ impl RTerm {
 
 fn psubst(args: &Context) -> impl Fn(usize, usize) -> RTerm + '_ {
     move |n: usize, k: usize| match args.get(n - k) {
-        Some(arg) => (**arg).clone() << k,
+        Some(arg) => arg.force().clone() << k,
         None => RTerm::new(Term::BVar(n - args.len())),
     }
 }
@@ -178,7 +180,7 @@ fn nonlinearity(s: Vec<RTTerm>, sig: &Signature) -> Option<RTTerm> {
     let st1 = iter.next()?;
     // nonlinearity
     for stn in iter {
-        if !convertible(&sig, (*st1).clone(), (*stn).clone()) {
+        if !convertible(&sig, st1.force().clone(), stn.force().clone()) {
             return None;
         }
     }
@@ -187,20 +189,26 @@ fn nonlinearity(s: Vec<RTTerm>, sig: &Signature) -> Option<RTTerm> {
 
 impl Rule {
     /// ~~~
-    /// # use kontroli::{Prerule, Preterm, Rule, RTerm, Symbol, Symbols};
+    /// # use kontroli::{Prerule, Preterm, Rule, RTerm, Signature, Symbol, Symbols};
     /// # use kontroli::reduce::State;
     /// # use std::convert::TryFrom;
-    /// let syms: Symbols = vec!("f", "g", "h").into_iter().collect();
-    /// let rule = "[A] f A --> A.";
-    /// let term = "f g h.";
-    /// let result = "g h.";
-    /// let rule = Rule::try_from(Prerule::try_from(rule).unwrap().scope(&syms).unwrap()).unwrap();
-    /// let term = Preterm::try_from(term).unwrap().scope_closed(&syms).unwrap();
-    /// // TODO: make RTerm::from and State::from!
-    /// let stack = State::new(RTerm::new(term)).stack;
-    /// let matches = rule.match_stack(&stack, &Default::default());
+    /// let syms: Symbols = vec!("id", "f", "a").into_iter().collect();
+    /// let sig: Signature = Default::default();
+    /// let mk_rule = |s: &str| Rule::try_from(Prerule::try_from(s).unwrap().scope(&syms).unwrap()).unwrap();
+    /// let mk_term = |s: &str| Preterm::try_from(s).unwrap().scope_closed(&syms).unwrap();
+    /// let rule = mk_rule("[A] id A --> A.");
+    /// let term = mk_term("id f a.");
+    /// let stack = State::new(RTerm::new(term)).whnf(&sig).stack;
+    /// let subst = rule.match_stack(&stack, &sig).unwrap();
+    /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
+    /// assert_eq!(vec!(mk_term("f.")), subst.collect::<Vec<_>>())
     /// ~~~
     pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RTTerm>> {
+        if stack.len() < self.lhs.args.len() {
+            // we do not have enough arguments on the stack to match against
+            return None;
+        }
+
         let iter = self
             .lhs
             .args
