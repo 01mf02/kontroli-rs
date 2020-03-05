@@ -43,6 +43,8 @@ To obtain a Dedukti from a Kontroli file, use:
 
 ## Usage
 
+To install Rust, follow the instructions on <https://rustup.rs/>.
+
 To run Kontroli on output generated from Isabelle/Pure:
 
     cargo run --release examples/pure.ko
