@@ -1,6 +1,6 @@
 //! Reduction to weak head normal form (WHNF), including rewriting.
 
-use crate::pattern::{Miller, Pattern};
+use crate::pattern::{Miller, Pattern, TopPattern};
 use crate::rule::Rule;
 use crate::signature::Signature;
 use crate::stack;
@@ -9,6 +9,7 @@ use lazy_st::Thunk;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+/// A shared lazy term constructed from a state.
 #[derive(Clone)]
 pub struct RTTerm(Rc<Thunk<RState, RTerm>>);
 pub type RState = Rc<RefCell<State>>;
@@ -20,6 +21,25 @@ impl RTTerm {
 
     pub fn force(&self) -> &RTerm {
         &**self.0
+    }
+
+    /// For a list of terms, return its first term
+    /// if it is convertible with all others.
+    ///
+    /// This is used for checking nonlinear pattern matches, because there
+    /// we want to ensure that all terms that were
+    /// matched with the same variable are convertible.
+    pub fn all_convertible(s: Vec<Self>, sig: &Signature) -> Option<Self> {
+        let mut iter = s.into_iter();
+        // assure that we have at least one term
+        let tm1 = iter.next()?;
+        for tmn in iter {
+            // the first term only gets evaluated if we have some other terms
+            if !convertible(&sig, tm1.force().clone(), tmn.force().clone()) {
+                return None;
+            }
+        }
+        Some(tm1)
     }
 }
 
@@ -43,6 +63,7 @@ impl State {
         }
     }
 
+    /// Evaluate the state to its weak head normal form.
     pub fn whnf(self, sig: &Signature) -> Self {
         use Term::*;
         let State {
@@ -174,17 +195,25 @@ impl Pattern {
     }
 }
 
-fn nonlinearity(s: Vec<RTTerm>, sig: &Signature) -> Option<RTTerm> {
-    let mut iter = s.into_iter();
-    // assure that at least one term was matched
-    let st1 = iter.next()?;
-    // nonlinearity
-    for stn in iter {
-        if !convertible(&sig, st1.force().clone(), stn.force().clone()) {
-            return None;
+impl TopPattern {
+    pub fn match_stack<'a>(
+        &'a self,
+        stack: &'a Stack,
+        sig: &'a Signature,
+    ) -> Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a> {
+        if stack.len() < self.args.len() {
+            // we do not have enough arguments on the stack to match against
+            return Box::new(std::iter::once(None));
         }
+
+        Box::new(
+            self.args
+                .iter()
+                .zip(stack.iter())
+                .map(move |(pat, rstate)| pat.match_state(rstate.clone(), sig))
+                .flatten(),
+        )
     }
-    Some(st1)
 }
 
 impl Rule {
@@ -204,24 +233,15 @@ impl Rule {
     /// assert_eq!(vec!(mk_term("f.")), subst.collect::<Vec<_>>())
     /// ~~~
     pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RTTerm>> {
-        if stack.len() < self.lhs.args.len() {
-            // we do not have enough arguments on the stack to match against
-            return None;
-        }
-
-        let iter = self
-            .lhs
-            .args
-            .iter()
-            .zip(stack.iter())
-            .map(|(pat, rstate)| pat.match_state(rstate.clone(), sig))
-            .flatten();
         let mut subst = vec![vec![]; self.ctx.len()];
-        for i in iter {
+        for i in self.lhs.match_stack(stack, sig) {
             let (m, st1) = i?;
             subst.get_mut(m.0).expect("subst").push(RTTerm::new(st1))
         }
-        subst.into_iter().map(|s| nonlinearity(s, sig)).collect()
+        subst
+            .into_iter()
+            .map(|s| RTTerm::all_convertible(s, sig))
+            .collect()
     }
 }
 
