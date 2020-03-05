@@ -4,10 +4,8 @@ extern crate pretty_env_logger;
 
 use byte_unit::{Byte, ByteError};
 use kontroli::command::Command;
-use kontroli::rule::Rule;
-use kontroli::signature::Signature;
-use kontroli::symbols::Symbols;
 use kontroli::{parse, parsebuffer, rule, scope, signature, typing};
+use kontroli::{Rule, Signature, Symbols};
 use nom::error::VerboseError;
 use std::convert::{TryFrom, TryInto};
 use std::path::PathBuf;

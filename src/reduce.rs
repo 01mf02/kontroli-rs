@@ -187,13 +187,8 @@ fn nonlinearity(s: Vec<RTTerm>, sig: &Signature) -> Option<RTTerm> {
 
 impl Rule {
     /// ~~~
-    /// # use kontroli::prerule::Prerule;
-    /// # use kontroli::preterm::Preterm;
+    /// # use kontroli::{Prerule, Preterm, Rule, RTerm, Symbol, Symbols};
     /// # use kontroli::reduce::State;
-    /// # use kontroli::rule::Rule;
-    /// # use kontroli::symbol::Symbol;
-    /// # use kontroli::symbols::Symbols;
-    /// # use kontroli::term::RTerm;
     /// # use std::convert::TryFrom;
     /// let syms: Symbols = vec!("f", "g", "h").into_iter().collect();
     /// let rule = "[A] f A --> A.";

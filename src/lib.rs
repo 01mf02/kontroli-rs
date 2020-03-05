@@ -34,4 +34,4 @@ pub use rule::Rule;
 pub use signature::Signature;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
-pub use term::{Term, RTerm};
+pub use term::{RTerm, Term};
