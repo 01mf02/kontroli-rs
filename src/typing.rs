@@ -5,7 +5,7 @@ use crate::signature::Signature;
 use crate::term::{Arg, RTerm, Term};
 use std::fmt;
 
-// DB -> type
+/// Map from de Bruijn indices to associated types.
 pub type Context = crate::stack::Stack<RTerm>;
 
 impl Context {
