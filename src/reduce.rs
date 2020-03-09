@@ -168,7 +168,11 @@ impl Pattern {
                 let state = rstate.borrow();
                 match &*state.term {
                     Term::Symb(st) => {
-                        if sp == st && state.stack.len() >= pats.len() {
+                        // The stack and pattern length have to be equal,
+                        // to exclude pattern matches like `f (g a) ~ f g`.
+                        // This is unlike `TopPattern::match_stack`, which
+                        // allows matches like `add 0 n ~ add 0`.
+                        if sp == st && state.stack.len() == pats.len() {
                             Box::new(
                                 pats.iter()
                                     .zip(state.stack.clone())
