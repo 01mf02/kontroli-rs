@@ -39,7 +39,7 @@ An example of the syntax can be seen in [examples/pure.ko](examples/pure.ko).
 
 To obtain a Dedukti from a Kontroli file, use:
 
-    sed -e 's/\\ //g' -e 's/! //g' file.ko > file.dk
+    sed -e 's/\\ //g' -e 's/! //g'  -e 's/:\([^ =]\)/\1/g' file.ko > file.dk
 
 ## Usage
 
