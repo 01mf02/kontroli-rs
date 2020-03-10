@@ -121,10 +121,8 @@ impl State {
                             None => break,
                             Some((subst, rule)) => {
                                 trace!("rewrite: {} ... ⟶ {}", s, rule);
+                                ctx = subst;
                                 term = rule.rhs.clone();
-                                for i in subst.into_iter().rev() {
-                                    ctx.push(i)
-                                }
                                 stack.pop_many(rule.lhs.args.len());
                             }
                         }
@@ -236,7 +234,7 @@ impl Rule {
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
     /// assert_eq!(vec!(mk_term("f.")), subst.collect::<Vec<_>>())
     /// ~~~
-    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Vec<RTTerm>> {
+    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Context> {
         let mut subst = vec![vec![]; self.ctx.len()];
         for i in self.lhs.match_stack(stack, sig) {
             let (m, st1) = i?;
@@ -244,6 +242,7 @@ impl Rule {
         }
         subst
             .into_iter()
+            .rev()
             .map(|s| RTTerm::all_convertible(s, sig))
             .collect()
     }
