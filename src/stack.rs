@@ -77,6 +77,6 @@ impl<A> IntoIterator for Stack<A> {
 
 impl<A> FromIterator<A> for Stack<A> {
     fn from_iter<I: IntoIterator<Item = A>>(iter: I) -> Self {
-        Stack(Vec::from_iter(iter))
+        Self(Vec::from_iter(iter))
     }
 }
