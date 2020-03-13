@@ -7,6 +7,7 @@ extern crate nom;
 extern crate log;
 
 pub mod command;
+pub mod error;
 pub mod parse;
 pub mod parsebuffer;
 pub mod parseerror;
@@ -26,6 +27,7 @@ pub mod symbols;
 pub mod term;
 pub mod typing;
 
+pub use error::Error;
 pub use pattern::Pattern;
 pub use prepattern::Prepattern;
 pub use prerule::Prerule;
