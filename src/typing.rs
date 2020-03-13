@@ -75,14 +75,23 @@ impl Arg {
 }
 
 impl Term {
-    /// Infer the type of the term.
+    /// Infer the type of a closed term.
+    pub fn infer_closed(&self, sig: &Signature) -> Result<RTerm, Error> {
+        self.infer(sig, &mut Context::new())
+    }
+
+    /// Check whether a closed term is of a given type.
+    pub fn check_closed(&self, sig: &Signature, ty_exp: RTerm) -> Result<bool, Error> {
+        self.check(sig, &mut Context::new(), ty_exp)
+    }
+
     pub fn infer(&self, sig: &Signature, ctx: &mut Context) -> Result<RTerm, Error> {
         debug!("infer type of {}", self);
         use Term::*;
         match self {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(RTerm::new(Kind)),
-            Symb(s) => Ok(sig.get(&s).unwrap().typ.clone()),
+            Symb(s) => Ok(sig.types.get(&s).unwrap().clone()),
             BVar(x) => Ok(ctx.get_type(*x).unwrap()),
             Appl(f, args) => {
                 args.iter()
@@ -121,7 +130,6 @@ impl Term {
         }
     }
 
-    /// Check whether the term is of a given type.
     pub fn check(&self, sig: &Signature, ctx: &mut Context, ty_exp: RTerm) -> Result<bool, Error> {
         debug!("check {} is of type {} when {}", self, ty_exp, ctx);
         use Term::*;

@@ -5,30 +5,27 @@ use crate::pattern::TopPattern;
 use crate::rule::Rule;
 use crate::symbol::Symbol;
 use crate::term::{RTerm, Term};
-use crate::typing::{Context, Error};
+use crate::typing;
 use fnv::FnvHashMap;
+use std::fmt;
 
-pub type Signature = FnvHashMap<Symbol, SymInfo>;
-
-pub struct SymInfo {
-    stat: Staticity,
-    pub typ: RTerm,
-    pub rules: Vec<Rule>,
+pub struct Signature {
+    pub eta: bool,
+    pub types: FnvHashMap<Symbol, RTerm>,
+    pub rules: FnvHashMap<Symbol, Vec<Rule>>,
 }
 
-impl SymInfo {
-    pub fn add_rule(&mut self, rule: Rule) -> Result<(), ()> {
-        match self.stat {
-            Staticity::Static => Err(()),
-            Staticity::Definable => {
-                self.rules.push(rule);
-                Ok(())
-            }
+impl Default for Signature {
+    fn default() -> Self {
+        Self {
+            eta: false,
+            types: Default::default(),
+            rules: Default::default(),
         }
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Staticity {
     Static,
     Definable,
@@ -36,44 +33,77 @@ pub enum Staticity {
 
 type Opacity = bool;
 
+// TODO: remake Entry into struct
 pub enum Entry {
     Declaration(Staticity, RTerm),
     Definition(Opacity, RTerm, RTerm),
 }
 
-impl SymInfo {
-    pub fn new(sym: &Symbol, e: Entry) -> Self {
+#[derive(Debug)]
+pub enum Error {
+    Reintroduction,
+    NonRewritable,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "signature error")
+    }
+}
+
+impl Signature {
+    fn intro_type(&mut self, sym: Symbol, typ: RTerm) -> Result<(), Error> {
+        if self.types.insert(sym, typ).is_some() {
+            return Err(Error::Reintroduction);
+        }
+        Ok(())
+    }
+
+    fn intro_rules(&mut self, sym: Symbol, rules: Vec<Rule>) -> Result<(), Error> {
+        if self.rules.insert(sym, rules).is_some() {
+            return Err(Error::Reintroduction);
+        }
+        Ok(())
+    }
+
+    pub fn add_rule(&mut self, rule: Rule) -> Result<(), Error> {
+        Ok(self
+            .rules
+            .get_mut(&rule.lhs.symbol)
+            .ok_or(Error::NonRewritable)?
+            .push(rule))
+    }
+
+    pub fn insert(&mut self, sym: &Symbol, e: Entry) -> Result<(), Error> {
         match e {
             Entry::Declaration(stat, typ) => {
-                let rules = Vec::new();
-                SymInfo { stat, typ, rules }
+                self.intro_type(sym.clone(), typ)?;
+                if stat == Staticity::Definable {
+                    self.intro_rules(sym.clone(), Vec::new())?;
+                }
+                Ok(())
             }
             Entry::Definition(opaque, typ, tm) => {
-                let stat = if opaque {
-                    Staticity::Static
-                } else {
-                    Staticity::Definable
-                };
-                let rules = if opaque {
-                    Vec::new()
-                } else {
-                    vec![Rule {
+                self.intro_type(sym.clone(), typ)?;
+                if !opaque {
+                    let rule = Rule {
                         ctx: Vec::new(),
                         lhs: TopPattern::from(Symbol::clone(sym)),
                         rhs: tm,
-                    }]
-                };
-                SymInfo { stat, typ, rules }
+                    };
+                    self.intro_rules(sym.clone(), vec![rule])?;
+                }
+                Ok(())
             }
         }
     }
 }
 
 impl Entry {
-    pub fn declare(sig: &Signature, st: Staticity, ty: RTerm) -> Result<Self, Error> {
-        match &*ty.infer(&sig, &mut Context::new())? {
+    pub fn declare(sig: &Signature, st: Staticity, ty: RTerm) -> Result<Self, typing::Error> {
+        match &*ty.infer_closed(&sig)? {
             Term::Kind | Term::Type => Ok(Entry::Declaration(st, ty)),
-            _ => Err(Error::SortExpected),
+            _ => Err(typing::Error::SortExpected),
         }
     }
 
@@ -82,27 +112,25 @@ impl Entry {
         opaque: bool,
         oty: Option<RTerm>,
         tm: RTerm,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, typing::Error> {
         let ty = match oty {
-            None => tm.infer(&sig, &mut Context::new())?,
+            None => tm.infer_closed(&sig)?,
             Some(ty) => {
-                let _ = ty.infer(&sig, &mut Context::new())?;
-                if tm.check(&sig, &mut Context::new(), ty.clone())? {
+                let _ = ty.infer_closed(&sig)?;
+                if tm.check_closed(&sig, ty.clone())? {
                     ty
                 } else {
-                    return Err(Error::Unconvertible);
+                    return Err(typing::Error::Unconvertible);
                 }
             }
         };
         match &*ty {
-            Term::Kind => Err(Error::UnexpectedKind),
+            Term::Kind => Err(typing::Error::UnexpectedKind),
             _ => Ok(Entry::Definition(opaque, ty, tm)),
         }
     }
-}
 
-impl Entry {
-    pub fn new(dcmd: DCommand, sig: &Signature) -> Result<Self, Error> {
+    pub fn new(dcmd: DCommand, sig: &Signature) -> Result<Self, typing::Error> {
         match dcmd {
             DCommand::Declaration(ty) => Self::declare(&sig, Staticity::Static, ty),
             DCommand::Definition(oty, otm) => match (oty, otm) {

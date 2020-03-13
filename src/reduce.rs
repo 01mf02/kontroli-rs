@@ -106,14 +106,10 @@ impl State {
                     }
                     term = head.clone();
                 }
-                Symb(s) => match &sig.get(&s) {
-                    // we did not find an entry for our symbol in the signature
-                    // (this should never happen in actual type checking,
-                    // but it is useful for tests)
+                Symb(s) => match &sig.rules.get(&s) {
                     None => break,
-                    Some(entry) => {
-                        match entry
-                            .rules
+                    Some(rules) => {
+                        match rules
                             .iter()
                             .filter_map(|r| Some((r.match_stack(&stack, sig)?, r)))
                             .next()

@@ -18,6 +18,7 @@ enum CliError {
     Type(typing::Error),
     Scope(scope::Error),
     Rule(rule::Error),
+    Signature(signature::Error),
 }
 
 impl fmt::Display for CliError {
@@ -27,6 +28,7 @@ impl fmt::Display for CliError {
             Self::Type(ref err) => err.fmt(f),
             Self::Scope(ref err) => err.fmt(f),
             Self::Rule(ref err) => err.fmt(f),
+            Self::Signature(ref err) => err.fmt(f),
         }
     }
 }
@@ -54,6 +56,12 @@ impl From<scope::Error> for CliError {
 impl From<rule::Error> for CliError {
     fn from(err: rule::Error) -> Self {
         Self::Rule(err)
+    }
+}
+
+impl From<signature::Error> for CliError {
+    fn from(err: signature::Error) -> Self {
+        Self::Signature(err)
     }
 }
 
@@ -102,21 +110,9 @@ fn handle(cmd: Command, sig: &mut Signature) -> Result<(), CliError> {
     match cmd {
         Command::DCmd(sym, dcmd) => {
             println!("{}", sym);
-            let entry = signature::Entry::new(dcmd, &*sig)?;
-            let info = signature::SymInfo::new(&sym, entry);
-            if sig.insert(sym, info).is_some() {
-                panic!("symbol redeclaration");
-            };
-            Ok(())
+            Ok(sig.insert(&sym, signature::Entry::new(dcmd, &*sig)?)?)
         }
-        Command::Rule(unchecked) => {
-            let rule: Rule = Rule::try_from(unchecked)?;
-            sig.get_mut(&rule.lhs.symbol)
-                .expect("rule")
-                .add_rule(rule)
-                .expect("static");
-            Ok(())
-        }
+        Command::Rule(unchecked) => Ok(sig.add_rule(Rule::try_from(unchecked)?)?),
     }
 }
 
