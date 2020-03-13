@@ -15,7 +15,7 @@ pub struct RTTerm(Rc<Thunk<RState, RTerm>>);
 
 /// A shared mutable state.
 ///
-/// We cannot easily use `Thunk` instead of `RefCell` here,
+/// We use `RefCell` instead of `Thunk` here
 /// because evaluation requires a signature and
 /// because we sometimes wish to access the original state.
 pub type RState = Rc<RefCell<WState>>;
