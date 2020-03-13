@@ -12,7 +12,37 @@ use std::rc::Rc;
 /// A shared lazy term constructed from a state.
 #[derive(Clone)]
 pub struct RTTerm(Rc<Thunk<RState, RTerm>>);
-pub type RState = Rc<RefCell<State>>;
+
+/// A shared mutable state.
+///
+/// We cannot easily use `Thunk` instead of `RefCell` here,
+/// because evaluation requires a signature and
+/// because we sometimes wish to access the original state.
+pub type RState = Rc<RefCell<WState>>;
+
+/// A version of `State` that tracks whether it was reduced to WHNF yet.
+pub struct WState {
+    state: State,
+    whnfed: bool,
+}
+
+impl WState {
+    fn new(state: State) -> WState {
+        let whnfed = false;
+        Self { state, whnfed }
+    }
+
+    /// Replace the state with its WHNF if it was not in WHNF before.
+    fn whnf(&mut self, sig: &Signature) {
+        if self.whnfed {
+            return;
+        }
+
+        let state = std::mem::replace(&mut self.state, State::default());
+        self.state = state.whnf(sig);
+        self.whnfed = true
+    }
+}
 
 impl RTTerm {
     fn new(st: RState) -> Self {
@@ -56,7 +86,7 @@ pub struct State {
 
 impl State {
     pub fn new(term: RTerm) -> Self {
-        State {
+        Self {
             ctx: Context::new(),
             term,
             stack: Stack::new(),
@@ -66,7 +96,7 @@ impl State {
     /// Evaluate the state to its weak head normal form.
     pub fn whnf(self, sig: &Signature) -> Self {
         use Term::*;
-        let State {
+        let Self {
             mut ctx,
             mut term,
             mut stack,
@@ -102,7 +132,7 @@ impl State {
                             term: t.clone(),
                             stack: Stack::new(),
                         };
-                        stack.push(Rc::new(RefCell::new(st)))
+                        stack.push(Rc::new(RefCell::new(WState::new(st))))
                     }
                     term = head.clone();
                 }
@@ -158,8 +188,8 @@ impl Pattern {
     ) -> Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a> {
         match self {
             Self::Symb(sp, pats) => {
-                rstate.replace_with(|state| std::mem::take(state).whnf(sig));
-                let state = rstate.borrow();
+                rstate.borrow_mut().whnf(sig);
+                let state = &rstate.borrow().state;
                 match &*state.term {
                     Term::Symb(st) => {
                         // The stack and pattern length have to be equal,
@@ -252,7 +282,7 @@ impl lazy_st::Evaluate<RTerm> for RState {
 
 impl From<RState> for RTerm {
     fn from(s: RState) -> Self {
-        RTerm::from(s.borrow().clone())
+        RTerm::from(s.borrow().state.clone())
     }
 }
 
