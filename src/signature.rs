@@ -59,11 +59,11 @@ impl Signature {
     }
 
     pub fn add_rule(&mut self, rule: Rule) -> Result<(), Error> {
-        Ok(self
-            .rules
+        self.rules
             .get_mut(&rule.lhs.symbol)
             .ok_or(Error::NonRewritable)?
-            .push(rule))
+            .push(rule);
+        Ok(())
     }
 
     pub fn insert(&mut self, sym: &Symbol, e: Entry) -> Result<(), Error> {
