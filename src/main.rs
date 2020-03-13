@@ -99,8 +99,7 @@ struct Opt {
     /// Size of the parse buffer
     #[structopt(long, default_value = "64MB", parse(try_from_str = parse_byte))]
     buffer: Byte,
-    //#[structopt(long, default_value = "1024")]
-    //buffer: usize,
+
     /// Files to process (cumulative)
     #[structopt(name = "FILE")]
     files: Vec<PathBuf>,
