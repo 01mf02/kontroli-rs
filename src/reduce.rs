@@ -272,9 +272,7 @@ impl RTerm {
     }
 }
 
-const ETA: bool = true;
-
-fn conversion_step(cn: (RTerm, RTerm), cns: &mut Vec<(RTerm, RTerm)>) -> bool {
+fn conversion_step(cn: (RTerm, RTerm), cns: &mut Vec<(RTerm, RTerm)>, eta: &bool) -> bool {
     use Term::*;
 
     let (cn1, cn2) = cn;
@@ -292,7 +290,7 @@ fn conversion_step(cn: (RTerm, RTerm), cns: &mut Vec<(RTerm, RTerm)>) -> bool {
             true
         }
         // TODO: make this nicer
-        (a, Abst(_, b)) | (Abst(_, b), a) if ETA => {
+        (a, Abst(_, b)) | (Abst(_, b), a) if *eta => {
             cns.push((
                 b.clone(),
                 (RTerm::new(a.clone()) << 1).apply(vec![RTerm::new(BVar(0))]),
@@ -320,7 +318,7 @@ pub fn convertible(sig: &Signature, tm1: RTerm, tm2: RTerm) -> bool {
                 trace!("convertible: {} ~? {}", tm1, tm2);
                 if tm1 != tm2 {
                     let cn = (tm1.whnf(sig), tm2.whnf(sig));
-                    if !conversion_step(cn, &mut cns) {
+                    if !conversion_step(cn, &mut cns, &sig.eta) {
                         break false;
                     }
                 }

@@ -151,6 +151,7 @@ fn main() -> Result<(), CliError> {
     let mut syms: Symbols = Default::default();
 
     let opt = Opt::from_args();
+    sig.eta = opt.eta;
 
     if opt.files.is_empty() {
         run(io::stdin(), &opt, &mut syms, &mut sig)?;
