@@ -143,15 +143,15 @@ def exists : :(:ind -> bool) -> bool := \ f => exists' f 1.
 
 
 def mem_line : :ind -> :ind -> :ind -> :sudo -> bool.
-[i,j,k,s] mem_line i j k s --> exists (\ i':ind => eq (get i' j s) k).
+[i,j,k,s] mem_line i j k s --> exists (\ i': ind => eq (get i' j s) k).
 
 def mem_col  : :ind -> :ind -> :ind -> :sudo -> bool.
-[i,j,k,s] mem_col i j k s --> exists (\ j':ind => eq (get i j' s) k).
+[i,j,k,s] mem_col i j k s --> exists (\ j': ind => eq (get i j' s) k).
 
 def mem_squ  : :ind -> :ind -> :ind -> :sudo -> bool.
 [i,j,k,s] mem_squ i j k s -->
-  (\ i':ind =>
-   \ j':ind =>
+  (\ i': ind =>
+   \ j': ind =>
     (or (eq (get i'         j'         s) k)
     (or (eq (get (S i')     j'         s) k)
 	(or (eq (get (S (S i')) j'         s) k)
@@ -204,3 +204,7 @@ def solve : :ind -> :ind -> :ind -> :sudo -> solution.
 
 
 def solve_sudo : :sudo -> solution := \ s => solve 1 1 1 s.
+
+(; A dependent type used to check equality ;)
+Dep: :solution -> Type.
+dep : ! s: solution -> Dep s.
