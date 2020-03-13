@@ -25,18 +25,10 @@ impl Default for Signature {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum Staticity {
-    Static,
-    Definable,
-}
-
-type Opacity = bool;
-
-// TODO: remake Entry into struct
-pub enum Entry {
-    Declaration(Staticity, RTerm),
-    Definition(Opacity, RTerm, RTerm),
+pub struct Entry {
+    rewritable: bool,
+    typ: RTerm,
+    term: Option<RTerm>,
 }
 
 #[derive(Debug)]
@@ -75,70 +67,70 @@ impl Signature {
     }
 
     pub fn insert(&mut self, sym: &Symbol, e: Entry) -> Result<(), Error> {
-        match e {
-            Entry::Declaration(stat, typ) => {
-                self.intro_type(sym.clone(), typ)?;
-                if stat == Staticity::Definable {
-                    self.intro_rules(sym.clone(), Vec::new())?;
-                }
-                Ok(())
-            }
-            Entry::Definition(opaque, typ, tm) => {
-                self.intro_type(sym.clone(), typ)?;
-                if !opaque {
-                    let rule = Rule {
-                        ctx: Vec::new(),
-                        lhs: TopPattern::from(Symbol::clone(sym)),
-                        rhs: tm,
-                    };
-                    self.intro_rules(sym.clone(), vec![rule])?;
-                }
-                Ok(())
-            }
+        self.intro_type(sym.clone(), e.typ)?;
+        if e.rewritable {
+            let rules = match e.term {
+                None => Vec::new(),
+                Some(tm) => vec![Rule {
+                    ctx: Vec::new(),
+                    lhs: TopPattern::from(Symbol::clone(sym)),
+                    rhs: tm,
+                }],
+            };
+            self.intro_rules(sym.clone(), rules)?;
         }
+        Ok(())
     }
 }
 
 impl Entry {
-    pub fn declare(sig: &Signature, st: Staticity, ty: RTerm) -> Result<Self, typing::Error> {
-        match &*ty.infer_closed(&sig)? {
-            Term::Kind | Term::Type => Ok(Entry::Declaration(st, ty)),
+    pub fn declare(sig: &Signature, rewritable: bool, typ: RTerm) -> Result<Self, typing::Error> {
+        match &*typ.infer_closed(&sig)? {
+            Term::Kind | Term::Type => Ok(Self {
+                rewritable,
+                typ,
+                term: None,
+            }),
             _ => Err(typing::Error::SortExpected),
         }
     }
 
     pub fn define(
         sig: &Signature,
-        opaque: bool,
+        rewritable: bool,
         oty: Option<RTerm>,
-        tm: RTerm,
+        term: RTerm,
     ) -> Result<Self, typing::Error> {
-        let ty = match oty {
-            None => tm.infer_closed(&sig)?,
+        let typ = match oty {
+            None => term.infer_closed(&sig)?,
             Some(ty) => {
                 let _ = ty.infer_closed(&sig)?;
-                if tm.check_closed(&sig, ty.clone())? {
+                if term.check_closed(&sig, ty.clone())? {
                     ty
                 } else {
                     return Err(typing::Error::Unconvertible);
                 }
             }
         };
-        match &*ty {
+        match &*typ {
             Term::Kind => Err(typing::Error::UnexpectedKind),
-            _ => Ok(Entry::Definition(opaque, ty, tm)),
+            _ => Ok(Self {
+                rewritable,
+                typ,
+                term: Some(term),
+            }),
         }
     }
 
     pub fn new(dcmd: DCommand, sig: &Signature) -> Result<Self, typing::Error> {
         match dcmd {
-            DCommand::Declaration(ty) => Self::declare(&sig, Staticity::Static, ty),
+            DCommand::Declaration(ty) => Self::declare(&sig, false, ty),
             DCommand::Definition(oty, otm) => match (oty, otm) {
-                (Some(ty), None) => Self::declare(&sig, Staticity::Definable, ty),
-                (oty, Some(tm)) => Self::define(&sig, false, oty, tm),
+                (Some(ty), None) => Self::declare(&sig, true, ty),
+                (oty, Some(tm)) => Self::define(&sig, true, oty, tm),
                 (None, None) => panic!("both type and term are empty"),
             },
-            DCommand::Theorem(ty, tm) => Self::define(&sig, true, Some(ty), tm),
+            DCommand::Theorem(ty, tm) => Self::define(&sig, false, Some(ty), tm),
         }
     }
 }
