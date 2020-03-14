@@ -1,9 +1,9 @@
 use nom::{
     branch::alt,
-    bytes::streaming::{tag, take_until, take_while1},
+    bytes::streaming::{is_not, tag, take_until, take_while1},
     character::is_alphanumeric,
-    character::streaming::{char, multispace0},
-    combinator::{map, map_opt, opt, value},
+    character::streaming::{char, multispace0, one_of},
+    combinator::{map, map_opt, opt, recognize, value},
     error::VerboseError,
     multi::{many0, separated_list},
     sequence::{delimited, pair, preceded, terminated, tuple},
@@ -23,8 +23,54 @@ trait Parser {
         Self: std::marker::Sized;
 }
 
+/// Parse arbitrary nesting of strings delimited by non-empty start and end strings.
+///
+/// ~~~
+/// # use kontroli::parse::nested;
+/// let c_style = nested(*b"/*", *b"*/");
+/// assert!(c_style(b"/* here /* more */ */").is_ok());
+///
+/// // all nestings have to be closed
+/// assert!(c_style(b"/* here /* more */").is_err());
+/// ~~~
+///
+/// To allow nested bracketed idents
+/// (which slows down parsing by about 10% compared to unnested ones):
+///
+/// ~~~
+/// # use nom::combinator::map;
+/// # use kontroli::parse::{nested, string_from_u8};
+/// let bid = map(nested(*b"{|", *b"|}"), string_from_u8);
+/// assert!(bid(b"{|n|}").is_ok());
+/// assert!(bid(b"{|quoting {|n|} is fun|}").is_ok());
+/// ~~~
+pub fn nested<'a>(start: [u8; 2], end: [u8; 2]) -> impl Fn(&'a [u8]) -> Parse<&'a [u8]> {
+    recognize(pair(tag(start), nested_post(start, end)))
+}
+
+fn nested_post<'a>(start: [u8; 2], end: [u8; 2]) -> impl Fn(&'a [u8]) -> Parse<&'a [u8]> {
+    let begins = [start[0], end[0]];
+
+    move |i: &'a [u8]| {
+        recognize(pair(
+            // first, we read until we see either the begin of start or end
+            opt(is_not(begins)),
+            alt((
+                // if we then recognize the end, we are done
+                tag(end),
+                // otherwise, we assume that we got either
+                // a new nesting or a stray character corresponding to a beginning
+                recognize(pair(
+                    alt((nested(start, end), recognize(one_of(begins)))),
+                    nested_post(start, end),
+                )),
+            )),
+        ))(i)
+    }
+}
+
 fn comment(i: &[u8]) -> Parse<&[u8]> {
-    delimited(tag("(;"), take_until(";)"), tag(";)"))(i)
+    nested(*b"(;", *b";)")(i)
 }
 
 fn space(i: &[u8]) -> Parse<Vec<&[u8]>> {
@@ -56,20 +102,8 @@ pub fn string_from_u8(i: &[u8]) -> String {
     std::str::from_utf8(i).map(String::from).unwrap()
 }
 
-fn bracket_string(s: String) -> String {
-    // this is fast because of:
-    // <https://github.com/hoodie/concatenation_benchmarks-rs>
-    let mut result = String::with_capacity(s.len() + 4);
-    result.push_str("{|");
-    result.push_str(&s);
-    result.push_str("|}");
-    result
-}
-
 fn bracket_ident(i: &[u8]) -> Parse<String> {
-    map(delimited(tag("{|"), take_until("|}"), tag("|}")), |id| {
-        bracket_string(string_from_u8(id))
-    })(i)
+    map(recognize(delimited(tag("{|"), take_until("|}"), tag("|}"))), string_from_u8)(i)
 }
 
 fn normal_ident(i: &[u8]) -> Parse<String> {
@@ -282,6 +316,18 @@ pub fn parse_toplevel(i: &[u8]) -> Parse<Option<Precommand>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn comments() {
+        assert!(comment(b"(; ;)").is_ok());
+        assert!(comment(b"(; ; ;; ) ); ;)").is_ok());
+        assert!(comment(b"(; a normal comment ;)").is_ok());
+        assert!(comment(r"(;💖;)".as_bytes()).is_ok());
+        assert!(comment(b"(;;)").is_ok());
+
+        assert!(comment(b"(; ").is_err());
+        assert!(comment(b" ;)").is_err());
+    }
 
     #[test]
     fn terms() {
