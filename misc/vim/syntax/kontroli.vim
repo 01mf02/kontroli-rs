@@ -28,4 +28,4 @@ syntax match   Keyword "\."
 
 " Comments
 syn keyword Todo contained TODO FIXME NOTE
-syn region Comment start="(;" end=";)" contains=Todo
+syn region Comment start="(;" end=";)" contains=Todo,Comment
