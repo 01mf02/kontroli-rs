@@ -1,3 +1,5 @@
+//! Map from strings to (shared) symbols.
+
 use crate::symbol::Symbol;
 use fnv::FnvHashMap;
 use std::iter::FromIterator;
