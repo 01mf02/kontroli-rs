@@ -23,7 +23,7 @@ trait Parser {
         Self: std::marker::Sized;
 }
 
-/// Parse arbitrary nesting of strings delimited by non-empty start and end strings.
+/// Parse arbitrary nesting of strings delimited by non-empty start and end tags.
 ///
 /// ~~~
 /// # use kontroli::parse::nested;
@@ -44,11 +44,11 @@ trait Parser {
 /// assert!(bid(b"{|n|}").is_ok());
 /// assert!(bid(b"{|quoting {|n|} is fun|}").is_ok());
 /// ~~~
-pub fn nested<'a>(start: [u8; 2], end: [u8; 2]) -> impl Fn(&'a [u8]) -> Parse<&'a [u8]> {
+pub fn nested<'a>(start: &'a [u8], end: &'a [u8]) -> impl Fn(&'a [u8]) -> Parse<&'a [u8]> {
     recognize(pair(tag(start), nested_post(start, end)))
 }
 
-fn nested_post<'a>(start: [u8; 2], end: [u8; 2]) -> impl Fn(&'a [u8]) -> Parse<&'a [u8]> {
+fn nested_post<'a>(start: &'a [u8], end: &'a [u8]) -> impl Fn(&'a [u8]) -> Parse<&'a [u8]> {
     let begins = [start[0], end[0]];
 
     move |i: &'a [u8]| {
@@ -70,7 +70,7 @@ fn nested_post<'a>(start: [u8; 2], end: [u8; 2]) -> impl Fn(&'a [u8]) -> Parse<&
 }
 
 fn comment(i: &[u8]) -> Parse<&[u8]> {
-    nested(*b"(;", *b";)")(i)
+    nested(b"(;", b";)")(i)
 }
 
 fn space(i: &[u8]) -> Parse<Vec<&[u8]>> {
@@ -103,7 +103,10 @@ pub fn string_from_u8(i: &[u8]) -> String {
 }
 
 fn bracket_ident(i: &[u8]) -> Parse<String> {
-    map(recognize(delimited(tag("{|"), take_until("|}"), tag("|}"))), string_from_u8)(i)
+    map(
+        recognize(delimited(tag("{|"), take_until("|}"), tag("|}"))),
+        string_from_u8,
+    )(i)
 }
 
 fn normal_ident(i: &[u8]) -> Parse<String> {
