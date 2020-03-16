@@ -1,3 +1,5 @@
+//! Parsers for prestructures.
+
 use nom::{
     branch::alt,
     bytes::streaming::{is_not, tag, take_until, take_while1},

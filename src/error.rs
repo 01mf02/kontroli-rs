@@ -1,6 +1,9 @@
+//! Common error type.
+
 use crate::{rule, scope, signature, typing};
 use std::{fmt, io};
 
+/// Common error type.
 #[derive(Debug)]
 pub enum Error {
     Io(io::Error),
