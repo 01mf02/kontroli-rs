@@ -77,6 +77,16 @@ impl RTTerm {
 type Context = stack::Stack<RTTerm>;
 type Stack = stack::Stack<RState>;
 
+/// An abstract machine representing arguments applied to a substituted term.
+///
+/// This representation allows for the lazy evaluation of terms.
+///
+/// See section 5.1 of the following reference:
+/// Asperti, A.; Ricciotti, W.; Sacerdoti Coen, C.; Tassi, E. (2009).
+/// "A compact kernel for the calculus of inductive constructions".
+/// *Sadhana*. **34**: 71–144.
+/// doi: [10.1007/s12046-009-0003-3](https://doi.org/10.1007%2Fs12046-009-0003-3).
+///
 #[derive(Clone, Default)]
 pub struct State {
     pub ctx: Context,
@@ -85,6 +95,9 @@ pub struct State {
 }
 
 impl State {
+    /// Construct a new state from a reference to a term.
+    ///
+    /// This does not yet evaluate anything.
     pub fn new(term: RTerm) -> Self {
         Self {
             ctx: Context::new(),
