@@ -29,7 +29,7 @@ trait Parser {
 ///
 /// ~~~
 /// # use kontroli::parse::nested;
-/// let c_style = nested(*b"/*", *b"*/");
+/// let c_style = nested(b"/*", b"*/");
 /// assert!(c_style(b"/* here /* more */ */").is_ok());
 ///
 /// // all nestings have to be closed
@@ -42,7 +42,7 @@ trait Parser {
 /// ~~~
 /// # use nom::combinator::map;
 /// # use kontroli::parse::{nested, string_from_u8};
-/// let bid = map(nested(*b"{|", *b"|}"), string_from_u8);
+/// let bid = map(nested(b"{|", b"|}"), string_from_u8);
 /// assert!(bid(b"{|n|}").is_ok());
 /// assert!(bid(b"{|quoting {|n|} is fun|}").is_ok());
 /// ~~~
