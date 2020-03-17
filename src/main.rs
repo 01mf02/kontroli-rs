@@ -5,12 +5,15 @@ extern crate pretty_env_logger;
 use byte_unit::{Byte, ByteError};
 use kontroli::command::Command;
 use kontroli::parsebuffer::ParseBuffer;
+use kontroli::precommand::Precommand;
 use kontroli::{parse, signature};
 use kontroli::{Error, Rule, Signature, Symbols};
 use nom::error::VerboseError;
 use std::convert::{TryFrom, TryInto};
 use std::io;
 use std::path::PathBuf;
+use std::sync::mpsc::{channel, Receiver};
+use std::thread;
 use structopt::StructOpt;
 
 #[derive(Debug)]
@@ -29,7 +32,7 @@ fn parse_byte<S: AsRef<str>>(s: S) -> Result<Byte, MyByteError> {
     Byte::from_str(s).map_err(MyByteError)
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Clone, Debug, StructOpt)]
 /// A typechecker for the lambda-Pi calculus modulo rewriting
 struct Opt {
     /// Reduce terms modulo eta
@@ -63,49 +66,72 @@ fn handle(cmd: Command, sig: &mut Signature) -> Result<(), Error> {
     }
 }
 
-fn run<R>(read: R, opt: &Opt, syms: &mut Symbols, sig: &mut Signature) -> Result<(), Error>
+fn produce<R>(read: R, opt: &Opt) -> impl Iterator<Item = Result<Precommand, Error>>
 where
     R: io::Read,
 {
-    let pb: ParseBuffer<_, _, _> = ParseBuffer {
+    ParseBuffer {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
         parse: parse::parse_toplevel,
-        fail: |e: nom::Err<VerboseError<&[u8]>>| format!("{:#?}", e),
-    };
-
-    for entry in pb {
-        let i = entry.expect("parse error");
-        if let Some(cmd) = i {
-            if opt.no_scope {
-                continue;
-            }
-            let cmd = cmd.scope(syms)?;
-            if opt.no_check {
-                continue;
-            }
-            handle(cmd, sig)?;
-        }
+        fail: |e: nom::Err<VerboseError<&[u8]>>| Error::Parse(format!("{:#?}", e)),
     }
-    Ok(())
+    // consider only the non-whitespace entries
+    .map(|entry| entry.transpose())
+    .flatten()
+}
+
+fn consume(opt: &Opt, receiver: &Receiver<Result<Precommand, Error>>) -> Result<(), Error> {
+    let mut sig: Signature = Default::default();
+    let mut syms: Symbols = Default::default();
+
+    sig.eta = opt.eta;
+
+    // run as long as we receive items from the sender
+    receiver.iter().try_for_each(|cmd| {
+        // abort if there was a parse error
+        let cmd = cmd?;
+
+        if opt.no_scope {
+            return Ok(());
+        }
+        let cmd = cmd.scope(&mut syms)?;
+
+        if opt.no_check {
+            return Ok(());
+        }
+        handle(cmd, &mut sig)?;
+
+        Ok(())
+    })
 }
 
 fn main() -> Result<(), Error> {
     pretty_env_logger::init();
 
-    let mut sig: Signature = Default::default();
-    let mut syms: Symbols = Default::default();
-
     let opt = Opt::from_args();
-    sig.eta = opt.eta;
+
+    let (sender, receiver) = channel();
+    let send = |cmd| sender.send(cmd).unwrap();
+
+    let optr = opt.clone();
+    let consumer = thread::spawn(move || consume(&optr, &receiver));
 
     if opt.files.is_empty() {
-        run(io::stdin(), &opt, &mut syms, &mut sig)?;
+        produce(io::stdin(), &opt).for_each(send);
     } else {
         for filename in &opt.files {
             let file = std::fs::File::open(filename)?;
-            run(file, &opt, &mut syms, &mut sig)?;
+            produce(file, &opt).for_each(send);
         }
-    }
+    };
+
+    // signalise that we are done sending commands
+    // (otherwise the consumer will eventually wait forever)
+    drop(sender);
+
+    // wait for all commands to be consumed
+    consumer.join().unwrap()?;
+
     Ok(())
 }

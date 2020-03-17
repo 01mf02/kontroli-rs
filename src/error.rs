@@ -7,6 +7,7 @@ use std::{fmt, io};
 #[derive(Debug)]
 pub enum Error {
     Io(io::Error),
+    Parse(String),
     Rule(rule::Error),
     Scope(scope::Error),
     Signature(signature::Error),
@@ -17,6 +18,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Self::Io(ref err) => err.fmt(f),
+            Self::Parse(ref err) => err.fmt(f),
             Self::Typing(ref err) => err.fmt(f),
             Self::Scope(ref err) => err.fmt(f),
             Self::Rule(ref err) => err.fmt(f),
