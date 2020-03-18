@@ -1,7 +1,7 @@
 //! Conversion from preterms to terms, from prepatterns to prepatterns etc.
 
 use crate::command::{Command, DCommand};
-use crate::pattern::{Miller, Pattern};
+use crate::pattern::{Miller, MillerCtx, Pattern};
 use crate::precommand::{PreDCommand, Precommand};
 use crate::prepattern::Prepattern;
 use crate::prerule::Prerule;
@@ -119,7 +119,10 @@ impl Prepattern {
                                 .into_iter()
                                 .map(|a| Ok(a.get_de_bruijn().ok_or(Error::MillerPattern)?))
                                 .collect();
-                            Ok(Pattern::MVar(Miller(idx), args?))
+                            Ok(Pattern::MVar(
+                                Miller(idx),
+                                MillerCtx::new(bvar.len(), args?),
+                            ))
                         }
                         None => {
                             let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;

@@ -38,7 +38,7 @@ impl WState {
             return;
         }
 
-        let state = std::mem::replace(&mut self.state, State::default());
+        let state = std::mem::take(&mut self.state);
         self.state = state.whnf(sig);
         self.whnfed = true
     }
@@ -223,15 +223,16 @@ impl Pattern {
                     _ => Box::new(std::iter::once(None)),
                 }
             }
-            Self::MVar(m, dbs) => {
-                if dbs.is_empty() {
+            Self::MVar(m, ctx) => {
+                if ctx.depth == 0 {
                     Box::new(std::iter::once(Some((*m, rstate))))
                 } else {
                     todo!()
                 }
             }
             Self::Joker => Box::new(std::iter::empty()),
-            _ => todo!(),
+            Self::Abst(_, pat) => todo!(),
+            Self::BVar(db, pats) => todo!(),
         }
     }
 }

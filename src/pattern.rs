@@ -17,8 +17,32 @@ impl fmt::Display for Miller {
 }
 
 #[derive(Clone)]
+pub struct MillerCtx {
+    /// number of lambda-abstractions in front of variable
+    pub depth: usize,
+    /// arguments applied to the variable
+    pub args: Vec<DeBruijn>,
+    /// mapping from variables to their positions in the arguments (if present)
+    pub arg_pos: Vec<Option<usize>>,
+}
+
+impl MillerCtx {
+    pub fn new(depth: usize, args: Vec<DeBruijn>) -> Self {
+        let mut arg_pos = vec![None; depth];
+        for (i, n) in args.iter().rev().enumerate() {
+            *arg_pos.get_mut(*n).unwrap() = Some(i);
+        }
+        Self {
+            depth,
+            args,
+            arg_pos,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub enum Pattern {
-    MVar(Miller, Vec<DeBruijn>),
+    MVar(Miller, MillerCtx),
     Abst(Option<String>, Box<Pattern>),
     Symb(Symbol, Vec<Pattern>),
     BVar(DeBruijn, Vec<Pattern>),
@@ -62,8 +86,8 @@ impl fmt::Display for Pattern {
         match self {
             Self::Symb(s, pats) => fmt_appl(&Term::Symb(s.clone()), pats, f),
             Self::BVar(x, pats) => fmt_appl(&Term::BVar(*x), pats, f),
-            Self::MVar(m, dbs) => {
-                let tail: Vec<_> = dbs.iter().map(|db| Term::BVar(*db)).collect();
+            Self::MVar(m, ctx) => {
+                let tail: Vec<_> = ctx.args.iter().map(|db| Term::BVar(*db)).collect();
                 fmt_appl(m, &tail, f)
             }
             Self::Abst(arg, tm) => unimplemented!(),
@@ -93,9 +117,9 @@ impl Pattern {
         }
     }
 
-    fn mvars<'a>(&'a self) -> Box<dyn Iterator<Item = (&Miller, &Vec<DeBruijn>)> + 'a> {
+    fn mvars<'a>(&'a self) -> Box<dyn Iterator<Item = (&Miller, &MillerCtx)> + 'a> {
         match self {
-            Self::MVar(mv, dbs) => Box::new(std::iter::once((mv, dbs))),
+            Self::MVar(mv, ctx) => Box::new(std::iter::once((mv, ctx))),
             Self::Abst(_, pat) => pat.mvars(),
             Self::Symb(_, pats) | Self::BVar(_, pats) => {
                 Box::new(pats.iter().map(|p| p.mvars()).flatten())
@@ -107,7 +131,8 @@ impl Pattern {
     pub fn arities(&self, mvars: Vec<String>) -> Result<Vec<(String, Arity)>, Error> {
         // TODO: use Vec instead of HashMap for arities
         let mut arities = HashMap::new();
-        for (m, args) in self.mvars() {
+        for (m, ctx) in self.mvars() {
+            let args = &ctx.args;
             if !all_unique(args.clone()) {
                 return Err(Error::MillerPattern);
             }
