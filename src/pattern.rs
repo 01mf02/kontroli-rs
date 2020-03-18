@@ -90,7 +90,10 @@ impl fmt::Display for Pattern {
                 let tail: Vec<_> = ctx.args.iter().map(|db| Term::BVar(*db)).collect();
                 fmt_appl(m, &tail, f)
             }
-            Self::Abst(arg, tm) => unimplemented!(),
+            Self::Abst(arg, pat) => {
+                let arg = arg.clone().unwrap_or("_".to_string());
+                write!(f, "(λ {}. {})", arg, pat)
+            }
             Self::Joker => write!(f, "_"),
         }
     }
