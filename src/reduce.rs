@@ -131,7 +131,7 @@ impl State {
                         break;
                     }
                 },
-                Abst(a, t) => match stack.pop() {
+                Abst(_, t) => match stack.pop() {
                     None => break,
                     Some(p) => {
                         term = t.clone();
@@ -170,6 +170,11 @@ impl State {
             }
         }
 
+        match &*term {
+            BVar(_) => assert!(ctx.is_empty()),
+            _ => (),
+        }
+
         State { ctx, term, stack }
     }
 }
@@ -193,56 +198,90 @@ fn psubst(args: &Context) -> impl Fn(usize, usize) -> RTerm + '_ {
 
 // TODO: move to "matching.rs"?
 
+type Matches<'a> = Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a>;
+
+fn matches<'a>(eq: bool, pats: &'a [Pattern], stack: &Stack, sig: &'a Signature) -> Matches<'a> {
+    // The stack and pattern length have to be equal,
+    // to exclude pattern matches like `f (g a) ~ f g`.
+    // This is unlike `TopPattern::match_stack`, which
+    // allows matches like `add 0 n ~ add 0`.
+    if eq && stack.len() == pats.len() {
+        Box::new(
+            pats.iter()
+                .zip(stack.clone())
+                .map(move |(pat, rst)| pat.match_state(rst, sig))
+                .flatten(),
+        )
+    } else {
+        Box::new(std::iter::once(None))
+    }
+}
+
 impl Pattern {
-    fn match_state<'a>(
-        &'a self,
-        rstate: RState,
-        sig: &'a Signature,
-    ) -> Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a> {
-        match self {
-            Self::Symb(sp, pats) => {
+    fn match_state<'a>(&'a self, rstate: RState, sig: &'a Signature) -> Matches<'a> {
+        let whnf = || {
                 rstate.borrow_mut().whnf(sig);
-                let state = &rstate.borrow().state;
+                rstate.borrow()
+        };
+        match self {
+            // TODO: merge Symb & BVar
+            Self::Symb(sp, pats) => {
+                let state = &whnf().state;
                 match &*state.term {
-                    Term::Symb(st) => {
-                        // The stack and pattern length have to be equal,
-                        // to exclude pattern matches like `f (g a) ~ f g`.
-                        // This is unlike `TopPattern::match_stack`, which
-                        // allows matches like `add 0 n ~ add 0`.
-                        if sp == st && state.stack.len() == pats.len() {
-                            Box::new(
-                                pats.iter()
-                                    .zip(state.stack.clone())
-                                    .map(move |(pat, rst)| pat.match_state(rst, sig))
-                                    .flatten(),
-                            )
-                        } else {
-                            Box::new(std::iter::once(None))
-                        }
-                    }
+                    Term::Symb(st) => matches(sp == st, pats, &state.stack, sig),
                     _ => Box::new(std::iter::once(None)),
+                }
+            }
+            Self::BVar(bp, pats) => {
+                let state = &whnf().state;
+                match &*state.term {
+                    Term::BVar(bt) => matches(bp == bt, pats, &state.stack, sig),
+                    _ => Box::new(std::iter::once(None)),
+                }
+            }
+            Self::Abst(_, pat) => {
+                // assure that the state evaluates to an abstraction
+                match &*(&whnf()).state.term {
+                    Term::Abst(_, _) => (),
+                    _ => return Box::new(std::iter::once(None)),
+                };
+
+                let rtm = RTerm::from(rstate);
+                match &*rtm {
+                    Term::Abst(_, tm) => {
+                        let rst = Rc::new(RefCell::new(WState::new(State::new(tm.clone()))));
+                        Box::new(
+                            std::iter::once((pat, rst))
+                                .map(move |(pat, rst)| pat.match_state(rst, sig))
+                                .flatten(),
+                        )
+                    }
+                    _ => unreachable!(),
                 }
             }
             Self::MVar(m, ctx) => {
                 if ctx.depth == 0 {
-                    Box::new(std::iter::once(Some((*m, rstate))))
-                } else {
-                    todo!()
+                    // the easy case: we have not traversed any lambdas
+                    return Box::new(std::iter::once(Some((*m, rstate))));
+                }
+
+                match RTerm::from(rstate).solve_real(ctx) {
+                    Ok(tm) => {
+                        let rst = Rc::new(RefCell::new(WState::new(State::new(tm))));
+                        Box::new(std::iter::once(Some((*m, rst))))
+                    }
+                    // TODO: reduce to SNF?
+                    Err(_) => Box::new(std::iter::once(None)),
                 }
             }
+            // TODO: jokers can be applied to (see e.g. underscore5.dk)!
             Self::Joker => Box::new(std::iter::empty()),
-            Self::Abst(_, pat) => todo!(),
-            Self::BVar(db, pats) => todo!(),
         }
     }
 }
 
 impl TopPattern {
-    pub fn match_stack<'a>(
-        &'a self,
-        stack: &'a Stack,
-        sig: &'a Signature,
-    ) -> Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a> {
+    pub fn match_stack<'a>(&'a self, stack: &'a Stack, sig: &'a Signature) -> Matches<'a> {
         if stack.len() < self.args.len() {
             // we do not have enough arguments on the stack to match against
             return Box::new(std::iter::once(None));

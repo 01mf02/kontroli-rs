@@ -8,6 +8,7 @@ extern crate log;
 
 pub mod command;
 pub mod error;
+pub mod matching;
 pub mod parse;
 pub mod parsebuffer;
 pub mod parseerror;
