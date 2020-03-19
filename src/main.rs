@@ -7,9 +7,9 @@ use kontroli::command::Command;
 use kontroli::parsebuffer::ParseBuffer;
 use kontroli::precommand::Precommand;
 use kontroli::{parse, signature};
-use kontroli::{Error, Rule, Signature, Symbols};
+use kontroli::{Error, Signature, Symbols};
 use nom::error::VerboseError;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 use std::io;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver};
@@ -62,7 +62,7 @@ fn handle(cmd: Command, sig: &mut Signature) -> Result<(), Error> {
             println!("{}", sym);
             Ok(sig.insert(&sym, signature::Entry::new(dcmd, &*sig)?)?)
         }
-        Command::Rule(unchecked) => Ok(sig.add_rule(Rule::try_from(unchecked)?)?),
+        Command::Rule(rule) => Ok(sig.add_rule(rule)?),
     }
 }
 

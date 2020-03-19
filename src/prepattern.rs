@@ -1,29 +1,31 @@
 //! Rewrite patterns not distinguishing bound and unbound symbols.
 
-use crate::preterm::{Binder, Preterm};
+use crate::preterm::Preterm;
+use crate::scope::Error;
+use std::convert::TryFrom;
 
 #[derive(Clone)]
-pub enum Prepattern {
-    Abst(Option<String>, Box<Prepattern>),
-    Symb(String, Vec<Prepattern>),
-}
+pub struct Prepattern(String, Vec<Prepattern>);
 
-impl From<Preterm> for Prepattern {
-    fn from(tm: Preterm) -> Self {
+impl TryFrom<Preterm> for Prepattern {
+    type Error = Error;
+
+    fn try_from(tm: Preterm) -> Result<Self, Self::Error> {
         use Preterm::*;
         match tm {
             Appl(head, mut args) => match *head {
-                Symb(s) => Self::Symb(s, args.into_iter().map(Self::from).collect()),
+                Symb(s) => {
+                    let args: Result<_, _> = args.into_iter().map(Self::try_from).collect();
+                    Ok(Self(s, args?))
+                }
                 Appl(head2, mut args2) => {
                     args2.append(&mut args);
-                    Self::from(Appl(head2, args2))
+                    Self::try_from(Appl(head2, args2))
                 }
-                _ => unimplemented!(),
+                _ => Err(Error::NoPrepattern),
             },
-            Symb(s) => Self::Symb(s, Vec::new()),
-            // TODO: warn if arg.type given?
-            Bind(Binder::Lam, arg, tm) => Self::Abst(arg.id, Box::new(Self::from(*tm))),
-            _ => unimplemented!(),
+            Symb(s) => Ok(Self(s, Vec::new())),
+            _ => Err(Error::NoPrepattern),
         }
     }
 }

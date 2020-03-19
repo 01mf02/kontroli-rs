@@ -154,7 +154,7 @@ impl State {
                     Some(rules) => {
                         match rules
                             .iter()
-                            .filter_map(|r| Some((r.match_stack(&stack, sig)?, r)))
+                            .filter_map(|r| Some((r.matches(&stack, sig)?, r)))
                             .next()
                         {
                             None => break,
@@ -170,9 +170,8 @@ impl State {
             }
         }
 
-        match &*term {
-            BVar(_) => assert!(ctx.is_empty()),
-            _ => (),
+        if let BVar(_) = &*term {
+            assert!(ctx.is_empty())
         }
 
         State { ctx, term, stack }
@@ -198,102 +197,63 @@ fn psubst(args: &Context) -> impl Fn(usize, usize) -> RTerm + '_ {
 
 // TODO: move to "matching.rs"?
 
-type Matches<'a> = Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a>;
+type Subst<'a> = Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a>;
 
-fn matches<'a>(eq: bool, pats: &'a [Pattern], stack: &Stack, sig: &'a Signature) -> Matches<'a> {
-    // The stack and pattern length have to be equal,
-    // to exclude pattern matches like `f (g a) ~ f g`.
-    // This is unlike `TopPattern::match_stack`, which
-    // allows matches like `add 0 n ~ add 0`.
-    if eq && stack.len() == pats.len() {
+impl Stack {
+    fn into_matches<'a>(self, pats: &'a [Pattern], sig: &'a Signature) -> Subst<'a> {
         Box::new(
-            pats.iter()
-                .zip(stack.clone())
-                .map(move |(pat, rst)| pat.match_state(rst, sig))
+            self.into_iter()
+                .zip(pats)
+                .map(move |(rst, pat)| pat.matches(rst, sig))
                 .flatten(),
         )
-    } else {
-        Box::new(std::iter::once(None))
+    }
+
+    pub fn matches<'a>(&'a self, pats: &'a [Pattern], sig: &'a Signature) -> Subst<'a> {
+        Box::new(
+            self.iter()
+                .zip(pats)
+                .map(move |(rstate, pat)| pat.matches(rstate.clone(), sig))
+                .flatten(),
+        )
     }
 }
 
 impl Pattern {
-    fn match_state<'a>(&'a self, rstate: RState, sig: &'a Signature) -> Matches<'a> {
-        let whnf = || {
-                rstate.borrow_mut().whnf(sig);
-                rstate.borrow()
-        };
+    fn matches<'a>(&'a self, rstate: RState, sig: &'a Signature) -> Subst<'a> {
         match self {
-            // TODO: merge Symb & BVar
             Self::Symb(sp, pats) => {
-                let state = &whnf().state;
+                rstate.borrow_mut().whnf(sig);
+                let state = &rstate.borrow().state;
                 match &*state.term {
-                    Term::Symb(st) => matches(sp == st, pats, &state.stack, sig),
+                    Term::Symb(st) => {
+                        // The stack and pattern length have to be equal,
+                        // to exclude pattern matches like `f (g a) ~ f g`.
+                        // This is unlike `TopPattern::match_stack`, which
+                        // allows matches like `add 0 n ~ add 0`.
+                        if sp == st && state.stack.len() == pats.len() {
+                            state.stack.clone().into_matches(pats, sig)
+                        } else {
+                            Box::new(std::iter::once(None))
+                        }
+                    }
                     _ => Box::new(std::iter::once(None)),
                 }
             }
-            Self::BVar(bp, pats) => {
-                let state = &whnf().state;
-                match &*state.term {
-                    Term::BVar(bt) => matches(bp == bt, pats, &state.stack, sig),
-                    _ => Box::new(std::iter::once(None)),
-                }
-            }
-            Self::Abst(_, pat) => {
-                // assure that the state evaluates to an abstraction
-                match &*(&whnf()).state.term {
-                    Term::Abst(_, _) => (),
-                    _ => return Box::new(std::iter::once(None)),
-                };
-
-                let rtm = RTerm::from(rstate);
-                match &*rtm {
-                    Term::Abst(_, tm) => {
-                        let rst = Rc::new(RefCell::new(WState::new(State::new(tm.clone()))));
-                        Box::new(
-                            std::iter::once((pat, rst))
-                                .map(move |(pat, rst)| pat.match_state(rst, sig))
-                                .flatten(),
-                        )
-                    }
-                    _ => unreachable!(),
-                }
-            }
-            Self::MVar(m, ctx) => {
-                if ctx.depth == 0 {
-                    // the easy case: we have not traversed any lambdas
-                    return Box::new(std::iter::once(Some((*m, rstate))));
-                }
-
-                match RTerm::from(rstate).solve_real(ctx) {
-                    Ok(tm) => {
-                        let rst = Rc::new(RefCell::new(WState::new(State::new(tm))));
-                        Box::new(std::iter::once(Some((*m, rst))))
-                    }
-                    // TODO: reduce to SNF?
-                    Err(_) => Box::new(std::iter::once(None)),
-                }
-            }
-            // TODO: jokers can be applied to (see e.g. underscore5.dk)!
+            Self::MVar(m) => Box::new(std::iter::once(Some((*m, rstate)))),
             Self::Joker => Box::new(std::iter::empty()),
         }
     }
 }
 
 impl TopPattern {
-    pub fn match_stack<'a>(&'a self, stack: &'a Stack, sig: &'a Signature) -> Matches<'a> {
+    pub fn matches<'a>(&'a self, stack: &'a Stack, sig: &'a Signature) -> Subst<'a> {
         if stack.len() < self.args.len() {
             // we do not have enough arguments on the stack to match against
             return Box::new(std::iter::once(None));
         }
 
-        Box::new(
-            self.args
-                .iter()
-                .zip(stack.iter())
-                .map(move |(pat, rstate)| pat.match_state(rstate.clone(), sig))
-                .flatten(),
-        )
+        stack.matches(&self.args, sig)
     }
 }
 
@@ -309,13 +269,13 @@ impl Rule {
     /// let rule = mk_rule("[A] id A --> A.");
     /// let term = mk_term("id f a.");
     /// let stack = State::new(RTerm::new(term)).whnf(&sig).stack;
-    /// let subst = rule.match_stack(&stack, &sig).unwrap();
+    /// let subst = rule.matches(&stack, &sig).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
     /// assert_eq!(vec!(mk_term("f.")), subst.collect::<Vec<_>>())
     /// ~~~
-    pub fn match_stack(&self, stack: &Stack, sig: &Signature) -> Option<Context> {
+    pub fn matches(&self, stack: &Stack, sig: &Signature) -> Option<Context> {
         let mut subst = vec![vec![]; self.ctx.len()];
-        for i in self.lhs.match_stack(stack, sig) {
+        for i in self.lhs.matches(stack, sig) {
             let (m, st1) = i?;
             subst.get_mut(m.0).expect("subst").push(RTTerm::new(st1))
         }

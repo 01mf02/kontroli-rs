@@ -1,16 +1,17 @@
 //! Conversion from preterms to terms, from prepatterns to prepatterns etc.
 
 use crate::command::{Command, DCommand};
-use crate::pattern::{Miller, MillerCtx, Pattern};
+use crate::pattern::{Miller, Pattern, TopPattern};
 use crate::precommand::{PreDCommand, Precommand};
 use crate::prepattern::Prepattern;
 use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
-use crate::rule::UncheckedRule;
+use crate::rule::Rule;
 use crate::stack::Stack;
 use crate::symbol::Symbol;
 use crate::symbols::Symbols;
 use crate::term::{Arg, RTerm, Term};
+use std::convert::TryFrom;
 use std::fmt;
 
 type Bound = Stack<String>;
@@ -89,8 +90,9 @@ impl PreDCommand {
 #[derive(Debug)]
 pub enum Error {
     UndeclaredSymbol(String),
-    MillerPattern,
     Redeclaration,
+    NoPrepattern,
+    NoTopPattern,
 }
 
 impl fmt::Display for Error {
@@ -100,56 +102,33 @@ impl fmt::Display for Error {
 }
 
 impl Prepattern {
-    pub fn scope(self, syms: &Symbols, mvar: &Bound, bvar: &mut Bound) -> Result<Pattern, Error> {
-        match self {
-            Self::Symb(s, args) if s == "_" => {
-                assert!(args.is_empty());
-                Ok(Pattern::Joker)
-            }
-            Self::Symb(s, args) => {
-                let args: Result<_, _> = args
-                    .into_iter()
-                    .map(|a| a.scope(syms, mvar, bvar))
-                    .collect();
-                match bvar.iter().position(|id| *id == *s) {
-                    Some(idx) => Ok(Pattern::BVar(idx, args?)),
-                    None => match mvar.iter().position(|id| *id == *s) {
-                        Some(idx) => {
-                            let args: Result<_, _> = args?
-                                .into_iter()
-                                .map(|a| Ok(a.get_de_bruijn().ok_or(Error::MillerPattern)?))
-                                .collect();
-                            Ok(Pattern::MVar(
-                                Miller(idx),
-                                MillerCtx::new(bvar.len(), args?),
-                            ))
-                        }
-                        None => {
-                            let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
-                            let sym = Symbol::clone(&entry);
-                            Ok(Pattern::Symb(sym, args?))
-                        }
-                    },
-                }
-            }
-            Self::Abst(arg, pat) => bind(bvar, arg.clone(), |bvar| {
-                Ok(Pattern::Abst(arg, Box::new(pat.scope(syms, mvar, bvar)?)))
-            }),
-        }
-    }
+    pub fn scope(self, syms: &Symbols, mvar: &Bound) -> Result<Pattern, Error> {
+        let Self(s, args) = self;
 
-    pub fn scope_closed(self, syms: &Symbols, mvar: &Bound) -> Result<Pattern, Error> {
-        self.scope(syms, mvar, &mut Stack::new())
+        if s == "_" {
+            assert!(args.is_empty());
+            Ok(Pattern::Joker)
+        } else if let Some(idx) = mvar.iter().position(|id| *id == *s) {
+            assert!(args.is_empty());
+            Ok(Pattern::MVar(Miller(idx)))
+        } else {
+            let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
+            let sym = Symbol::clone(&entry);
+            let args: Result<_, _> = args.into_iter().map(|a| a.scope(syms, mvar)).collect();
+            Ok(Pattern::Symb(sym, args?))
+        }
     }
 }
 
 impl Prerule {
-    pub fn scope(self, syms: &Symbols) -> Result<UncheckedRule, Error> {
+    pub fn scope(self, syms: &Symbols) -> Result<Rule, Error> {
         let mut ctxs = Stack::from(self.ctx.clone());
         let ctx = self.ctx;
-        let lhs = Prepattern::from(self.lhs).scope_closed(syms, &ctxs)?;
+        let pre = Prepattern::try_from(self.lhs)?;
+        let pat = pre.scope(syms, &ctxs)?;
+        let lhs = TopPattern::try_from(pat)?;
         let rhs = self.rhs.scoper(syms, &mut ctxs)?;
-        Ok(UncheckedRule { ctx, lhs, rhs })
+        Ok(Rule { ctx, lhs, rhs })
     }
 }
 
