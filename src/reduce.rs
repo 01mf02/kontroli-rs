@@ -97,10 +97,20 @@ pub struct State {
 impl State {
     /// Construct a new state from a reference to a term.
     ///
-    /// This does not yet evaluate anything.
+    /// This does not yet evaluate anything, as can be seen from following example:
     ///
-    /// TODO: Write a test to show that:
-    /// RTerm::from(State::new("(\ x => x) (\ x => x)")) = (\ x => x) (\ x => x)
+    /// ~~~
+    /// # use kontroli::{Error, RTerm, Signature, Symbols, Term};
+    /// # use kontroli::reduce::State;
+    /// let syms = Symbols::new();
+    ///
+    /// let term = Term::parse(r"(\ x => x) (\ x => x).", &syms)?;
+    /// let rterm = RTerm::new(term);
+    ///
+    /// let state = State::new(rterm.clone());
+    /// assert!(RTerm::ptr_eq(&RTerm::from(state), &rterm));
+    /// # Ok::<(), Error>(())
+    /// ~~~
     pub fn new(term: RTerm) -> Self {
         Self {
             ctx: Context::new(),
@@ -110,6 +120,22 @@ impl State {
     }
 
     /// Evaluate the state to its weak head normal form.
+    ///
+    /// ~~~
+    /// # use kontroli::{Error, RTerm, Signature, Symbols, Term};
+    /// # use kontroli::reduce::State;
+    /// let sig = Signature::new();
+    /// let syms = Symbols::new();
+    ///
+    /// let term = Term::parse(r"(\ x => x) (\ x => x).", &syms)?;
+    /// let whnf = State::new(RTerm::new(term)).whnf(&sig);
+    ///
+    /// let expected = Term::parse(r"(\ x => x).", &syms)?;
+    /// assert!(whnf.ctx.is_empty());
+    /// assert!(whnf.stack.is_empty());
+    /// assert_eq!(*whnf.term, expected);
+    /// # Ok::<(), Error>(())
+    /// ~~~
     pub fn whnf(self, sig: &Signature) -> Self {
         use Term::*;
         let Self {
