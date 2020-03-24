@@ -21,7 +21,7 @@ pub type BPreterm = Box<Preterm>;
 
 pub type Prearg = GArg<BPreterm>;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Preterm {
     Type,
     Symb(String),

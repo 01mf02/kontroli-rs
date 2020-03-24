@@ -1,4 +1,7 @@
 //! Parsers for prestructures.
+//!
+//! All basic parsers operate on byte slices (`&[u8]`) instead of strings (`&str`).
+//! This enables efficient parsing using a circular buffer.
 
 use nom::{
     branch::alt,
@@ -16,12 +19,30 @@ use crate::precommand::{GDCommand, Precommand};
 use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
 
+/// Result of a parser.
 pub type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
 
 /// A trait similar to `FromStr`, but for byte slices instead of strings.
 pub trait Parser: Sized {
     fn parse(i: &[u8]) -> Parse<Self>;
 }
+
+/// Parse a string phrase and discard remaining input.
+///
+/// ~~~
+/// # use kontroli::{Error, Preterm};
+/// # use kontroli::parse::parse;
+/// # use Preterm::{Symb, Appl};
+/// let preterm = parse::<Preterm>("fst x y. Nothing to see here, move along.")?;
+/// let head = Symb("fst".to_string());
+/// let args = vec![Symb("x".to_string()), Symb("y".to_string())];
+/// assert_eq!(preterm, Appl(Box::new(head), args));
+/// # Ok::<(), Error>(())
+/// ~~~
+pub fn parse<'a, P: Parser>(i: &'a str) -> Result<P, nom::Err<VerboseError<&'a [u8]>>> {
+    phrase(P::parse)(i.as_bytes()).map(|(_i, o)| o)
+}
+
 
 /// Parse arbitrary nesting of strings delimited by non-empty start and end tags.
 ///
@@ -104,6 +125,9 @@ where
     delimited(char('('), lexeme(inner), lexeme(char(')')))
 }
 
+/// Parse a phrase, i.e. a given function terminated by a dot.
+///
+/// For example, this line is a phrase.
 pub fn phrase<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
@@ -293,10 +317,6 @@ impl Parser for Precommand {
     fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::dcmd, map(Prerule::parse, Self::Rule)))(i)
     }
-}
-
-pub fn parse<'a, P: Parser>(i: &'a str) -> Result<P, nom::Err<VerboseError<&'a [u8]>>> {
-    phrase(P::parse)(i.as_bytes()).map(|(_i, o)| o)
 }
 
 #[cfg(test)]
