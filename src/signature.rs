@@ -44,6 +44,10 @@ impl fmt::Display for Error {
 }
 
 impl Signature {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     fn intro_type(&mut self, sym: Symbol, typ: RTerm) -> Result<(), Error> {
         if self.types.insert(sym, typ).is_some() {
             return Err(Error::Reintroduction);
