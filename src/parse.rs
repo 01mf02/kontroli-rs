@@ -17,9 +17,9 @@ use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
 use std::convert::TryFrom;
 
-type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
+pub type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
 
-trait Parser {
+pub trait Parser {
     fn parse(i: &[u8]) -> Parse<Self>
     where
         Self: std::marker::Sized;
@@ -71,12 +71,25 @@ fn nested_post<'a>(start: &'a [u8], end: &'a [u8]) -> impl Fn(&'a [u8]) -> Parse
     }
 }
 
+/// Parse a (potentially nested) comment.
 fn comment(i: &[u8]) -> Parse<&[u8]> {
     nested(b"(;", b";)")(i)
 }
 
 fn space(i: &[u8]) -> Parse<Vec<&[u8]>> {
     preceded(multispace0, many0(terminated(comment, multispace0)))(i)
+}
+
+/// Parse whitespace/comments to `None` and given function to `Some`.
+pub fn opt_lexeme<'a, O1: Clone, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<Option<O1>>
+where
+    F: Fn(&'a [u8]) -> Parse<'a, O1>,
+{
+    alt((
+        value(None, nom::character::complete::multispace1),
+        value(None, comment),
+        map(inner, Some),
+    ))
 }
 
 fn lexeme<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
@@ -93,7 +106,7 @@ where
     delimited(char('('), lexeme(inner), lexeme(char(')')))
 }
 
-fn phrase<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
+pub fn phrase<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
 {
