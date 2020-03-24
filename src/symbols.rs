@@ -8,6 +8,10 @@ use std::iter::FromIterator;
 pub struct Symbols(FnvHashMap<String, Symbol>);
 
 impl Symbols {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     pub fn get(&self, s: &str) -> Option<&Symbol> {
         self.0.get(s)
     }
