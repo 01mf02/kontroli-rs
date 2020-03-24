@@ -1,3 +1,5 @@
+//! Commands to change the signature.
+
 use crate::precommand::GDCommand;
 use crate::rule::Rule;
 use crate::symbol::Symbol;

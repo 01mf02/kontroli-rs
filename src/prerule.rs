@@ -1,3 +1,5 @@
+//! Unscoped rewrite rules.
+
 use crate::preterm::Preterm;
 
 #[derive(Clone)]

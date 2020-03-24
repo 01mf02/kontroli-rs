@@ -1,6 +1,19 @@
+//! Unscoped commands to change the signature.
+
 use crate::prerule::Prerule;
 use crate::preterm::{BPreterm, Prearg};
 
+/// Unscoped commands to change the signature.
+///
+/// In contrast to its scoped `Command` counterpart,
+/// `Precommand`s hold (pre-)arguments for definitions/declarations.
+/// For example, in the definition
+/// `f (x : A) : B := t.`
+/// the argument for `f` is `(x : A)`, and
+/// the whole definition is interpreted as
+/// `f : ! x : A -> B := \ x : A => t.`
+///
+/// TODO: make a test here?
 #[derive(Clone)]
 pub enum Precommand {
     DCmd(String, Vec<Prearg>, PreDCommand),

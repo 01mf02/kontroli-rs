@@ -98,6 +98,9 @@ impl State {
     /// Construct a new state from a reference to a term.
     ///
     /// This does not yet evaluate anything.
+    ///
+    /// TODO: Write a test to show that:
+    /// RTerm::from(State::new("(\ x => x) (\ x => x)")) = (\ x => x) (\ x => x)
     pub fn new(term: RTerm) -> Self {
         Self {
             ctx: Context::new(),
