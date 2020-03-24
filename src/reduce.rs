@@ -73,8 +73,10 @@ impl RTTerm {
     }
 }
 
-// DB -> term
+/// Map from de Bruijn indices in the term of the abstract machine to lazy terms.
 type Context = stack::Stack<RTTerm>;
+
+/// Arguments to the abstract machine term.
 type Stack = stack::Stack<RState>;
 
 /// An abstract machine representing arguments applied to a substituted term.
