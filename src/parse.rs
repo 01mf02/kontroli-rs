@@ -322,15 +322,6 @@ impl<'a> TryFrom<&'a str> for Preterm {
     }
 }
 
-// parse whitespace or commands
-pub fn parse_toplevel(i: &[u8]) -> Parse<Option<Precommand>> {
-    alt((
-        value(None, nom::character::complete::multispace1),
-        value(None, comment),
-        map(phrase(Precommand::parse), Some),
-    ))(i)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
