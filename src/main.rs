@@ -70,10 +70,12 @@ fn produce<R>(read: R, opt: &Opt) -> impl Iterator<Item = Result<Precommand, Err
 where
     R: io::Read,
 {
+    use parse::{opt_lexeme, phrase, Parse, Parser};
+    let parse: fn(&[u8]) -> Parse<_> = |i| opt_lexeme(phrase(Precommand::parse))(i);
     ParseBuffer {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
-        parse: parse::parse_toplevel,
+        parse,
         fail: |e: nom::Err<VerboseError<&[u8]>>| Error::Parse(format!("{:#?}", e)),
     }
     // consider only the non-whitespace entries
