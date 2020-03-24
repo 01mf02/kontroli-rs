@@ -261,21 +261,25 @@ impl TopPattern {
 }
 
 impl Rule {
+    /// Determine whether the stack of an abstract machine matches the rule's LHS.
+    ///
+    /// Return a new machine context containing variable assignments in case of a match.
+    ///
     /// ~~~
-    /// # use kontroli::{Prerule, Preterm, Rule, RTerm, Signature, Symbol, Symbols};
+    /// # use kontroli::{Error, RTerm, Rule, Signature, Symbols, Term};
     /// # use kontroli::reduce::State;
-    /// # use kontroli::parse::parse;
-    /// # use std::convert::TryFrom;
-    /// let syms: Symbols = vec!("id", "f", "a").into_iter().collect();
-    /// let sig: Signature = Default::default();
-    /// let mk_rule = |s: &str| Rule::try_from(parse::<Prerule>(s).unwrap().scope(&syms).unwrap()).unwrap();
-    /// let mk_term = |s: &str| parse::<Preterm>(s).unwrap().scope_closed(&syms).unwrap();
-    /// let rule = mk_rule("[A] id A --> A.");
-    /// let term = mk_term("id f a.");
+    /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
+    /// let sig = Signature::new();
+    ///
+    /// let rule = Rule::parse("[A] id A --> A.", &syms)?;
+    /// let term = Term::parse("id f a.", &syms)?;
+    ///
     /// let stack = State::new(RTerm::new(term)).whnf(&sig).stack;
     /// let subst = rule.matches(&stack, &sig).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
-    /// assert_eq!(vec!(mk_term("f.")), subst.collect::<Vec<_>>())
+    ///
+    /// assert_eq!(vec![Term::parse("f.", &syms)?], subst.collect::<Vec<_>>());
+    /// # Ok::<(), Error>(())
     /// ~~~
     pub fn matches(&self, stack: &Stack, sig: &Signature) -> Option<Context> {
         let mut subst = vec![vec![]; self.ctx.len()];
