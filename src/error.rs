@@ -33,6 +33,13 @@ impl From<io::Error> for Error {
     }
 }
 
+impl<'a> From<nom::Err<nom::error::VerboseError<&'a [u8]>>> for Error {
+    fn from(err: nom::Err<nom::error::VerboseError<&'a [u8]>>) -> Self {
+        Self::Parse("TODO".to_string())
+    }
+}
+
+
 impl From<scope::Error> for Error {
     fn from(err: scope::Error) -> Self {
         Self::Scope(err)
