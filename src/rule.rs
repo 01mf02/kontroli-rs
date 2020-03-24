@@ -5,6 +5,9 @@ use crate::prerule::GRule;
 use crate::term::RTerm;
 use std::fmt;
 
+/// Rewrite rules with strings as bound variable identifiers,
+/// top pattern (symbol application) as left-hand side, and
+/// a shared term as right-hand side.
 pub type Rule = GRule<String, TopPattern, RTerm>;
 
 impl fmt::Display for Rule {
