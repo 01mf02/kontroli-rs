@@ -18,6 +18,7 @@ use crate::preterm::{Binder, Prearg, Preterm};
 
 pub type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
 
+/// A trait similar to `FromStr`, but for byte slices instead of strings.
 pub trait Parser: Sized {
     fn parse(i: &[u8]) -> Parse<Self>;
 }
