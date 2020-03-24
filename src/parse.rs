@@ -39,8 +39,8 @@ pub trait Parser: Sized {
 ///
 /// ~~~
 /// # use nom::combinator::map;
-/// # use kontroli::parse::{nested, string_from_u8};
-/// let bid = map(nested(b"{|", b"|}"), string_from_u8);
+/// # use kontroli::parse::nested;
+/// let bid = nested(b"{|", b"|}");
 /// assert!(bid(b"{|n|}").is_ok());
 /// assert!(bid(b"{|quoting {|n|} is fun|}").is_ok());
 /// ~~~
@@ -111,28 +111,20 @@ where
     terminated(inner, lexeme(char('.')))
 }
 
-pub fn string_from_u8(i: &[u8]) -> String {
-    std::str::from_utf8(i).map(String::from).unwrap()
+fn bracket_ident(i: &[u8]) -> Parse<&[u8]> {
+    recognize(delimited(tag("{|"), take_until("|}"), tag("|}")))(i)
 }
 
-fn bracket_ident(i: &[u8]) -> Parse<String> {
-    map(
-        recognize(delimited(tag("{|"), take_until("|}"), tag("|}"))),
-        string_from_u8,
-    )(i)
-}
-
-fn normal_ident(i: &[u8]) -> Parse<String> {
+fn normal_ident(i: &[u8]) -> Parse<&[u8]> {
     // 0x27 is: '
     // 0x5F is: _
-    map(
-        take_while1(|c| is_alphanumeric(c) || c == 0x5F || c == 0x27),
-        string_from_u8,
-    )(i)
+    take_while1(|c| is_alphanumeric(c) || c == 0x5F || c == 0x27)(i)
 }
 
 fn ident(i: &[u8]) -> Parse<String> {
-    alt((bracket_ident, normal_ident))(i)
+    map(alt((bracket_ident, normal_ident)), |i| {
+        std::str::from_utf8(i).map(String::from).unwrap()
+    })(i)
 }
 
 fn maybe_ident(i: &[u8]) -> Parse<Option<String>> {
