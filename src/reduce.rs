@@ -264,11 +264,12 @@ impl Rule {
     /// ~~~
     /// # use kontroli::{Prerule, Preterm, Rule, RTerm, Signature, Symbol, Symbols};
     /// # use kontroli::reduce::State;
+    /// # use kontroli::parse::parse;
     /// # use std::convert::TryFrom;
     /// let syms: Symbols = vec!("id", "f", "a").into_iter().collect();
     /// let sig: Signature = Default::default();
-    /// let mk_rule = |s: &str| Rule::try_from(Prerule::try_from(s).unwrap().scope(&syms).unwrap()).unwrap();
-    /// let mk_term = |s: &str| Preterm::try_from(s).unwrap().scope_closed(&syms).unwrap();
+    /// let mk_rule = |s: &str| Rule::try_from(parse::<Prerule>(s).unwrap().scope(&syms).unwrap()).unwrap();
+    /// let mk_term = |s: &str| parse::<Preterm>(s).unwrap().scope_closed(&syms).unwrap();
     /// let rule = mk_rule("[A] id A --> A.");
     /// let term = mk_term("id f a.");
     /// let stack = State::new(RTerm::new(term)).whnf(&sig).stack;

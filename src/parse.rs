@@ -15,14 +15,11 @@ use nom::{
 use crate::precommand::{GDCommand, Precommand};
 use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
-use std::convert::TryFrom;
 
 pub type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
 
-pub trait Parser {
-    fn parse(i: &[u8]) -> Parse<Self>
-    where
-        Self: std::marker::Sized;
+pub trait Parser: Sized {
+    fn parse(i: &[u8]) -> Parse<Self>;
 }
 
 /// Parse arbitrary nesting of strings delimited by non-empty start and end tags.
@@ -305,21 +302,8 @@ impl Parser for Precommand {
     }
 }
 
-// TODO: reduce code duplication
-impl<'a> TryFrom<&'a str> for Prerule {
-    type Error = nom::Err<VerboseError<&'a [u8]>>;
-
-    fn try_from(i: &'a str) -> Result<Self, Self::Error> {
-        phrase(Self::parse)(i.as_bytes()).map(|(_i, o)| o)
-    }
-}
-
-impl<'a> TryFrom<&'a str> for Preterm {
-    type Error = nom::Err<VerboseError<&'a [u8]>>;
-
-    fn try_from(i: &'a str) -> Result<Self, Self::Error> {
-        phrase(Self::parse)(i.as_bytes()).map(|(_i, o)| o)
-    }
+pub fn parse<'a, P: Parser>(i: &'a str) -> Result<P, nom::Err<VerboseError<&'a [u8]>>> {
+    phrase(P::parse)(i.as_bytes()).map(|(_i, o)| o)
 }
 
 #[cfg(test)]
