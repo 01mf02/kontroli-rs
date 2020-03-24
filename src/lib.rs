@@ -37,3 +37,15 @@ pub use signature::Signature;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
 pub use term::{RTerm, Term};
+
+impl Term {
+    pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
+        Ok(parse::parse::<Preterm>(i)?.scope_closed(&syms)?)
+    }
+}
+
+impl Rule {
+    pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
+        Ok(parse::parse::<Prerule>(i)?.scope(&syms)?)
+    }
+}
