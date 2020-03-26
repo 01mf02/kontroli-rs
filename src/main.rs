@@ -10,7 +10,7 @@ use kontroli::{parse, signature};
 use kontroli::{Error, Signature, Symbols};
 use nom::error::VerboseError;
 use std::convert::TryInto;
-use std::io;
+use std::io::Read;
 use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::thread;
@@ -51,6 +51,10 @@ struct Opt {
     #[structopt(long, default_value = "64MB", parse(try_from_str = parse_byte))]
     buffer: Byte,
 
+    /// Use threads to simultaneously parse and scope/check
+    #[structopt(long, short = "j")]
+    jobs: bool,
+
     /// Files to process (cumulative)
     #[structopt(name = "FILE")]
     files: Vec<PathBuf>,
@@ -68,7 +72,7 @@ fn handle(cmd: Command, sig: &mut Signature) -> Result<(), Error> {
 
 type Item = Result<Precommand, Error>;
 
-fn produce<R: io::Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
+fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
     use parse::{opt_lexeme, phrase, Parse, Parser};
     let parse: fn(&[u8]) -> Parse<_> = |i| opt_lexeme(phrase(Precommand::parse))(i);
     ParseBuffer {
@@ -88,7 +92,7 @@ fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error>
 
     sig.eta = opt.eta;
 
-    // run as long as we receive items from the sender
+    // run as long as we receive items
     iter.try_for_each(|cmd| {
         // abort if there was a parse error
         let cmd = cmd?;
@@ -107,32 +111,46 @@ fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error>
     })
 }
 
+/// Return stdin if no files given, else lazily open and return the files.
+fn reads<'a>(files: &'a [PathBuf]) -> Box<dyn Iterator<Item = Result<Box<dyn Read>, Error>> + 'a> {
+    if files.is_empty() {
+        let read: Box<dyn Read> = Box::new(std::io::stdin());
+        Box::new(std::iter::once(Ok(read)))
+    } else {
+        Box::new(files.iter().map(|file| {
+            let read: Box<dyn Read> = Box::new(std::fs::File::open(file)?);
+            Ok(read)
+        }))
+    }
+}
+
 fn main() -> Result<(), Error> {
     pretty_env_logger::init();
 
     let opt = Opt::from_args();
 
-    let (sender, receiver) = channel();
-    let send = |cmd| sender.send(cmd).unwrap();
+    // lazily produce precommands from all specified files
+    let items = reads(&opt.files)
+        .flat_map(|read| Ok::<_, Error>(produce(read?, &opt)))
+        .flatten();
 
-    let optr = opt.clone();
-    let consumer = thread::spawn(move || consume(&optr, receiver.iter()));
+    if opt.jobs {
+        let (sender, receiver) = channel();
 
-    if opt.files.is_empty() {
-        produce(io::stdin(), &opt).for_each(send);
+        let optr = opt.clone();
+        let consumer = thread::spawn(move || consume(&optr, receiver.iter()));
+
+        items.for_each(|cmd| sender.send(cmd).unwrap());
+
+        // signalise that we are done sending precommands
+        // (otherwise the consumer will eventually wait forever)
+        drop(sender);
+
+        // wait for all commands to be consumed
+        consumer.join().unwrap()?;
     } else {
-        for filename in &opt.files {
-            let file = std::fs::File::open(filename)?;
-            produce(file, &opt).for_each(send);
-        }
-    };
-
-    // signalise that we are done sending commands
-    // (otherwise the consumer will eventually wait forever)
-    drop(sender);
-
-    // wait for all commands to be consumed
-    consumer.join().unwrap()?;
+        consume(&opt, items)?;
+    }
 
     Ok(())
 }
