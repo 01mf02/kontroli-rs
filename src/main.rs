@@ -51,7 +51,7 @@ struct Opt {
     #[structopt(long, default_value = "64MB", parse(try_from_str = parse_byte))]
     buffer: Byte,
 
-    /// Number of commands to parse in advance (∞ if argument omitted)
+    /// Parse given number of commands in advance (∞ if argument omitted)
     #[structopt(long, short = "j")]
     jobs: Option<Option<usize>>,
 
