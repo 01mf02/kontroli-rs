@@ -3,6 +3,7 @@
 extern crate pretty_env_logger;
 
 use byte_unit::{Byte, ByteError};
+use crossbeam_channel::{bounded, unbounded};
 use kontroli::command::Command;
 use kontroli::parsebuffer::ParseBuffer;
 use kontroli::precommand::Precommand;
@@ -12,7 +13,6 @@ use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::Read;
 use std::path::PathBuf;
-use std::sync::mpsc::channel;
 use std::thread;
 use structopt::StructOpt;
 
@@ -51,9 +51,9 @@ struct Opt {
     #[structopt(long, default_value = "64MB", parse(try_from_str = parse_byte))]
     buffer: Byte,
 
-    /// Use threads to simultaneously parse and scope/check
+    /// Number of commands to parse in advance (∞ if argument omitted)
     #[structopt(long, short = "j")]
-    jobs: bool,
+    jobs: Option<Option<usize>>,
 
     /// Files to process (cumulative)
     #[structopt(name = "FILE")]
@@ -134,22 +134,26 @@ fn main() -> Result<(), Error> {
         .flat_map(|read| Ok::<_, Error>(produce(read?, &opt)))
         .flatten();
 
-    if opt.jobs {
-        let (sender, receiver) = channel();
+    match opt.jobs {
+        Some(channel) => {
+            let (sender, receiver) = match channel {
+                Some(capacity) => bounded(capacity),
+                None => unbounded(),
+            };
 
-        let optr = opt.clone();
-        let consumer = thread::spawn(move || consume(&optr, receiver.iter()));
+            let optr = opt.clone();
+            let consumer = thread::spawn(move || consume(&optr, receiver.iter()));
 
-        items.for_each(|cmd| sender.send(cmd).unwrap());
+            items.for_each(|cmd| sender.send(cmd).unwrap());
 
-        // signalise that we are done sending precommands
-        // (otherwise the consumer will eventually wait forever)
-        drop(sender);
+            // signalise that we are done sending precommands
+            // (otherwise the consumer will eventually wait forever)
+            drop(sender);
 
-        // wait for all commands to be consumed
-        consumer.join().unwrap()?;
-    } else {
-        consume(&opt, items)?;
+            // wait for all commands to be consumed
+            consumer.join().unwrap()?;
+        }
+        None => consume(&opt, items)?,
     }
 
     Ok(())
