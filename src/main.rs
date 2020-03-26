@@ -12,7 +12,7 @@ use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io;
 use std::path::PathBuf;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::channel;
 use std::thread;
 use structopt::StructOpt;
 
@@ -66,10 +66,9 @@ fn handle(cmd: Command, sig: &mut Signature) -> Result<(), Error> {
     }
 }
 
-fn produce<R>(read: R, opt: &Opt) -> impl Iterator<Item = Result<Precommand, Error>>
-where
-    R: io::Read,
-{
+type Item = Result<Precommand, Error>;
+
+fn produce<R: io::Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
     use parse::{opt_lexeme, phrase, Parse, Parser};
     let parse: fn(&[u8]) -> Parse<_> = |i| opt_lexeme(phrase(Precommand::parse))(i);
     ParseBuffer {
@@ -83,14 +82,14 @@ where
     .flatten()
 }
 
-fn consume(opt: &Opt, receiver: &Receiver<Result<Precommand, Error>>) -> Result<(), Error> {
+fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error> {
     let mut sig: Signature = Default::default();
     let mut syms: Symbols = Default::default();
 
     sig.eta = opt.eta;
 
     // run as long as we receive items from the sender
-    receiver.iter().try_for_each(|cmd| {
+    iter.try_for_each(|cmd| {
         // abort if there was a parse error
         let cmd = cmd?;
 
@@ -117,7 +116,7 @@ fn main() -> Result<(), Error> {
     let send = |cmd| sender.send(cmd).unwrap();
 
     let optr = opt.clone();
-    let consumer = thread::spawn(move || consume(&optr, &receiver));
+    let consumer = thread::spawn(move || consume(&optr, receiver.iter()));
 
     if opt.files.is_empty() {
         produce(io::stdin(), &opt).for_each(send);
