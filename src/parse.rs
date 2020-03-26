@@ -43,7 +43,6 @@ pub fn parse<'a, P: Parser>(i: &'a str) -> Result<P, nom::Err<VerboseError<&'a [
     phrase(P::parse)(i.as_bytes()).map(|(_i, o)| o)
 }
 
-
 /// Parse arbitrary nesting of strings delimited by non-empty start and end tags.
 ///
 /// ~~~
