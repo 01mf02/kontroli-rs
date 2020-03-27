@@ -207,11 +207,7 @@ impl Preterm {
     }
 
     fn sterm(i: &[u8]) -> Parse<Self> {
-        alt((
-            parens(Self::parse),
-            value(Self::Type, tag("Type")),
-            map(ident, Self::Symb),
-        ))(i)
+        alt((parens(Self::parse), map(ident, Self::Symb)))(i)
     }
 
     fn appl(i: &[u8]) -> Parse<Self> {

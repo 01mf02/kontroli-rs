@@ -38,15 +38,17 @@ impl Preterm {
 
     pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<Term, Error> {
         match self {
-            Self::Type => Ok(Term::Type),
-            Self::Symb(s) => match bnd.iter().position(|id| *id == *s) {
-                Some(idx) => Ok(Term::BVar(idx)),
-                None => {
+            Self::Symb(s) => {
+                if s == "Type" {
+                    Ok(Term::Type)
+                } else if let Some(idx) = bnd.iter().position(|id| *id == *s) {
+                    Ok(Term::BVar(idx))
+                } else {
                     let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
                     let sym = Symbol::clone(&entry);
                     Ok(Term::Symb(sym))
                 }
-            },
+            }
             Self::Appl(head, tail) => {
                 let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scoper(syms, bnd)).collect();
                 Ok(Term::Appl(head.scoper(syms, bnd)?, tail?))

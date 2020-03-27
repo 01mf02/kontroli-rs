@@ -23,7 +23,6 @@ pub type Prearg = GArg<BPreterm>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Preterm {
-    Type,
     Symb(String),
     Appl(BPreterm, Vec<Preterm>),
     Bind(Binder, GArg<BPreterm>, BPreterm),
