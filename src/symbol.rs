@@ -1,4 +1,4 @@
-//! A shared string with fast hashing and equality check.
+//! Shared strings with fast hashing and equality check.
 
 use std::fmt;
 use std::hash::{Hash, Hasher};
