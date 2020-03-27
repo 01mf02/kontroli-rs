@@ -2,6 +2,21 @@
 //!
 //! All basic parsers operate on byte slices (`&[u8]`) instead of strings (`&str`).
 //! This enables efficient parsing using a circular buffer.
+//!
+//! The parsers for all primitives in this file assume that
+//! they are being given input that has been lexed;
+//! that is, leading whitespace has been removed.
+//! This has a few practical implications:
+//!
+//! * If a parser consists of a sequence of other parsers,
+//!   then it has to lex every parser in that sequence except the first.
+//!   (We could also lex the first parser, but then, we would duplicate work,
+//!   because we know by assumption that the whole parser is lexed.)
+//! * If a parser consists of an alternative of parsers `alt(p1, ..., pn)`,
+//!   then its lexed version should be
+//!   the lexed alternative of parsers `lexeme(alt(p1, ..., pn))` instead of
+//!   the alternative of lexed parsers `alt(lexeme(p1), ..., lexeme(pn))`.
+//!   This avoids redoing the lexing for all alternatives.
 
 use nom::{
     branch::alt,
@@ -110,6 +125,7 @@ where
     ))
 }
 
+/// Strip away space before parsing with the given function.
 fn lexeme<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
@@ -134,6 +150,7 @@ where
     terminated(inner, lexeme(char('.')))
 }
 
+/// Parse bracket-surrounded identifier, like `{| anything \o/ goes |}`.
 fn bracket_ident(i: &[u8]) -> Parse<&[u8]> {
     recognize(delimited(tag("{|"), take_until("|}"), tag("|}")))(i)
 }
