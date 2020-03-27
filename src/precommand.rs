@@ -1,10 +1,10 @@
-//! Unscoped commands to change the signature.
+//! Unscoped signature-changing commands.
 
 use crate::prerule::Prerule;
 use crate::preterm::{BPreterm, Prearg};
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-/// Unscoped commands to change the signature.
+/// Unscoped signature-changing command.
 ///
 /// In contrast to its scoped `Command` counterpart,
 /// `Precommand`s hold (pre-)arguments for definitions/declarations.
