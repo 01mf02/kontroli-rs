@@ -3,12 +3,10 @@
 use crate::{scope, signature, typing};
 use alloc::string::String;
 use core::fmt;
-use std::io;
 
 /// Common error type.
 #[derive(Debug)]
 pub enum Error {
-    Io(io::Error),
     Parse(String),
     Scope(scope::Error),
     Signature(signature::Error),
@@ -18,18 +16,11 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Self::Io(ref err) => err.fmt(f),
             Self::Parse(ref err) => err.fmt(f),
             Self::Scope(ref err) => err.fmt(f),
             Self::Signature(ref err) => err.fmt(f),
             Self::Typing(ref err) => err.fmt(f),
         }
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Self::Io(err)
     }
 }
 

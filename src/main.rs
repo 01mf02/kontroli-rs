@@ -11,13 +11,32 @@ use crossbeam_channel::{bounded, unbounded};
 use kontroli::command::Command;
 use kontroli::precommand::Precommand;
 use kontroli::{parse, signature};
-use kontroli::{Error, Signature, Symbols};
+use kontroli::{Signature, Symbols};
 use nom::error::VerboseError;
 use std::convert::TryInto;
+use std::io;
 use std::io::Read;
 use std::path::PathBuf;
 use std::thread;
 use structopt::StructOpt;
+
+#[derive(Debug)]
+pub enum Error {
+    Io(io::Error),
+    Kontroli(kontroli::Error),
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Self::Io(err)
+    }
+}
+
+impl From<kontroli::Error> for Error {
+    fn from(err: kontroli::Error) -> Self {
+        Self::Kontroli(err)
+    }
+}
 
 #[derive(Debug)]
 struct MyByteError(ByteError);
@@ -63,7 +82,7 @@ struct Opt {
     files: Vec<PathBuf>,
 }
 
-fn handle(cmd: Command, sig: &mut Signature) -> Result<(), Error> {
+fn handle(cmd: Command, sig: &mut Signature) -> Result<(), kontroli::Error> {
     match cmd {
         Command::DCmd(sym, dcmd) => {
             println!("{}", sym);
@@ -73,7 +92,7 @@ fn handle(cmd: Command, sig: &mut Signature) -> Result<(), Error> {
     }
 }
 
-type Item = Result<Precommand, Error>;
+type Item = Result<Precommand, kontroli::Error>;
 
 fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
     use parse::{opt_lexeme, phrase, Parse, Parser};
@@ -82,14 +101,14 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
         parse,
-        fail: |e: nom::Err<VerboseError<&[u8]>>| Error::Parse(format!("{:#?}", e)),
+        fail: |e: nom::Err<VerboseError<&[u8]>>| kontroli::Error::Parse(format!("{:#?}", e)),
     }
     // consider only the non-whitespace entries
     .map(|entry| entry.transpose())
     .flatten()
 }
 
-fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error> {
+fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), kontroli::Error> {
     let mut sig: Signature = Default::default();
     let mut syms: Symbols = Default::default();
 
@@ -117,7 +136,7 @@ fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error>
 /// Return stdin if no files given, else lazily open and return the files.
 fn reads<'a>(files: &'a [PathBuf]) -> Box<dyn Iterator<Item = Result<Box<dyn Read>, Error>> + 'a> {
     if files.is_empty() {
-        let read: Box<dyn Read> = Box::new(std::io::stdin());
+        let read: Box<dyn Read> = Box::new(io::stdin());
         Box::new(std::iter::once(Ok(read)))
     } else {
         Box::new(files.iter().map(|file| {
