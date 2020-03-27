@@ -9,7 +9,9 @@
 //! to make it easier for users to understand and learn from the implementation.
 //! It is also a testbed for parallelising type checking.
 //!
-//! It tries to be the following:
+//! # Goals
+//!
+//! Kontroli tries to be the following:
 //!
 //! * Small: write as little code as possible ...
 //! * Correct: ... because the code you do not write, contains no bugs
@@ -17,14 +19,16 @@
 //! * Compatible: stick to Dedukti's syntax/semantics as much as possible
 //! * Conservative: use established and well-tested techniques
 //!
+//! # Differences
+//!
 //! There are a few differences with respect to Dedukti:
 //!
-//! * Kontroli's syntax is not left-recursive to simplify the parser.
-//!   As a result, most of today's Dedukti files cannot be directly read,
-//!   but it is relatively simple to convert Kontroli to Dedukti files.
+//! * Kontroli's syntax is not left-recursive, in order to simplify parsing.
+//!   As a result, it cannot directly read most of today's Dedukti files, but
+//!   converting Kontroli to Dedukti files is only a matter of a `sed` one-liner.
 //!   (Dedukti could be also easily extended to read/write Kontroli syntax.)
 //! * Kontroli does not support higher-order rewrite rules,
-//!   as they make the whole program considerably more complex,
+//!   as they would make the whole program considerably more complex,
 //!   thus contradicting the idea of a small type checker.
 //! * Kontroli does not try to assure the type-safety of rewrite rules.
 //!   However, using Kontroli's API, it should be relatively straightforward
@@ -33,6 +37,13 @@
 //! * Kontroli does not have any commands like `#EVAL` or `#ASSERT`,
 //!   which are particularly used in Dedukti tests.
 //!   Instead, tests in the code base are preferred.
+//!
+//! # Usage
+//!
+//! Kontroli provides a command-line program and a library.
+//! The latter means that you can use Kontroli as part of your own applications.
+//! Given that the Kontroli library does not rely on Rust's standard library,
+//! you could use it also in environments such as web pages.
 //!
 //! [Dedukti]: https://deducteam.github.io/
 
