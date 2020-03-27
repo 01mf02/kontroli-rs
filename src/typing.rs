@@ -50,6 +50,7 @@ pub enum Error {
     KindNotTypable,
     UnexpectedKind,
     DomainFreeAbstraction,
+    TypeAndTermEmpty,
 }
 
 impl Arg {
