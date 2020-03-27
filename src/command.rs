@@ -1,13 +1,13 @@
 //! Commands to change the signature.
 
-use crate::precommand::GDCommand;
+use crate::precommand::GIntroType;
 use crate::rule::Rule;
 use crate::symbol::Symbol;
 use crate::term::RTerm;
 
 pub enum Command {
-    DCmd(Symbol, DCommand),
+    Intro(Symbol, IntroType),
     Rule(Rule),
 }
 
-pub type DCommand = GDCommand<RTerm, RTerm>;
+pub type IntroType = GIntroType<RTerm, RTerm>;

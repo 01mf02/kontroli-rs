@@ -1,8 +1,8 @@
 //! Conversion from preterms to terms, from prepatterns to prepatterns etc.
 
-use crate::command::{Command, DCommand};
+use crate::command::{Command, IntroType};
 use crate::pattern::{Miller, Pattern, TopPattern};
-use crate::precommand::{PreDCommand, Precommand};
+use crate::precommand::{PreIntroType, Precommand};
 use crate::prepattern::Prepattern;
 use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
@@ -81,8 +81,8 @@ impl Prearg {
     }
 }
 
-impl PreDCommand {
-    pub fn scope(self, syms: &Symbols) -> Result<DCommand, Error> {
+impl PreIntroType {
+    pub fn scope(self, syms: &Symbols) -> Result<IntroType, Error> {
         let mut bnd = Stack::new();
         self.map_type_err(|tm| tm.scoper(syms, &mut bnd))?
             .map_term_err(|tm| tm.scoper(syms, &mut bnd))
@@ -131,13 +131,13 @@ impl Prerule {
 impl Precommand {
     pub fn scope(self, syms: &mut Symbols) -> Result<Command, Error> {
         match self {
-            Self::DCmd(id, args, dcmd) => {
-                let dcmd = dcmd.parametrise(args).scope(syms)?;
+            Self::Intro(id, args, it) => {
+                let it = it.parametrise(args).scope(syms)?;
                 let sym = Symbol::new(id.clone());
                 if syms.insert(id, Symbol::clone(&sym)).is_some() {
                     return Err(Error::Redeclaration);
                 };
-                Ok(Command::DCmd(sym, dcmd))
+                Ok(Command::Intro(sym, it))
             }
             Self::Rule(prerule) => Ok(Command::Rule(prerule.scope(syms)?)),
         }

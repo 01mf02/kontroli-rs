@@ -1,6 +1,6 @@
 //! Map from symbols to their types and associated rewrite rules.
 
-use crate::command::DCommand;
+use crate::command::IntroType;
 use crate::pattern::TopPattern;
 use crate::rule::Rule;
 use crate::symbol::Symbol;
@@ -120,15 +120,15 @@ impl Entry {
         }
     }
 
-    pub fn new(dcmd: DCommand, sig: &Signature) -> Result<Self, typing::Error> {
-        match dcmd {
-            DCommand::Declaration(ty) => Self::declare(&sig, false, ty),
-            DCommand::Definition(oty, otm) => match (oty, otm) {
+    pub fn new(it: IntroType, sig: &Signature) -> Result<Self, typing::Error> {
+        match it {
+            IntroType::Declaration(ty) => Self::declare(&sig, false, ty),
+            IntroType::Definition(oty, otm) => match (oty, otm) {
                 (Some(ty), None) => Self::declare(&sig, true, ty),
                 (oty, Some(tm)) => Self::define(&sig, true, oty, tm),
                 (None, None) => panic!("both type and term are empty"),
             },
-            DCommand::Theorem(ty, tm) => Self::define(&sig, false, Some(ty), tm),
+            IntroType::Theorem(ty, tm) => Self::define(&sig, false, Some(ty), tm),
         }
     }
 }

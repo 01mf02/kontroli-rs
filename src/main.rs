@@ -84,9 +84,9 @@ struct Opt {
 
 fn handle(cmd: Command, sig: &mut Signature) -> Result<(), kontroli::Error> {
     match cmd {
-        Command::DCmd(sym, dcmd) => {
+        Command::Intro(sym, it) => {
             println!("{}", sym);
-            Ok(sig.insert(&sym, signature::Entry::new(dcmd, &*sig)?)?)
+            Ok(sig.insert(&sym, signature::Entry::new(it, &*sig)?)?)
         }
         Command::Rule(rule) => Ok(sig.add_rule(rule)?),
     }

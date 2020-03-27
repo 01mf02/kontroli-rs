@@ -30,7 +30,7 @@ use nom::{
     IResult,
 };
 
-use crate::precommand::{GDCommand, Precommand};
+use crate::precommand::{GIntroType, Precommand};
 use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
 use alloc::{boxed::Box, string::String, vec::Vec};
@@ -290,7 +290,7 @@ impl Precommand {
                     opt(lexeme(Preterm::of)),
                     opt(lexeme(Preterm::is)),
                 )),
-                |(id, params, ty, tm)| Self::DCmd(id, params, GDCommand::Definition(ty, tm)),
+                |(id, params, ty, tm)| Self::Intro(id, params, GIntroType::Definition(ty, tm)),
             ),
         )(i)
     }
@@ -305,7 +305,7 @@ impl Precommand {
                     lexeme(Preterm::of),
                     lexeme(Preterm::is),
                 )),
-                |(id, params, ty, tm)| Self::DCmd(id, params, GDCommand::Theorem(ty, tm)),
+                |(id, params, ty, tm)| Self::Intro(id, params, GIntroType::Theorem(ty, tm)),
             ),
         )(i)
     }
@@ -317,18 +317,18 @@ impl Precommand {
                 many0(lexeme(parens(Prearg::parse))),
                 lexeme(Preterm::of),
             )),
-            |(id, params, ty)| Self::DCmd(id, params, GDCommand::Declaration(ty)),
+            |(id, params, ty)| Self::Intro(id, params, GIntroType::Declaration(ty)),
         )(i)
     }
 
-    fn dcmd(i: &[u8]) -> Parse<Self> {
+    fn intro(i: &[u8]) -> Parse<Self> {
         alt((Self::definition, Self::theorem, Self::declaration))(i)
     }
 }
 
 impl Parser for Precommand {
     fn parse(i: &[u8]) -> Parse<Self> {
-        alt((Self::dcmd, map(Prerule::parse, Self::Rule)))(i)
+        alt((Self::intro, map(Prerule::parse, Self::Rule)))(i)
     }
 }
 
