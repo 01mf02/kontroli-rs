@@ -1,3 +1,5 @@
+#![no_std]
+
 //! Type checking for the lambda-Pi calculus modulo rewriting.
 //!
 //! Kontroli (Esperanto for *verify*) is
