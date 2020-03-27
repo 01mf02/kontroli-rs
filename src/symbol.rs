@@ -1,4 +1,4 @@
-//! Shared strings with fast hashing and equality check.
+//! Shared strings with fast cloning, hashing and equality checking.
 
 use alloc::{rc::Rc, string::String};
 use core::fmt;
