@@ -1,11 +1,14 @@
 //! A typechecker for the lambda-Pi calculus modulo rewriting.
 
+extern crate circular;
 extern crate pretty_env_logger;
+
+mod parsebuffer;
+mod parseerror;
 
 use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
 use kontroli::command::Command;
-use kontroli::parsebuffer::ParseBuffer;
 use kontroli::precommand::Precommand;
 use kontroli::{parse, signature};
 use kontroli::{Error, Signature, Symbols};
@@ -75,7 +78,7 @@ type Item = Result<Precommand, Error>;
 fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
     use parse::{opt_lexeme, phrase, Parse, Parser};
     let parse: fn(&[u8]) -> Parse<_> = |i| opt_lexeme(phrase(Precommand::parse))(i);
-    ParseBuffer {
+    parsebuffer::ParseBuffer {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
         parse,

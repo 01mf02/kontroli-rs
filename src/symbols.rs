@@ -1,8 +1,9 @@
 //! Map from strings to (shared) symbols.
 
 use crate::symbol::Symbol;
+use alloc::string::String;
+use core::iter::FromIterator;
 use fnv::FnvHashMap;
-use std::iter::FromIterator;
 
 #[derive(Default)]
 pub struct Symbols(FnvHashMap<String, Symbol>);

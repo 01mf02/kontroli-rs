@@ -33,6 +33,7 @@ use nom::{
 use crate::precommand::{GDCommand, Precommand};
 use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
+use alloc::{boxed::Box, string::String, vec::Vec};
 
 /// Result of a parser.
 pub type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
@@ -163,7 +164,7 @@ fn normal_ident(i: &[u8]) -> Parse<&[u8]> {
 
 fn ident(i: &[u8]) -> Parse<String> {
     map(alt((bracket_ident, normal_ident)), |i| {
-        std::str::from_utf8(i).map(String::from).unwrap()
+        alloc::str::from_utf8(i).map(String::from).unwrap()
     })(i)
 }
 

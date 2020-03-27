@@ -1,8 +1,8 @@
 //! Shared strings with fast hashing and equality check.
 
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::rc::Rc;
+use alloc::{rc::Rc, string::String};
+use core::fmt;
+use core::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug)]
 pub struct Symbol(Rc<String>);
@@ -15,7 +15,7 @@ impl Symbol {
 
 impl Hash for Symbol {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        std::ptr::hash(&**self.0, state)
+        core::ptr::hash(&**self.0, state)
     }
 }
 

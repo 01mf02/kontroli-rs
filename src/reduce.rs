@@ -5,9 +5,9 @@ use crate::rule::Rule;
 use crate::signature::Signature;
 use crate::stack;
 use crate::term::{Arg, RTerm, Term};
+use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
+use core::cell::RefCell;
 use lazy_st::Thunk;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 /// A shared lazy term constructed from a state.
 #[derive(Clone)]
@@ -38,7 +38,7 @@ impl WState {
             return;
         }
 
-        let state = std::mem::take(&mut self.state);
+        let state = core::mem::take(&mut self.state);
         self.state = state.whnf(sig);
         self.whnfed = true
     }
@@ -265,14 +265,14 @@ impl Pattern {
                         if sp == st && state.stack.len() == pats.len() {
                             state.stack.clone().into_matches(pats, sig)
                         } else {
-                            Box::new(std::iter::once(None))
+                            Box::new(core::iter::once(None))
                         }
                     }
-                    _ => Box::new(std::iter::once(None)),
+                    _ => Box::new(core::iter::once(None)),
                 }
             }
-            Self::MVar(m) => Box::new(std::iter::once(Some((*m, rstate)))),
-            Self::Joker => Box::new(std::iter::empty()),
+            Self::MVar(m) => Box::new(core::iter::once(Some((*m, rstate)))),
+            Self::Joker => Box::new(core::iter::empty()),
         }
     }
 }
@@ -281,7 +281,7 @@ impl TopPattern {
     pub fn matches<'a>(&'a self, stack: &'a Stack, sig: &'a Signature) -> Subst<'a> {
         if stack.len() < self.args.len() {
             // we do not have enough arguments on the stack to match against
-            return Box::new(std::iter::once(None));
+            return Box::new(core::iter::once(None));
         }
 
         stack.matches(&self.args, sig)

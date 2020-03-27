@@ -3,7 +3,8 @@
 use crate::pattern::{Pattern, TopPattern};
 use crate::prerule::GRule;
 use crate::term::RTerm;
-use std::fmt;
+use alloc::string::String;
+use core::fmt;
 
 /// Rewrite rules with strings as bound variable identifiers,
 /// top pattern (symbol application) as left-hand side, and

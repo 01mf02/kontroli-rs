@@ -6,8 +6,9 @@ use crate::rule::Rule;
 use crate::symbol::Symbol;
 use crate::term::{RTerm, Term};
 use crate::typing;
+use alloc::{vec, vec::Vec};
+use core::fmt;
 use fnv::FnvHashMap;
-use std::fmt;
 
 pub struct Signature {
     pub eta: bool,

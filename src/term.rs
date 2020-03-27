@@ -2,8 +2,8 @@
 
 use crate::preterm::GArg;
 use crate::symbol::Symbol;
-use std::fmt;
-use std::rc::Rc;
+use alloc::{rc::Rc, vec::Vec};
+use core::fmt;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RTerm(Rc<Term>);
@@ -105,7 +105,7 @@ impl RTerm {
     }
 }
 
-impl std::ops::Deref for RTerm {
+impl core::ops::Deref for RTerm {
     type Target = Term;
 
     fn deref(&self) -> &Self::Target {

@@ -1,6 +1,7 @@
 //! Substitution and shifting for terms.
 
 use crate::term::{Arg, RTerm, Term};
+use alloc::vec::Vec;
 
 impl Arg {
     /// Return the substitution of an argument only if it changed.

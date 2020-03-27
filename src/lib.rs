@@ -34,7 +34,7 @@
 //!
 //! [Dedukti]: https://deducteam.github.io/
 
-extern crate circular;
+extern crate alloc;
 extern crate lazy_st;
 extern crate nom;
 #[macro_use]
@@ -43,8 +43,6 @@ extern crate log;
 pub mod command;
 pub mod error;
 pub mod parse;
-pub mod parsebuffer;
-pub mod parseerror;
 pub mod pattern;
 pub mod precommand;
 pub mod prepattern;

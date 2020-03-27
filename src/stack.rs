@@ -1,7 +1,8 @@
 //! A `Vec` that is iterated from the last to the first pushed element.
 // TODO: rename to lifo?
 
-use std::iter::FromIterator;
+use alloc::vec::Vec;
+use core::iter::FromIterator;
 
 #[derive(Clone, Debug)]
 pub struct Stack<A>(Vec<A>);
@@ -68,7 +69,7 @@ impl<A> From<Vec<A>> for Stack<A> {
 
 impl<A> IntoIterator for Stack<A> {
     type Item = A;
-    type IntoIter = std::iter::Rev<std::vec::IntoIter<Self::Item>>;
+    type IntoIter = core::iter::Rev<alloc::vec::IntoIter<Self::Item>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter().rev()

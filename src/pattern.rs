@@ -3,8 +3,8 @@
 use crate::scope::Error;
 use crate::symbol::Symbol;
 use crate::term::{fmt_appl, Term};
-use std::convert::TryFrom;
-use std::fmt;
+use alloc::vec::Vec;
+use core::{convert::TryFrom, fmt};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Miller(pub usize);

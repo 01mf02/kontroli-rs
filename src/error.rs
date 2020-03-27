@@ -1,7 +1,9 @@
 //! Common error type.
 
 use crate::{scope, signature, typing};
-use std::{fmt, io};
+use alloc::string::String;
+use core::fmt;
+use std::io;
 
 /// Common error type.
 #[derive(Debug)]
@@ -24,8 +26,6 @@ impl fmt::Display for Error {
         }
     }
 }
-
-impl std::error::Error for Error {}
 
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self {

@@ -3,7 +3,7 @@
 use crate::reduce::convertible;
 use crate::signature::Signature;
 use crate::term::{Arg, RTerm, Term};
-use std::fmt;
+use core::fmt;
 
 /// Map from de Bruijn indices to associated types.
 pub type Context = crate::stack::Stack<RTerm>;
@@ -57,8 +57,6 @@ impl fmt::Display for Error {
         write!(f, "typing error")
     }
 }
-
-impl std::error::Error for Error {}
 
 impl Arg {
     /// Check whether the bound variable's type (if present)

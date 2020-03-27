@@ -1,5 +1,7 @@
 //! Unshared terms, not distinguishing bound and unbound symbols.
 
+use alloc::{boxed::Box, string::String, vec::Vec};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Binder {
     Lam,

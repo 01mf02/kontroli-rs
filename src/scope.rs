@@ -11,8 +11,8 @@ use crate::stack::Stack;
 use crate::symbol::Symbol;
 use crate::symbols::Symbols;
 use crate::term::{Arg, RTerm, Term};
-use std::convert::TryFrom;
-use std::fmt;
+use alloc::string::String;
+use core::{convert::TryFrom, fmt};
 
 type Bound = Stack<String>;
 

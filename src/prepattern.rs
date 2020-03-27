@@ -2,7 +2,8 @@
 
 use crate::preterm::Preterm;
 use crate::scope::Error;
-use std::convert::TryFrom;
+use alloc::{string::String, vec::Vec};
+use core::convert::TryFrom;
 
 #[derive(Clone)]
 pub struct Prepattern(String, Vec<Prepattern>);

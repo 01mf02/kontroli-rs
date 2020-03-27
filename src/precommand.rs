@@ -2,6 +2,7 @@
 
 use crate::prerule::Prerule;
 use crate::preterm::{BPreterm, Prearg};
+use alloc::{boxed::Box, string::String, vec::Vec};
 
 /// Unscoped commands to change the signature.
 ///

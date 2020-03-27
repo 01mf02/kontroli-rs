@@ -1,5 +1,5 @@
+use core::fmt;
 use nom::error::{VerboseError, VerboseErrorKind};
-use std::fmt;
 
 /// obtain the line number, the following input and the column number
 /// of a substring in a string
