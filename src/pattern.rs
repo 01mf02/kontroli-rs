@@ -1,4 +1,4 @@
-//! Rewrite patterns à la Miller.
+//! Rewrite patterns.
 
 use crate::scope::Error;
 use crate::symbol::Symbol;
