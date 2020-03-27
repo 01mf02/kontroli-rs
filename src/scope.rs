@@ -12,7 +12,7 @@ use crate::symbol::Symbol;
 use crate::symbols::Symbols;
 use crate::term::{Arg, RTerm, Term};
 use alloc::string::String;
-use core::{convert::TryFrom, fmt};
+use core::convert::TryFrom;
 
 type Bound = Stack<String>;
 
@@ -95,12 +95,6 @@ pub enum Error {
     Redeclaration,
     NoPrepattern,
     NoTopPattern,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "scoping error")
-    }
 }
 
 impl Prepattern {

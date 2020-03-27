@@ -7,7 +7,6 @@ use crate::symbol::Symbol;
 use crate::term::{RTerm, Term};
 use crate::typing;
 use alloc::{vec, vec::Vec};
-use core::fmt;
 use fnv::FnvHashMap;
 
 pub struct Signature {
@@ -36,12 +35,6 @@ pub struct Entry {
 pub enum Error {
     Reintroduction,
     NonRewritable,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "signature error")
-    }
 }
 
 impl Signature {

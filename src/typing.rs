@@ -52,12 +52,6 @@ pub enum Error {
     DomainFreeAbstraction,
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "typing error")
-    }
-}
-
 impl Arg {
     /// Check whether the bound variable's type (if present)
     /// has a proper type and is convertible with the given type.
