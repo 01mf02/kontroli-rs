@@ -10,25 +10,25 @@ use alloc::{vec, vec::Vec};
 use fnv::FnvHashMap;
 
 pub struct Signature {
-    pub eta: bool,
     pub types: FnvHashMap<Symbol, RTerm>,
     pub rules: FnvHashMap<Symbol, Vec<Rule>>,
+    pub eta: bool,
 }
 
 impl Default for Signature {
     fn default() -> Self {
         Self {
-            eta: false,
             types: Default::default(),
             rules: Default::default(),
+            eta: false,
         }
     }
 }
 
 pub struct Entry {
-    rewritable: bool,
     typ: RTerm,
     term: Option<RTerm>,
+    rewritable: bool,
 }
 
 #[derive(Debug)]
@@ -82,7 +82,7 @@ impl Signature {
 }
 
 impl Entry {
-    pub fn declare(sig: &Signature, rewritable: bool, typ: RTerm) -> Result<Self, typing::Error> {
+    pub fn declare(typ: RTerm, rewritable: bool, sig: &Signature) -> Result<Self, typing::Error> {
         match &*typ.infer_closed(&sig)? {
             Term::Kind | Term::Type => Ok(Self {
                 rewritable,
@@ -94,10 +94,10 @@ impl Entry {
     }
 
     pub fn define(
-        sig: &Signature,
-        rewritable: bool,
         oty: Option<RTerm>,
         term: RTerm,
+        rewritable: bool,
+        sig: &Signature,
     ) -> Result<Self, typing::Error> {
         let typ = match oty {
             None => term.infer_closed(&sig)?,
@@ -113,22 +113,22 @@ impl Entry {
         match &*typ {
             Term::Kind => Err(typing::Error::UnexpectedKind),
             _ => Ok(Self {
-                rewritable,
                 typ,
                 term: Some(term),
+                rewritable,
             }),
         }
     }
 
     pub fn new(it: IntroType, sig: &Signature) -> Result<Self, typing::Error> {
         match it {
-            IntroType::Declaration(ty) => Self::declare(&sig, false, ty),
+            IntroType::Declaration(ty) => Self::declare(ty, false, &sig),
             IntroType::Definition(oty, otm) => match (oty, otm) {
-                (Some(ty), None) => Self::declare(&sig, true, ty),
-                (oty, Some(tm)) => Self::define(&sig, true, oty, tm),
+                (Some(ty), None) => Self::declare(ty, true, &sig),
+                (oty, Some(tm)) => Self::define(oty, tm, true, &sig),
                 (None, None) => panic!("both type and term are empty"),
             },
-            IntroType::Theorem(ty, tm) => Self::define(&sig, false, Some(ty), tm),
+            IntroType::Theorem(ty, tm) => Self::define(Some(ty), tm, false, &sig),
         }
     }
 }
