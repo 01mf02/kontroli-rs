@@ -30,9 +30,16 @@
 //! * Kontroli does not support higher-order rewrite rules,
 //!   as they would make the whole program considerably more complex,
 //!   thus contradicting the idea of a small type checker.
+//! * Kontroli does not have a module system.
+//!   However, when checking a sequence of files,
+//!   any file can reference symbols from all files checked before,
+//!   without prefixing the symbols with the file name.
 //! * Kontroli does not try to assure the type-safety of rewrite rules.
-//!   However, using Kontroli's API, it should be relatively straightforward
-//!   to implement a type checker that assures type-safety.
+//!   As a consequence, neither
+//!   bracket patterns nor
+//!   type annotations in rewrite rules are supported.
+//!   However, using Kontroli's API, it should be possible
+//!   to implement type checkers that assure type-safety.
 //! * Kontroli does not use decision trees for rewriting.
 //! * Kontroli does not have any commands like `#EVAL` or `#ASSERT`,
 //!   which are particularly used in Dedukti tests.
@@ -43,7 +50,8 @@
 //! Kontroli provides a command-line program and a library.
 //! The latter means that you can use Kontroli as part of your own applications.
 //! Given that the Kontroli library does not rely on Rust's standard library,
-//! you could use it also in environments such as web pages.
+//! you could use it also in environments such as web pages,
+//! offering type checking as a service.
 //!
 //! [Dedukti]: https://deducteam.github.io/
 
