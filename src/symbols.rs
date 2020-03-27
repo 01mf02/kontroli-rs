@@ -1,7 +1,7 @@
 //! Map from strings to (shared) symbols.
 
 use crate::symbol::Symbol;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use core::iter::FromIterator;
 use fnv::FnvHashMap;
 

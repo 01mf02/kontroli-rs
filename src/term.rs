@@ -2,7 +2,7 @@
 
 use crate::preterm::GArg;
 use crate::symbol::Symbol;
-use alloc::{rc::Rc, vec::Vec};
+use alloc::{rc::Rc, string::ToString, vec::Vec};
 use core::fmt;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
