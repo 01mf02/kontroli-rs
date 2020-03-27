@@ -4,6 +4,28 @@ use alloc::{rc::Rc, string::String};
 use core::fmt;
 use core::hash::{Hash, Hasher};
 
+/// Shared string with fast cloning, hashing, and equality check.
+///
+/// This is implemented using a reference-counted pointer.
+/// Cloning, hashing, and equality checking is performed on
+/// the address of the pointer, making them constant-time operations.
+///
+/// Note that two different symbols pointing to equivalent strings are not equal:
+///
+/// ~~~
+/// # use kontroli::Symbol;
+/// let s1 = Symbol::new("Hello".to_string());
+/// let s2 = Symbol::new("Hello".to_string());
+/// let s3 = Symbol::new("World".to_string());
+/// assert_eq!(s1, s1);
+/// assert_ne!(s1, s2);
+/// assert_ne!(s1, s3);
+/// ~~~
+///
+/// To consistently assign the same symbols to equivalent strings,
+/// you can use the [`Symbols`] type.
+///
+/// [`Symbols`]: ../symbols/struct.Symbols.html
 #[derive(Clone, Debug)]
 pub struct Symbol(Rc<String>);
 
