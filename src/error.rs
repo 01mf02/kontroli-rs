@@ -1,20 +1,19 @@
 //! Common error type.
 
 use crate::{scope, signature, typing};
-use alloc::string::String;
 
 /// Common error type.
 #[derive(Debug)]
 pub enum Error {
-    Parse(String),
+    Parse,
     Scope(scope::Error),
     Signature(signature::Error),
     Typing(typing::Error),
 }
 
 impl<'a> From<nom::Err<nom::error::VerboseError<&'a [u8]>>> for Error {
-    fn from(err: nom::Err<nom::error::VerboseError<&'a [u8]>>) -> Self {
-        Self::Parse("TODO".to_string())
+    fn from(_: nom::Err<nom::error::VerboseError<&'a [u8]>>) -> Self {
+        Self::Parse
     }
 }
 

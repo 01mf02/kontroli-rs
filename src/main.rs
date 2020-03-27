@@ -101,7 +101,7 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
         parse,
-        fail: |e: nom::Err<VerboseError<&[u8]>>| kontroli::Error::Parse(format!("{:#?}", e)),
+        fail: |_: nom::Err<VerboseError<&[u8]>>| kontroli::Error::Parse,
     }
     // consider only the non-whitespace entries
     .map(|entry| entry.transpose())
