@@ -126,7 +126,7 @@ impl Entry {
             IntroType::Definition(oty, otm) => match (oty, otm) {
                 (Some(ty), None) => Self::declare(ty, true, &sig),
                 (oty, Some(tm)) => Self::define(oty, tm, true, &sig),
-                (None, None) => Err(typing::Error::TypeAndTermEmpty)
+                (None, None) => Err(typing::Error::TypeAndTermEmpty),
             },
             IntroType::Theorem(ty, tm) => Self::define(Some(ty), tm, false, &sig),
         }
