@@ -26,6 +26,54 @@
 //! yielding a signature [Entry].
 //! Once we have an entry, we add it to the signature.
 //!
+//! Let us see this in action:
+//!
+//! ~~~
+//! # use kontroli::{Command, Error, Signature, Symbol, Symbols};
+//! # use kontroli::signature;
+//! let cmds = [
+//!     // declarations
+//!     "prop : Type.",
+//!     "imp : :prop -> :prop -> prop.",
+//!
+//!     // definition with a rewrite rule
+//!     "def proof : :prop -> Type.",
+//!     "[x, y] proof (imp x y) --> :proof x -> proof y.",
+//!
+//!     // theorem
+//!     // FIXME: is there a bug?
+//!     //r"thm imp_refl (x : prop) : proof (imp x x) := \ p : proof x => p.",
+//! ];
+//!
+//! let mut syms = Symbols::new();
+//! let mut sig = Signature::new();
+//!
+//! for c in cmds.iter() {
+//!     // parse to Precommand and scope to Command in one go
+//!     let cmd: Command = Command::parse(c, &syms)?;
+//!     match cmd {
+//!         // introduction of a new name
+//!         Command::Intro(id, it) => {
+//!             // create a symbol for the name
+//!             let sym = Symbol::new(id.clone());
+//!             // add symbol to symbol table and fail if it is not new
+//!             if syms.insert(id, sym.clone()).is_some() {
+//!                 return Err(signature::Error::Reintroduction.into());
+//!             };
+//!
+//!             // typecheck and insert into signature
+//!             let entry = signature::Entry::new(it, &sig)?;
+//!             sig.insert(&sym, entry)?
+//!         }
+//!         // addition of a rewrite rule
+//!         Command::Rule(rule) => sig.add_rule(rule)?,
+//!     }
+//! }
+//! # Ok::<_, Error>(())
+//! ~~~
+//!
+//!
+//!
 //! [Kontroli]: https://github.com/01mf02/kontroli-rs
 //!
 //! [Symbols]: symbols/struct.Symbols.html
