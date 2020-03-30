@@ -2,58 +2,37 @@
 
 //! Type checking for the lambda-Pi calculus modulo rewriting.
 //!
-//! Kontroli (Esperanto for *verify*) is
-//! an alternative implementation of the logical framework [Dedukti],
-//! concentrating on the verification of proofs.
-//! Kontroli's use case is to provide a "second opinion" to Dedukti and
-//! to make it easier for users to understand and learn from the implementation.
-//! It is also a testbed for parallelising type checking.
+//! This is the library underlying the [Kontroli] proof checker.
 //!
-//! # Goals
+//! Users communicate with Kontroli using *commands*.
+//! A command either
+//! introduces of a new name (by declaration, definition, or theorem), or
+//! adds a rewrite rule.
+//! The state of a Kontroli typechecking session consists of
+//! a [Symbols] table, keeping track of all previously introduced names, and
+//! a [Signature], recording types and rewrite rules attached to symbols.
 //!
-//! Kontroli tries to be the following:
+//! How is a user command processed?
+//! A command is parsed from a string to yield a [Precommand].
+//! The scoping operation then refines the precommand to a [Command],
+//! verifying whether the names referenced in the precommand
+//! have been previously declared in the [Symbols] table.
+//! Once we have a command, we distinguish whether it
+//! introduces a name or adds a rewrite rule:
+//! In case of a rewrite rule, we add the rewrite rule to the signature.
+//! In case of a name introduction, we first
+//! update the [Symbols] table with the newly introduced name and
+//! verify that the given types and terms are valid by typing them,
+//! yielding a signature [Entry].
+//! Once we have an entry, we add it to the signature.
 //!
-//! * Small: write as little code as possible ...
-//! * Correct: ... because the code you do not write, contains no bugs
-//! * Efficient: be at least as fast as Dedukti in main use case
-//! * Compatible: stick to Dedukti's syntax/semantics as much as possible
-//! * Conservative: use established and well-tested techniques
+//! [Kontroli]: https://github.com/01mf02/kontroli-rs
 //!
-//! # Differences
-//!
-//! There are a few differences with respect to Dedukti:
-//!
-//! * Kontroli's syntax is not left-recursive, in order to simplify parsing.
-//!   As a result, it cannot directly read most of today's Dedukti files, but
-//!   converting Kontroli to Dedukti files is only a matter of a `sed` one-liner.
-//!   (Dedukti could be also easily extended to read/write Kontroli syntax.)
-//! * Kontroli does not support higher-order rewrite rules,
-//!   as they would make the whole program considerably more complex,
-//!   thus contradicting the idea of a small type checker.
-//! * Kontroli does not have a module system.
-//!   However, when checking a sequence of files,
-//!   any file can reference symbols from all files checked before,
-//!   without prefixing the symbols with the file name.
-//! * Kontroli does not try to assure the type-safety of rewrite rules.
-//!   As a consequence, neither
-//!   bracket patterns nor
-//!   type annotations in rewrite rules are supported.
-//!   However, using Kontroli's API, it should be possible
-//!   to implement type checkers that assure type-safety.
-//! * Kontroli does not use decision trees for rewriting.
-//! * Kontroli does not have any commands like `#EVAL` or `#ASSERT`,
-//!   which are particularly used in Dedukti tests.
-//!   Instead, tests in the code base are preferred.
-//!
-//! # Usage
-//!
-//! Kontroli provides a command-line program and a library.
-//! The latter means that you can use Kontroli as part of your own applications.
-//! Given that the Kontroli library does not rely on Rust's standard library,
-//! you could use it also in environments such as web pages,
-//! offering type checking as a service.
-//!
-//! [Dedukti]: https://deducteam.github.io/
+//! [Symbols]: symbols/struct.Symbols.html
+//! [Signature]: signature/struct.Signature.html
+//! [Precommand]: precommand/enum.Precommand.html
+//! [Command]: command/enum.Command.html
+//! [Entry]: signature/struct.Entry.html
 
 extern crate alloc;
 extern crate lazy_st;
@@ -80,8 +59,10 @@ pub mod symbols;
 pub mod term;
 pub mod typing;
 
+pub use command::Command;
 pub use error::Error;
 pub use pattern::Pattern;
+pub use precommand::Precommand;
 pub use prepattern::Prepattern;
 pub use prerule::Prerule;
 pub use preterm::Preterm;
@@ -90,6 +71,13 @@ pub use signature::Signature;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
 pub use term::{RTerm, Term};
+
+impl Command {
+    /// Parse a command and scope it. Used for testing.
+    pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
+        Ok(parse::parse::<Precommand>(i)?.scope(&syms)?)
+    }
+}
 
 impl Term {
     /// Parse a term and scope it. Used for testing.
