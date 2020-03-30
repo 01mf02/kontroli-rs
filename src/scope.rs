@@ -92,7 +92,6 @@ impl PreIntroType {
 #[derive(Debug)]
 pub enum Error {
     UndeclaredSymbol(String),
-    Redeclaration,
     NoPrepattern,
     NoTopPattern,
 }
@@ -129,16 +128,9 @@ impl Prerule {
 }
 
 impl Precommand {
-    pub fn scope(self, syms: &mut Symbols) -> Result<Command, Error> {
+    pub fn scope(self, syms: &Symbols) -> Result<Command, Error> {
         match self {
-            Self::Intro(id, args, it) => {
-                let it = it.parametrise(args).scope(syms)?;
-                let sym = Symbol::new(id.clone());
-                if syms.insert(id, Symbol::clone(&sym)).is_some() {
-                    return Err(Error::Redeclaration);
-                };
-                Ok(Command::Intro(sym, it))
-            }
+            Self::Intro(id, args, it) => Ok(Command::Intro(id, it.parametrise(args).scope(syms)?)),
             Self::Rule(prerule) => Ok(Command::Rule(prerule.scope(syms)?)),
         }
     }

@@ -11,7 +11,7 @@ use crossbeam_channel::{bounded, unbounded};
 use kontroli::command::Command;
 use kontroli::precommand::Precommand;
 use kontroli::{parse, signature};
-use kontroli::{Signature, Symbols};
+use kontroli::{Signature, Symbol, Symbols};
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io;
@@ -82,16 +82,6 @@ struct Opt {
     files: Vec<PathBuf>,
 }
 
-fn handle(cmd: Command, sig: &mut Signature) -> Result<(), kontroli::Error> {
-    match cmd {
-        Command::Intro(sym, it) => {
-            println!("{}", sym);
-            Ok(sig.insert(&sym, signature::Entry::new(it, &*sig)?)?)
-        }
-        Command::Rule(rule) => Ok(sig.add_rule(rule)?),
-    }
-}
-
 type Item = Result<Precommand, kontroli::Error>;
 
 fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
@@ -122,14 +112,23 @@ fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), kontro
         if opt.no_scope {
             return Ok(());
         }
-        let cmd = cmd.scope(&mut syms)?;
 
-        if opt.no_check {
-            return Ok(());
+        match cmd.scope(&syms)? {
+            Command::Intro(id, it) => {
+                println!("{}", id);
+                let sym = Symbol::new(id.clone());
+                if syms.insert(id, sym.clone()).is_some() {
+                    return Err(signature::Error::Reintroduction.into());
+                };
+
+                if opt.no_check {
+                    return Ok(());
+                }
+
+                Ok(sig.insert(&sym, signature::Entry::new(it, &sig)?)?)
+            }
+            Command::Rule(rule) => Ok(sig.add_rule(rule)?),
         }
-        handle(cmd, &mut sig)?;
-
-        Ok(())
     })
 }
 

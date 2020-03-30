@@ -2,13 +2,13 @@
 
 use crate::precommand::GIntroType;
 use crate::rule::Rule;
-use crate::symbol::Symbol;
 use crate::term::RTerm;
+use alloc::string::String;
 
 /// Signature-changing command.
 pub enum Command {
     /// Introduce a new name
-    Intro(Symbol, IntroType),
+    Intro(String, IntroType),
     /// Add a rewrite rule
     Rule(Rule),
 }
