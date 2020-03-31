@@ -35,6 +35,16 @@ impl RTerm {
     }
 }
 
+impl Arg {
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        match (self.ty.as_ref(), other.ty.as_ref()) {
+            (None, None) => Rc::ptr_eq(&self.id, &other.id),
+            (Some(ty1), Some(ty2)) => RTerm::ptr_eq(&ty1, &ty2) && Rc::ptr_eq(&self.id, &other.id),
+            _ => false,
+        }
+    }
+}
+
 impl fmt::Display for Arg {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.id)?;

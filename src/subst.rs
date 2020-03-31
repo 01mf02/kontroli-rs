@@ -4,35 +4,21 @@ use crate::term::{Arg, RTerm, Term};
 use alloc::vec::Vec;
 
 impl Arg {
-    /// Return the substitution of an argument only if it changed.
-    fn subst<S>(&self, subst: &S, k: usize) -> Option<Self>
+    /// Return the substitution of an argument.
+    fn subst<S>(self, subst: &S, k: usize) -> Self
     where
         S: Fn(usize, usize) -> RTerm,
     {
-        let ty = self.ty.as_ref()?;
-        let ty2 = ty.clone().apply_subst(subst, k);
-        if ty.ptr_eq(&ty2) {
-            None
-        } else {
-            Some(Self {
-                id: self.id.clone(),
-                ty: Some(ty2),
-            })
-        }
+        let ty = self.ty.map(|ty| ty.apply_subst(subst, k));
+        Self { id: self.id, ty }
     }
 
-    /// Return the substitution of an argument and a term
-    /// only if at least one them changed.
-    fn subst_bound<S>(&self, f: &RTerm, subst: &S, k: usize) -> Option<(Self, RTerm)>
+    /// Return the substitution of an argument and a term.
+    fn subst_bound<S>(self, tm: RTerm, subst: &S, k: usize) -> (Self, RTerm)
     where
         S: Fn(usize, usize) -> RTerm,
     {
-        let f2 = f.clone().apply_subst(subst, k + 1);
-        if f.ptr_eq(&f2) {
-            Some((self.subst(subst, k)?, f2))
-        } else {
-            Some((self.subst(subst, k).unwrap_or_else(|| self.clone()), f2))
-        }
+        (self.subst(subst, k), tm.apply_subst(subst, k + 1))
     }
 }
 
@@ -55,14 +41,22 @@ impl RTerm {
                     Self::new(Term::Appl(f2, args2))
                 }
             }
-            Term::Abst(arg, f) => match arg.subst_bound(f, subst, k) {
-                Some((arg2, f2)) => Self::new(Term::Abst(arg2, f2)),
-                None => self,
-            },
-            Term::Prod(arg, f) => match arg.subst_bound(f, subst, k) {
-                Some((arg2, f2)) => Self::new(Term::Prod(arg2, f2)),
-                None => self,
-            },
+            Term::Abst(arg, f) => {
+                let (arg2, f2) = arg.clone().subst_bound(f.clone(), subst, k);
+                if arg.ptr_eq(&arg2) && f.ptr_eq(&f2) {
+                    self
+                } else {
+                    Self::new(Term::Abst(arg2, f2))
+                }
+            }
+            Term::Prod(arg, f) => {
+                let (arg2, f2) = arg.clone().subst_bound(f.clone(), subst, k);
+                if arg.ptr_eq(&arg2) && f.ptr_eq(&f2) {
+                    self
+                } else {
+                    Self::new(Term::Prod(arg2, f2))
+                }
+            }
             _ => self,
         }
     }
