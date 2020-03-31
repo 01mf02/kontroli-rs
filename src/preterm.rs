@@ -11,11 +11,11 @@ pub enum Binder {
 /// Argument of a binder.
 /// For example, the `x` and `A` in the term `\ x : A => t`.
 ///
-/// Saving the bound name as `String` has an imperceptible
-/// performance overhead compared to having e.g. `None` as `id` everywhere.
+/// Saving the bound name has an imperceptible performance overhead
+/// compared to e.g. having `""` as `id` everywhere.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GArg<T> {
-    pub id: Option<String>,
+    pub id: String,
     pub ty: Option<T>,
 }
 

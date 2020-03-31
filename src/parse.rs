@@ -33,7 +33,7 @@ use nom::{
 use crate::precommand::{GIntroType, Precommand};
 use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, string::String, string::ToString, vec::Vec};
 
 /// Result of a parser.
 pub type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
@@ -168,14 +168,11 @@ fn ident(i: &[u8]) -> Parse<String> {
     })(i)
 }
 
-fn maybe_ident(i: &[u8]) -> Parse<Option<String>> {
-    alt((map(ident, Some), value(None, char('_'))))(i)
-}
-
 impl Parser for Prearg {
     fn parse(i: &[u8]) -> Parse<Self> {
-        map(pair(maybe_ident, opt(lexeme(Preterm::of))), |(id, ty)| {
-            Self { id, ty }
+        map(pair(ident, opt(lexeme(Preterm::of))), |(id, ty)| Self {
+            id,
+            ty,
         })(i)
     }
 }
@@ -239,8 +236,9 @@ impl Preterm {
         map(
             Binder::parse_unnamed(Self::appl, Self::parse),
             |(ty, bnd, tm)| {
+                let id = "$".to_string();
                 let ty = Some(Box::new(ty));
-                Self::Bind(bnd, Prearg { id: None, ty }, Box::new(tm))
+                Self::Bind(bnd, Prearg { id, ty }, Box::new(tm))
             },
         )(i)
     }

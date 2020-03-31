@@ -41,8 +41,7 @@
 //!     "[x, y] proof (imp x y) --> :proof x -> proof y.",
 //!
 //!     // theorem
-//!     // FIXME: is there a bug?
-//!     //r"thm imp_refl (x : prop) : proof (imp x x) := \ p : proof x => p.",
+//!     r"thm imp_refl (x : prop) : proof (imp x x) := \ p : proof x => p.",
 //! ];
 //!
 //! let mut syms = Symbols::new();

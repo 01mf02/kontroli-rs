@@ -2,7 +2,7 @@
 
 use crate::preterm::GArg;
 use crate::symbol::Symbol;
-use alloc::{rc::Rc, string::ToString, vec::Vec};
+use alloc::{rc::Rc, vec::Vec};
 use core::fmt;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -37,7 +37,7 @@ impl RTerm {
 
 impl fmt::Display for Arg {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.id.as_ref().unwrap_or(&"_".to_string()))?;
+        write!(f, "{}", self.id)?;
         if let Some(ty) = self.ty.as_ref() {
             write!(f, " : {}", ty)?;
         }

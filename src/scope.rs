@@ -16,21 +16,6 @@ use core::convert::TryFrom;
 
 type Bound = Stack<String>;
 
-pub fn bind<X, A, F>(bnd: &mut Stack<X>, arg: Option<X>, f: F) -> A
-where
-    F: FnOnce(&mut Stack<X>) -> A,
-{
-    match arg {
-        Some(id) => {
-            bnd.push(id);
-            let x = f(bnd);
-            bnd.pop();
-            x
-        }
-        None => f(bnd),
-    }
-}
-
 impl Preterm {
     fn scoper(self, syms: &Symbols, bnd: &mut Bound) -> Result<RTerm, Error> {
         Ok(RTerm::new(self.scope(syms, bnd)?))
@@ -39,7 +24,9 @@ impl Preterm {
     pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<Term, Error> {
         match self {
             Self::Symb(s) => {
-                if s == "Type" {
+                if s == "_" {
+                    Err(Error::Underscore)
+                } else if s == "Type" {
                     Ok(Term::Type)
                 } else if let Some(idx) = bnd.iter().position(|id| *id == *s) {
                     Ok(Term::BVar(idx))
@@ -55,7 +42,7 @@ impl Preterm {
             }
             Self::Bind(binder, arg, tm) => {
                 let arg = arg.scope(syms, bnd)?;
-                bind(bnd, arg.id.clone(), |bnd| {
+                bnd.with_pushed(arg.id.clone(), |bnd| {
                     let tm = tm.scoper(syms, bnd)?;
                     match binder {
                         Binder::Lam => Ok(Term::Abst(arg, tm)),
@@ -66,6 +53,17 @@ impl Preterm {
         }
     }
 
+    /// Scope a closed term.
+    ///
+    /// ~~~
+    /// # use kontroli::{Error, Preterm, Symbols};
+    /// # use kontroli::scope;
+    /// # use kontroli::parse::parse;
+    /// let syms: Symbols = vec!["A"].into_iter().collect();
+    /// let tm = parse::<Preterm>(r"\ _ : A => _.")?;
+    /// assert_eq!(tm.scope_closed(&syms), Err(scope::Error::Underscore));
+    /// # Ok::<_, Error>(())
+    /// ~~~
     pub fn scope_closed(self, syms: &Symbols) -> Result<Term, Error> {
         self.scope(syms, &mut Stack::new())
     }
@@ -89,9 +87,10 @@ impl PreIntroType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Error {
     UndeclaredSymbol(String),
+    Underscore,
     NoPrepattern,
     NoTopPattern,
 }
