@@ -10,7 +10,7 @@ use alloc::{string::String, vec::Vec};
 /// * a context (bound variables),
 /// * a left-hand side (pattern to match with), and
 /// * a right-hand side (term to replace with).
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct GRule<V, L, R> {
     pub ctx: Vec<V>,
     pub lhs: L,

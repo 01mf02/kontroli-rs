@@ -15,7 +15,7 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 /// `f : ! x : A -> B := \ x : A => t`.
 ///
 /// TODO: make a test here?
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Precommand {
     /// Introduce a new name
     Intro(String, Vec<Prearg>, PreIntroType),
