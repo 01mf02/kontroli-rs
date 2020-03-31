@@ -2,13 +2,13 @@
 
 use crate::preterm::GArg;
 use crate::symbol::Symbol;
-use alloc::{rc::Rc, vec::Vec};
+use alloc::{rc::Rc, string::String, vec::Vec};
 use core::fmt;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RTerm(Rc<Term>);
 
-pub type Arg = GArg<RTerm>;
+pub type Arg = GArg<Rc<String>, Option<RTerm>>;
 
 pub type DeBruijn = usize;
 

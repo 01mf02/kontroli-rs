@@ -10,24 +10,21 @@ pub enum Binder {
 
 /// Argument of a binder.
 /// For example, the `x` and `A` in the term `\ x : A => t`.
-///
-/// Saving the bound name has an imperceptible performance overhead
-/// compared to e.g. having `""` as `id` everywhere.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GArg<T> {
-    pub id: String,
-    pub ty: Option<T>,
+pub struct GArg<Id, Ty> {
+    pub id: Id,
+    pub ty: Ty,
 }
 
 pub type BPreterm = Box<Preterm>;
 
-pub type Prearg = GArg<BPreterm>;
+pub type Prearg = GArg<String, Option<BPreterm>>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Preterm {
     Symb(String),
     Appl(BPreterm, Vec<Preterm>),
-    Bind(Binder, GArg<BPreterm>, BPreterm),
+    Bind(Binder, Prearg, BPreterm),
 }
 
 impl Preterm {

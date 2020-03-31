@@ -11,7 +11,7 @@ use crate::stack::Stack;
 use crate::symbol::Symbol;
 use crate::symbols::Symbols;
 use crate::term::{Arg, RTerm, Term};
-use alloc::string::String;
+use alloc::{rc::Rc, string::String, string::ToString};
 use core::convert::TryFrom;
 
 type Bound = Stack<String>;
@@ -42,7 +42,7 @@ impl Preterm {
             }
             Self::Bind(binder, arg, tm) => {
                 let arg = arg.scope(syms, bnd)?;
-                bnd.with_pushed(arg.id.clone(), |bnd| {
+                bnd.with_pushed(arg.id.to_string(), |bnd| {
                     let tm = tm.scoper(syms, bnd)?;
                     match binder {
                         Binder::Lam => Ok(Term::Abst(arg, tm)),
@@ -75,7 +75,8 @@ impl Prearg {
             .ty
             .map(|ty| Ok(RTerm::new(ty.scope(syms, bnd)?)))
             .transpose()?;
-        Ok(Arg { id: self.id, ty })
+        let id = Rc::new(self.id);
+        Ok(Arg { id, ty })
     }
 }
 
