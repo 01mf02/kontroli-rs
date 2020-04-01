@@ -30,7 +30,7 @@
 //! # std::fs::copy("structure.svg", "target/doc/kontroli/structure.svg")?;
 //! # Ok::<_, std::io::Error>(())
 //! ~~~
-//! ![](structure.svg)
+//! ![Command processing.](structure.svg)
 //!
 //! Let us see this in action:
 //!
