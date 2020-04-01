@@ -1,0 +1,15 @@
+[package]
+name = "kocheck"
+version = "0.1.0"
+authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
+edition = "2018"
+
+[dependencies]
+bytecount = "0.6"
+byte-unit = "3.0"
+circular = "0.3"
+crossbeam-channel = "0.4.2"
+kontroli = { path = "../" }
+nom = "5.0"
+pretty_env_logger = "0.4"
+structopt = "0.3"

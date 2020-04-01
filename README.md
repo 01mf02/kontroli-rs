@@ -17,13 +17,13 @@ To install Rust, follow the instructions on <https://rustup.rs/>.
 
 To run Kontroli on output generated from Isabelle/Pure:
 
-    cargo run --release examples/pure.ko
+    cargo run -p kocheck --release examples/pure.ko
 
 To install Kontroli:
 
-    cargo install --path .
+    cargo install --path kocheck
 
-Kontroli provides a command-line program and a library.
+Kontroli provides a command-line program, `kocheck`, and a library.
 The latter means that you can use Kontroli as part of your own applications.
 Given that the Kontroli library does not rely on Rust's standard library,
 you could use it also in environments such as web pages,
