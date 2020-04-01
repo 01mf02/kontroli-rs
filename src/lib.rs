@@ -26,6 +26,12 @@
 //! yielding a signature [Entry].
 //! Once we have an entry, we add it to the signature.
 //!
+//! ~~~
+//! # std::fs::copy("structure.svg", "target/doc/kontroli/structure.svg")?;
+//! # Ok::<_, std::io::Error>(())
+//! ~~~
+//! ![](structure.svg)
+//!
 //! Let us see this in action:
 //!
 //! ~~~
