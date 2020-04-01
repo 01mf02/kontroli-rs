@@ -18,10 +18,11 @@ type Bound = Stack<String>;
 
 impl Preterm {
     fn scoper(self, syms: &Symbols, bnd: &mut Bound) -> Result<RTerm, Error> {
-        Ok(RTerm::new(self.scope(syms, bnd)?))
+        Ok(RTerm::new(self.scopen(syms, bnd)?))
     }
 
-    pub fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<Term, Error> {
+    /// Scope an open preterm using supplied bound variables.
+    pub fn scopen(self, syms: &Symbols, bnd: &mut Bound) -> Result<Term, Error> {
         match self {
             Self::Symb(s) => {
                 if s == "_" {
@@ -41,7 +42,7 @@ impl Preterm {
                 Ok(Term::Appl(head.scoper(syms, bnd)?, tail?))
             }
             Self::Bind(binder, arg, tm) => {
-                let arg = arg.scope(syms, bnd)?;
+                let arg = arg.scopen(syms, bnd)?;
                 bnd.with_pushed(arg.id.to_string(), |bnd| {
                     let tm = tm.scoper(syms, bnd)?;
                     match binder {
@@ -61,19 +62,19 @@ impl Preterm {
     /// # use kontroli::parse::parse;
     /// let syms: Symbols = vec!["A"].into_iter().collect();
     /// let tm = parse::<Preterm>(r"\ _ : A => _.")?;
-    /// assert_eq!(tm.scope_closed(&syms), Err(scope::Error::Underscore));
+    /// assert_eq!(tm.scope(&syms), Err(scope::Error::Underscore));
     /// # Ok::<_, Error>(())
     /// ~~~
-    pub fn scope_closed(self, syms: &Symbols) -> Result<Term, Error> {
-        self.scope(syms, &mut Stack::new())
+    pub fn scope(self, syms: &Symbols) -> Result<Term, Error> {
+        self.scopen(syms, &mut Stack::new())
     }
 }
 
 impl Prearg {
-    fn scope(self, syms: &Symbols, bnd: &mut Bound) -> Result<Arg, Error> {
+    fn scopen(self, syms: &Symbols, bnd: &mut Bound) -> Result<Arg, Error> {
         let ty = self
             .ty
-            .map(|ty| Ok(RTerm::new(ty.scope(syms, bnd)?)))
+            .map(|ty| Ok(RTerm::new(ty.scopen(syms, bnd)?)))
             .transpose()?;
         let id = Rc::new(self.id);
         Ok(Arg { id, ty })
@@ -97,7 +98,8 @@ pub enum Error {
 }
 
 impl Prepattern {
-    pub fn scope(self, syms: &Symbols, mvar: &Bound) -> Result<Pattern, Error> {
+    /// Scope an open prepattern using supplied bound variables.
+    pub fn scopen(self, syms: &Symbols, mvar: &Bound) -> Result<Pattern, Error> {
         let Self(s, args) = self;
 
         if s == "_" {
@@ -109,7 +111,7 @@ impl Prepattern {
         } else {
             let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
             let sym = Symbol::clone(&entry);
-            let args: Result<_, _> = args.into_iter().map(|a| a.scope(syms, mvar)).collect();
+            let args: Result<_, _> = args.into_iter().map(|a| a.scopen(syms, mvar)).collect();
             Ok(Pattern::Symb(sym, args?))
         }
     }
@@ -120,7 +122,7 @@ impl Prerule {
         let mut ctxs = Stack::from(self.ctx.clone());
         let ctx = self.ctx;
         let pre = Prepattern::try_from(self.lhs)?;
-        let pat = pre.scope(syms, &ctxs)?;
+        let pat = pre.scopen(syms, &ctxs)?;
         let lhs = TopPattern::try_from(pat)?;
         let rhs = self.rhs.scoper(syms, &mut ctxs)?;
         Ok(Rule { ctx, lhs, rhs })

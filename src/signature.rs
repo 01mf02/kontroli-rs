@@ -83,7 +83,7 @@ impl Signature {
 
 impl Entry {
     pub fn declare(typ: RTerm, rewritable: bool, sig: &Signature) -> Result<Self, typing::Error> {
-        match &*typ.infer_closed(&sig)? {
+        match &*typ.infer(&sig)? {
             Term::Kind | Term::Type => Ok(Self {
                 rewritable,
                 typ,
@@ -100,10 +100,10 @@ impl Entry {
         sig: &Signature,
     ) -> Result<Self, typing::Error> {
         let typ = match oty {
-            None => term.infer_closed(&sig)?,
+            None => term.infer(&sig)?,
             Some(ty) => {
-                let _ = ty.infer_closed(&sig)?;
-                if term.check_closed(&sig, ty.clone())? {
+                let _ = ty.infer(&sig)?;
+                if term.check(&sig, ty.clone())? {
                     ty
                 } else {
                     return Err(typing::Error::Unconvertible);

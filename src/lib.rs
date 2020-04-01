@@ -129,7 +129,7 @@ impl Command {
 impl Term {
     /// Parse a term and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(parse::parse::<Preterm>(i)?.scope_closed(&syms)?)
+        Ok(parse::parse::<Preterm>(i)?.scope(&syms)?)
     }
 }
 
