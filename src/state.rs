@@ -16,7 +16,6 @@ use lazy_st::Thunk;
 /// "A compact kernel for the calculus of inductive constructions".
 /// *Sadhana*. **34**: 71–144.
 /// doi: [10.1007/s12046-009-0003-3](https://doi.org/10.1007%2Fs12046-009-0003-3).
-///
 #[derive(Clone, Default)]
 pub struct State {
     pub ctx: Context,
