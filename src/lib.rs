@@ -25,6 +25,7 @@
 //! verify that the given types and terms are valid by typing them,
 //! yielding a signature [Entry].
 //! Once we have an entry, we add it to the signature.
+//! This whole process is illustrated in the following image.
 //!
 //! ~~~
 //! # std::fs::copy("structure.svg", "target/doc/kontroli/structure.svg")?;
@@ -37,6 +38,7 @@
 //! ~~~
 //! # use kontroli::{Command, Error, Signature, Symbol, Symbols};
 //! # use kontroli::signature;
+//! # use kontroli::signature::Entry;
 //! let cmds = [
 //!     // declarations
 //!     "prop : Type.",
@@ -67,7 +69,7 @@
 //!             };
 //!
 //!             // typecheck and insert into signature
-//!             let entry = signature::Entry::new(it, &sig)?;
+//!             let entry: Entry = Entry::new(it, &sig)?;
 //!             sig.insert(&sym, entry)?
 //!         }
 //!         // addition of a rewrite rule
