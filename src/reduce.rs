@@ -65,7 +65,7 @@ impl RTTerm {
         let tm1 = iter.next()?;
         for tmn in iter {
             // the first term only gets evaluated if we have some other terms
-            if !convertible(&sig, tm1.force().clone(), tmn.force().clone()) {
+            if !RTerm::convertible(tm1.force().clone(), tmn.force().clone(), &sig) {
                 return None;
             }
         }
@@ -344,17 +344,8 @@ impl From<State> for RTerm {
     }
 }
 
-impl RTerm {
-    pub fn whnf(self, sig: &Signature) -> Self {
-        trace!("whnf of {}", self);
-        Self::from(State::new(self).whnf(sig))
-    }
-}
-
-fn conversion_step(cn: (RTerm, RTerm), cns: &mut Vec<(RTerm, RTerm)>, eta: bool) -> bool {
+fn conversion_step(cn1: RTerm, cn2: RTerm, cns: &mut Vec<(RTerm, RTerm)>, eta: bool) -> bool {
     use Term::*;
-
-    let (cn1, cn2) = cn;
     match (&*cn1, &*cn2) {
         (Kind, Kind) | (Type, Type) => true,
         (Symb(s1), Symb(s2)) => s1 == s2,
@@ -389,20 +380,28 @@ fn conversion_step(cn: (RTerm, RTerm), cns: &mut Vec<(RTerm, RTerm)>, eta: bool)
     }
 }
 
-pub fn convertible(sig: &Signature, tm1: RTerm, tm2: RTerm) -> bool {
-    let mut cns = vec![(tm1, tm2)];
-    loop {
-        match cns.pop() {
-            Some((tm1, tm2)) => {
-                trace!("convertible: {} ~? {}", tm1, tm2);
-                if tm1 != tm2 {
-                    let cn = (tm1.whnf(sig), tm2.whnf(sig));
-                    if !conversion_step(cn, &mut cns, sig.eta) {
+impl RTerm {
+    /// Return true if the given terms are convertible.
+    pub fn convertible(tm1: Self, tm2: Self, sig: &Signature) -> bool {
+        let mut cns = vec![(tm1, tm2)];
+        loop {
+            match cns.pop() {
+                Some((cn1, cn2)) => {
+                    trace!("convertible: {} ~? {}", cn1, cn2);
+                    if cn1 != cn2
+                        && !conversion_step(cn1.whnf(sig), cn2.whnf(sig), &mut cns, sig.eta)
+                    {
                         break false;
                     }
                 }
+                None => break true,
             }
-            None => break true,
         }
+    }
+
+    /// Return the weak-head normal form of the term.
+    pub fn whnf(self, sig: &Signature) -> Self {
+        trace!("whnf of {}", self);
+        Self::from(State::new(self).whnf(sig))
     }
 }

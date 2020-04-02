@@ -1,6 +1,5 @@
 //! Type checking and type inference for terms.
 
-use crate::reduce::convertible;
 use crate::signature::Signature;
 use crate::term::{Arg, RTerm, Term};
 use core::fmt;
@@ -61,7 +60,7 @@ impl Arg {
             None => Ok(true),
             Some(ty) => {
                 let _ = ty.infern(sig, ctx)?;
-                Ok(convertible(sig, ty, ty_exp.clone()))
+                Ok(RTerm::convertible(ty, ty_exp.clone(), sig))
             }
         }
     }
@@ -138,7 +137,7 @@ impl Term {
             _ => {
                 let ty_inf = self.infern(sig, ctx)?;
                 debug!("checking convertibility: {} ~ {}", ty_inf, ty_exp);
-                Ok(convertible(sig, ty_inf, ty_exp))
+                Ok(RTerm::convertible(ty_inf, ty_exp, sig))
             }
         }
     }
