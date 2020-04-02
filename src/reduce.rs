@@ -49,6 +49,7 @@ impl RTTerm {
         Self(Rc::new(Thunk::new(st)))
     }
 
+    /// Force evaluation of the lazy term.
     pub fn force(&self) -> &RTerm {
         &**self.0
     }
