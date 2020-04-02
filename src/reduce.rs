@@ -1,24 +1,8 @@
 //! Reduction to weak head normal form (WHNF), including rewriting.
 
-use crate::pattern::{Miller, Pattern, TopPattern};
-use crate::rule::Rule;
-use crate::signature::Signature;
-use crate::stack;
-use crate::term::{Arg, RTerm, Term};
-use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
-use core::cell::RefCell;
-use lazy_st::Thunk;
-
-/// A shared lazy term constructed from a state.
-#[derive(Clone)]
-pub struct RTTerm(Rc<Thunk<RState, RTerm>>);
-
-/// A shared mutable state.
-///
-/// We use `RefCell` instead of `Thunk` here
-/// because evaluation requires a signature and
-/// because we sometimes wish to access the original state.
-pub type RState = Rc<RefCell<WState>>;
+use crate::state::{Context, RState, RTTerm, Stack, State};
+use crate::{RTerm, Rule, Signature, Term};
+use core::cell::Ref;
 
 /// A version of `State` that tracks whether it was reduced to WHNF yet.
 pub struct WState {
@@ -44,89 +28,24 @@ impl WState {
     }
 }
 
-impl RTTerm {
-    fn new(st: RState) -> Self {
-        Self(Rc::new(Thunk::new(st)))
+impl RState {
+    /// Replace the state with its WHNF if it was not in WHNF before.
+    pub fn whnf(&self, sig: &Signature) {
+        self.borrow_mut().whnf(sig)
     }
 
-    /// Force evaluation of the lazy term.
-    pub fn force(&self) -> &RTerm {
-        &**self.0
+    /// Obtain a reference to the state.
+    pub fn borrow_state(&self) -> Ref<State> {
+        Ref::map(self.borrow(), |wst| &wst.state)
     }
-
-    /// For a list of terms, return its first term
-    /// if it is convertible with all others.
-    ///
-    /// This is used for checking nonlinear pattern matches, because there
-    /// we want to ensure that all terms that were
-    /// matched with the same variable are convertible.
-    pub fn all_convertible(s: Vec<Self>, sig: &Signature) -> Option<Self> {
-        let mut iter = s.into_iter();
-        // assure that we have at least one term
-        let tm1 = iter.next()?;
-        for tmn in iter {
-            // the first term only gets evaluated if we have some other terms
-            if !RTerm::convertible(tm1.force().clone(), tmn.force().clone(), &sig) {
-                return None;
-            }
-        }
-        Some(tm1)
-    }
-}
-
-/// Map from de Bruijn indices in the term of the abstract machine to lazy terms.
-type Context = stack::Stack<RTTerm>;
-
-/// Arguments to the abstract machine term.
-type Stack = stack::Stack<RState>;
-
-/// An abstract machine representing arguments applied to a substituted term.
-///
-/// This representation allows for the lazy evaluation of terms.
-///
-/// See section 5.1 of the following reference:
-/// Asperti, A.; Ricciotti, W.; Sacerdoti Coen, C.; Tassi, E. (2009).
-/// "A compact kernel for the calculus of inductive constructions".
-/// *Sadhana*. **34**: 71–144.
-/// doi: [10.1007/s12046-009-0003-3](https://doi.org/10.1007%2Fs12046-009-0003-3).
-///
-#[derive(Clone, Default)]
-pub struct State {
-    pub ctx: Context,
-    pub term: RTerm,
-    pub stack: Stack,
 }
 
 impl State {
-    /// Construct a new state from a reference to a term.
-    ///
-    /// This does not yet evaluate anything, as can be seen from following example:
-    ///
-    /// ~~~
-    /// # use kontroli::{Error, RTerm, Signature, Symbols, Term};
-    /// # use kontroli::reduce::State;
-    /// let syms = Symbols::new();
-    ///
-    /// let term = Term::parse(r"(\ x => x) (\ x => x).", &syms)?;
-    /// let rterm = RTerm::new(term);
-    ///
-    /// let state = State::new(rterm.clone());
-    /// assert!(RTerm::ptr_eq(&RTerm::from(state), &rterm));
-    /// # Ok::<(), Error>(())
-    /// ~~~
-    pub fn new(term: RTerm) -> Self {
-        Self {
-            ctx: Context::new(),
-            term,
-            stack: Stack::new(),
-        }
-    }
-
     /// Evaluate the state to its weak head normal form.
     ///
     /// ~~~
     /// # use kontroli::{Error, RTerm, Signature, Symbols, Term};
-    /// # use kontroli::reduce::State;
+    /// # use kontroli::state::State;
     /// let sig = Signature::new();
     /// let syms = Symbols::new();
     ///
@@ -177,7 +96,7 @@ impl State {
                             term: t.clone(),
                             stack: Stack::new(),
                         };
-                        stack.push(Rc::new(RefCell::new(WState::new(st))))
+                        stack.push(RState::new(WState::new(st)))
                     }
                     term = head.clone();
                 }
@@ -186,7 +105,7 @@ impl State {
                     Some(rules) => {
                         match rules
                             .iter()
-                            .filter_map(|r| Some((r.matches(&stack, sig)?, r)))
+                            .filter_map(|r| Some((r.match_flatten(&stack, sig)?, r)))
                             .next()
                         {
                             None => break,
@@ -211,82 +130,30 @@ impl State {
 }
 
 impl RTerm {
-    fn psubst(self, args: &Context) -> Self {
-        if args.is_empty() {
-            self
-        } else {
-            self.apply_subst(&psubst(args), 0)
+    /// Return the weak head normal form of the term.
+    pub fn whnf(self, sig: &Signature) -> Self {
+        trace!("whnf of {}", self);
+        Self::from(State::new(self).whnf(sig))
+    }
+}
+
+/// For a sequence of states,
+/// return the term corresponding to its first state
+/// if it is convertible with all other states.
+///
+/// This is used for checking nonlinear pattern matches, because there
+/// we want to ensure that all states that were
+/// matched with the same variable are convertible.
+fn all_convertible(mut iter: impl Iterator<Item = RState>, sig: &Signature) -> Option<RTTerm> {
+    // assure that we have at least one term
+    let tm = RTTerm::new(iter.next()?);
+    for stn in iter {
+        // the first term is only evaluated if we have some other terms
+        if !RTerm::convertible(tm.force().clone(), RTerm::from(stn), &sig) {
+            return None;
         }
     }
-}
-
-fn psubst(args: &Context) -> impl Fn(usize, usize) -> RTerm + '_ {
-    move |n: usize, k: usize| match args.get(n - k) {
-        Some(arg) => arg.force().clone() << k,
-        None => RTerm::new(Term::BVar(n - args.len())),
-    }
-}
-
-// TODO: move to "matching.rs"?
-
-type Subst<'a> = Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a>;
-
-impl Stack {
-    fn into_matches<'a>(self, pats: &'a [Pattern], sig: &'a Signature) -> Subst<'a> {
-        Box::new(
-            self.into_iter()
-                .zip(pats)
-                .map(move |(rst, pat)| pat.matches(rst, sig))
-                .flatten(),
-        )
-    }
-
-    pub fn matches<'a>(&'a self, pats: &'a [Pattern], sig: &'a Signature) -> Subst<'a> {
-        Box::new(
-            self.iter()
-                .zip(pats)
-                .map(move |(rstate, pat)| pat.matches(rstate.clone(), sig))
-                .flatten(),
-        )
-    }
-}
-
-impl Pattern {
-    fn matches<'a>(&'a self, rstate: RState, sig: &'a Signature) -> Subst<'a> {
-        match self {
-            Self::Symb(sp, pats) => {
-                rstate.borrow_mut().whnf(sig);
-                let state = &rstate.borrow().state;
-                match &*state.term {
-                    Term::Symb(st) => {
-                        // The stack and pattern length have to be equal,
-                        // to exclude pattern matches like `f (g a) ~ f g`.
-                        // This is unlike `TopPattern::match_stack`, which
-                        // allows matches like `add 0 n ~ add 0`.
-                        if sp == st && state.stack.len() == pats.len() {
-                            state.stack.clone().into_matches(pats, sig)
-                        } else {
-                            Box::new(core::iter::once(None))
-                        }
-                    }
-                    _ => Box::new(core::iter::once(None)),
-                }
-            }
-            Self::MVar(m) => Box::new(core::iter::once(Some((*m, rstate)))),
-            Self::Joker => Box::new(core::iter::empty()),
-        }
-    }
-}
-
-impl TopPattern {
-    pub fn matches<'a>(&'a self, stack: &'a Stack, sig: &'a Signature) -> Subst<'a> {
-        if stack.len() < self.args.len() {
-            // we do not have enough arguments on the stack to match against
-            return Box::new(core::iter::once(None));
-        }
-
-        stack.matches(&self.args, sig)
-    }
+    Some(tm)
 }
 
 impl Rule {
@@ -296,7 +163,7 @@ impl Rule {
     ///
     /// ~~~
     /// # use kontroli::{Error, RTerm, Rule, Signature, Symbols, Term};
-    /// # use kontroli::reduce::State;
+    /// # use kontroli::state::State;
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
     /// let sig = Signature::new();
     ///
@@ -304,105 +171,17 @@ impl Rule {
     /// let term = Term::parse("id f a.", &syms)?;
     ///
     /// let stack = State::new(RTerm::new(term)).whnf(&sig).stack;
-    /// let subst = rule.matches(&stack, &sig).unwrap();
+    /// let subst = rule.match_flatten(&stack, &sig).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
     ///
     /// assert_eq!(vec![Term::parse("f.", &syms)?], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn matches(&self, stack: &Stack, sig: &Signature) -> Option<Context> {
-        let mut subst = vec![vec![]; self.ctx.len()];
-        for i in self.lhs.matches(stack, sig) {
-            let (m, st1) = i?;
-            subst.get_mut(m.0).expect("subst").push(RTTerm::new(st1))
-        }
-        subst
+    pub fn match_flatten(&self, stack: &Stack, sig: &Signature) -> Option<Context> {
+        self.matches(stack, sig)?
             .into_iter()
+            .map(|s| all_convertible(s.into_iter(), sig))
             .rev()
-            .map(|s| RTTerm::all_convertible(s, sig))
             .collect()
-    }
-}
-
-impl lazy_st::Evaluate<RTerm> for RState {
-    fn evaluate(self) -> RTerm {
-        RTerm::from(self)
-    }
-}
-
-impl From<RState> for RTerm {
-    fn from(s: RState) -> Self {
-        RTerm::from(s.borrow().state.clone())
-    }
-}
-
-impl From<State> for RTerm {
-    fn from(state: State) -> Self {
-        state
-            .term
-            .psubst(&state.ctx)
-            .apply(state.stack.into_iter().map(Self::from).collect())
-    }
-}
-
-fn conversion_step(cn1: RTerm, cn2: RTerm, cns: &mut Vec<(RTerm, RTerm)>, eta: bool) -> bool {
-    use Term::*;
-    match (&*cn1, &*cn2) {
-        (Kind, Kind) | (Type, Type) => true,
-        (Symb(s1), Symb(s2)) => s1 == s2,
-        (BVar(v1), BVar(v2)) => v1 == v2,
-        (Abst(_, t1), Abst(_, t2)) => {
-            cns.push((t1.clone(), t2.clone()));
-            true
-        }
-        (Prod(Arg { ty: Some(ty1), .. }, tm1), Prod(Arg { ty: Some(ty2), .. }, tm2)) => {
-            cns.push((ty1.clone(), ty2.clone()));
-            cns.push((tm1.clone(), tm2.clone()));
-            true
-        }
-        // TODO: make this nicer
-        (a, Abst(_, b)) | (Abst(_, b), a) if eta => {
-            cns.push((
-                b.clone(),
-                (RTerm::new(a.clone()) << 1).apply(vec![RTerm::new(BVar(0))]),
-            ));
-            true
-        }
-        (Appl(f1, args1), Appl(f2, args2)) => {
-            if args1.len() == args2.len() {
-                cns.push((f1.clone(), f2.clone()));
-                cns.extend(args1.clone().into_iter().zip(args2.clone()));
-                true
-            } else {
-                false
-            }
-        }
-        _ => false,
-    }
-}
-
-impl RTerm {
-    /// Return true if the given terms are convertible.
-    pub fn convertible(tm1: Self, tm2: Self, sig: &Signature) -> bool {
-        let mut cns = vec![(tm1, tm2)];
-        loop {
-            match cns.pop() {
-                Some((cn1, cn2)) => {
-                    trace!("convertible: {} ~? {}", cn1, cn2);
-                    if cn1 != cn2
-                        && !conversion_step(cn1.whnf(sig), cn2.whnf(sig), &mut cns, sig.eta)
-                    {
-                        break false;
-                    }
-                }
-                None => break true,
-            }
-        }
-    }
-
-    /// Return the weak-head normal form of the term.
-    pub fn whnf(self, sig: &Signature) -> Self {
-        trace!("whnf of {}", self);
-        Self::from(State::new(self).whnf(sig))
     }
 }

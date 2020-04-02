@@ -94,7 +94,9 @@ extern crate nom;
 extern crate log;
 
 pub mod command;
+pub mod convertible;
 pub mod error;
+pub mod matching;
 pub mod parse;
 pub mod pattern;
 pub mod precommand;
@@ -106,6 +108,7 @@ pub mod rule;
 pub mod scope;
 pub mod signature;
 pub mod stack;
+pub mod state;
 pub mod subst;
 pub mod symbol;
 pub mod symbols;
