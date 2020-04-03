@@ -1,5 +1,5 @@
 use nom::{Err, IResult, Offset};
-use std::io::Read;
+use std::io::{self, Read};
 
 pub struct ParseBuffer<R, P, F> {
     pub buf: circular::Buffer,
@@ -9,6 +9,31 @@ pub struct ParseBuffer<R, P, F> {
 }
 
 use nom::error::VerboseError;
+
+impl<R: Read, P, F> ParseBuffer<R, P, F> {
+    /// Fill the circular buffer until the reader returns no more data.
+    ///
+    /// Some readers, most notably `std::io::stdin()`,
+    /// read only a fixed number of bytes regardless of the space they write to.
+    /// Therefore, we repeat reading until either
+    /// the buffer is full or
+    /// the reader returns no data.
+    /// This particularly helps the performance when parsing from stdin.
+    fn fill(&mut self) -> io::Result<usize> {
+        let mut total_read_bytes = 0;
+
+        loop {
+            // read from file to free space of buffer
+            let read_bytes = self.read.read(self.buf.space())?;
+            //println!("Read {} bytes from file", read_bytes);
+            self.buf.fill(read_bytes);
+            total_read_bytes = total_read_bytes + read_bytes;
+            if read_bytes == 0 || self.buf.available_space() == 0 {
+                break Ok(total_read_bytes);
+            }
+        }
+    }
+}
 
 impl<O, E, R: Read, P, F> Iterator for ParseBuffer<R, P, F>
 where
@@ -33,10 +58,7 @@ where
                         }
                     }
 
-                    // read from file to free space of buffer
-                    let read_bytes = self.read.read(self.buf.space()).expect("should write");
-                    self.buf.fill(read_bytes);
-                    //println!("Read {} bytes from file", read_bytes);
+                    let read_bytes = self.fill().unwrap();
 
                     if self.buf.available_data() == 0 {
                         // no more data to read or parse, stopping the reading loop
