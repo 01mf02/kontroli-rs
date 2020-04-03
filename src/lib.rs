@@ -4,6 +4,8 @@
 //!
 //! This is the library underlying the [Kontroli] proof checker.
 //!
+//! # Usage
+//!
 //! Users communicate with Kontroli using *commands*.
 //! A command either
 //! introduces of a new name (by declaration, definition, or theorem), or
@@ -26,14 +28,19 @@
 //! yielding a signature [Entry].
 //! Once we have an entry, we add it to the signature.
 //! This whole process is illustrated in the following image.
+//! The [Symbols] and [Signature] are boxed to indicate that
+//! they persist throughout the checking.
 //!
 //! ~~~
+//! # std::fs::create_dir_all("target/doc/kontroli")?;
 //! # std::fs::copy("structure.svg", "target/doc/kontroli/structure.svg")?;
 //! # Ok::<_, std::io::Error>(())
 //! ~~~
 //! ![Command processing.](structure.svg)
 //!
-//! Let us see this in action:
+//! The following example parses a few commands and executes them on a signature.
+//! (By the way, this example, just as all other code examples in this library,
+//! can be executed by running `cargo test`.)
 //!
 //! ~~~
 //! # use kontroli::{Command, Error, Signature, Symbol, Symbols};
@@ -79,7 +86,24 @@
 //! # Ok::<_, Error>(())
 //! ~~~
 //!
+//! # Organisation
 //!
+//! This library is organised around *data structures* and *functions*.
+//! Some modules, such as [pattern], [term], and [state]
+//! revolve around data structures of the same name and
+//! define only basic functions proper to them.
+//! Other modules, such as [parse], [scope], and [reduce]
+//! define functions that are common to multiple data structures.
+//!
+//! For many data structures, we have a corresponding prestructure;
+//! for example, precommands for commands, preterms for terms, and so on.
+//! These prestructures are
+//! constructed by the parser and
+//! refined into their corresponding "post"-structures by `scope` functions.
+//! Prestructures also, unlike their corresponding "post"-structures,
+//! implement the `Send` and `Sync` traits, meaning that
+//! they can be transferred and shared between threads.
+//! This allows parsing and checking to be performed in parallel.
 //!
 //! [Kontroli]: https://github.com/01mf02/kontroli-rs
 //!
@@ -88,6 +112,14 @@
 //! [Precommand]: precommand/enum.Precommand.html
 //! [Command]: command/enum.Command.html
 //! [Entry]: signature/struct.Entry.html
+//!
+//! [pattern]: pattern/index.html
+//! [term]: term/index.html
+//! [state]: state/index.html
+//!
+//! [parse]: pattern/index.html
+//! [scope]: term/index.html
+//! [reduce]: state/index.html
 
 extern crate alloc;
 extern crate lazy_st;
