@@ -1,7 +1,7 @@
 //! Terms and shared terms.
 
 use crate::preterm::GArg;
-use crate::symbol::Symbol;
+use crate::Symbol;
 use alloc::{rc::Rc, string::String, vec::Vec};
 use core::fmt;
 

@@ -2,10 +2,8 @@
 
 use crate::command::IntroType;
 use crate::pattern::TopPattern;
-use crate::rule::Rule;
-use crate::symbol::Symbol;
-use crate::term::{RTerm, Term};
 use crate::typing;
+use crate::{RTerm, Rule, Symbol, Term};
 use alloc::{vec, vec::Vec};
 use fnv::FnvHashMap;
 

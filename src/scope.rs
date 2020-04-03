@@ -3,14 +3,10 @@
 use crate::command::{Command, IntroType};
 use crate::pattern::{Miller, Pattern, TopPattern};
 use crate::precommand::{PreIntroType, Precommand};
-use crate::prepattern::Prepattern;
-use crate::prerule::Prerule;
 use crate::preterm::{Binder, Prearg, Preterm};
-use crate::rule::Rule;
 use crate::stack::Stack;
-use crate::symbol::Symbol;
-use crate::symbols::Symbols;
 use crate::term::{Arg, RTerm, Term};
+use crate::{Prepattern, Prerule, Rule, Symbol, Symbols};
 use alloc::{rc::Rc, string::String, string::ToString};
 use core::convert::TryFrom;
 

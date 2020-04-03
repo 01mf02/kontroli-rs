@@ -1,6 +1,6 @@
 //! Convertibility checking.
 
-use crate::signature::Signature;
+use crate::Signature;
 use crate::term::{Arg, RTerm, Term};
 use alloc::{vec, vec::Vec};
 
