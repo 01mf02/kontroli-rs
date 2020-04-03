@@ -58,6 +58,10 @@ fn parse_byte<S: AsRef<str>>(s: S) -> Result<Byte, MyByteError> {
 /// A typechecker for the lambda-Pi calculus modulo rewriting
 struct Opt {
     /// Reduce terms modulo eta
+    ///
+    /// When this flag is enabled, checking whether
+    /// `\ x => t` and `u` are convertible will succeed if
+    /// `\ x => t` and `\ y => u y` are convertible.
     #[structopt(long)]
     eta: bool,
 
@@ -70,14 +74,33 @@ struct Opt {
     no_check: bool,
 
     /// Size of the parse buffer
+    ///
+    /// The parser repeatedly reads data into a buffer and parses a command.
+    /// If a command does not fit into the buffer,
+    /// the buffer size is doubled and parsing is retried,
+    /// until either parsing succeeds or the whole file is read.
+    ///
+    /// Therefore, the buffer size should be chosen to be
+    /// larger than the size of the largest expected command,
+    /// to avoid unnecessary retries.
     #[structopt(long, default_value = "64MB", parse(try_from_str = parse_byte))]
     buffer: Byte,
 
     /// Parse given number of commands in advance (∞ if argument omitted)
+    ///
+    /// If this option is used, commands are parsed and checked simultaneously.
+    /// If this option is given with a number n, then
+    /// maximally n commands are parsed in advance.
+    /// If this option is given without extra argument, then
+    /// the number of commands parsed in advance is unbounded.
+    ///
+    /// Note that unbounded parsing can lead to high memory usage!
     #[structopt(long, short = "j")]
     jobs: Option<Option<usize>>,
 
     /// Files to process (cumulative)
+    ///
+    /// Checking multiple files is equivalent to checking their concatenation.
     #[structopt(name = "FILE")]
     files: Vec<PathBuf>,
 }
