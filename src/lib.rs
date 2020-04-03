@@ -95,12 +95,12 @@
 //! Other modules, such as [parse], [scope], and [reduce]
 //! define functions that are common to multiple data structures.
 //!
-//! For many data structures, we have a corresponding prestructure;
+//! For many shared data structures, we have a corresponding prestructure;
 //! for example, precommands for commands, preterms for terms, and so on.
 //! These prestructures are
 //! constructed by the parser and
-//! refined into their corresponding "post"-structures by `scope` functions.
-//! Prestructures also, unlike their corresponding "post"-structures,
+//! refined into their corresponding shared structures by `scope` functions.
+//! Prestructures also, unlike their corresponding shared structures,
 //! implement the `Send` and `Sync` traits, meaning that
 //! they can be transferred and shared between threads.
 //! This allows parsing and checking to be performed in parallel.
