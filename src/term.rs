@@ -1,17 +1,21 @@
-//! Terms and shared terms.
+//! Shared terms.
 
 use crate::preterm::GArg;
 use crate::Symbol;
 use alloc::{rc::Rc, string::String, vec::Vec};
 use core::fmt;
 
+/// Pointer to a shared term.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RTerm(Rc<Term>);
 
+/// Argument of a binder.
 pub type Arg = GArg<Rc<String>, Option<RTerm>>;
 
+/// De Bruijn variable.
 pub type DeBruijn = usize;
 
+/// Shared term for the lambda-Pi calculus.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Term {
     Kind,
@@ -26,22 +30,6 @@ pub enum Term {
 impl Default for Term {
     fn default() -> Self {
         Self::Type
-    }
-}
-
-impl RTerm {
-    pub fn ptr_eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
-    }
-}
-
-impl Arg {
-    pub fn ptr_eq(&self, other: &Self) -> bool {
-        match (self.ty.as_ref(), other.ty.as_ref()) {
-            (None, None) => Rc::ptr_eq(&self.id, &other.id),
-            (Some(ty1), Some(ty2)) => RTerm::ptr_eq(&ty1, &ty2) && Rc::ptr_eq(&self.id, &other.id),
-            _ => false,
-        }
     }
 }
 
@@ -95,10 +83,12 @@ where
 }
 
 impl RTerm {
+    /// Create a term pointer from a term.
     pub fn new(t: Term) -> Self {
         Self(Rc::new(t))
     }
 
+    /// Apply some terms to the term.
     pub fn apply(self, mut args: Vec<RTerm>) -> Self {
         if args.is_empty() {
             self
@@ -111,6 +101,22 @@ impl RTerm {
                 }
                 _ => RTerm::new(Term::Appl(self, args)),
             }
+        }
+    }
+
+    /// Compare the memory addresses of two term pointers.
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Arg {
+    /// Compare the memory addresses of the argument components.
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        match (self.ty.as_ref(), other.ty.as_ref()) {
+            (None, None) => Rc::ptr_eq(&self.id, &other.id),
+            (Some(ty1), Some(ty2)) => RTerm::ptr_eq(&ty1, &ty2) && Rc::ptr_eq(&self.id, &other.id),
+            _ => false,
         }
     }
 }
