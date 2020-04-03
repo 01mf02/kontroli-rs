@@ -4,6 +4,8 @@ use crate::term::{Arg, RTerm, Term};
 use crate::Signature;
 use alloc::{vec, vec::Vec};
 
+/// Return true if the given two terms are potentially convertible, and if so,
+/// add convertibility constraints that have to be fulfilled.
 fn step(cn1: RTerm, cn2: RTerm, cns: &mut Vec<(RTerm, RTerm)>, eta: bool) -> bool {
     use Term::*;
     match (&*cn1, &*cn2) {
@@ -38,7 +40,7 @@ fn step(cn1: RTerm, cn2: RTerm, cns: &mut Vec<(RTerm, RTerm)>, eta: bool) -> boo
 }
 
 impl RTerm {
-    /// Return true if the given terms are convertible.
+    /// Return true if the given terms have a common redex.
     pub fn convertible(tm1: Self, tm2: Self, sig: &Signature) -> bool {
         let mut cns = vec![(tm1, tm2)];
         loop {
