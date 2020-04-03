@@ -164,6 +164,7 @@ fn normal_ident(i: &[u8]) -> Parse<&[u8]> {
 
 fn ident(i: &[u8]) -> Parse<String> {
     map(alt((bracket_ident, normal_ident)), |i| {
+        // TODO: do not panic on invalid UTF-8
         alloc::str::from_utf8(i).map(String::from).unwrap()
     })(i)
 }
