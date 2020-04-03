@@ -2,7 +2,7 @@
 
 use crate::pattern::{Pattern, TopPattern};
 use crate::prerule::GRule;
-use crate::term::RTerm;
+use crate::RTerm;
 use alloc::string::String;
 use core::fmt;
 

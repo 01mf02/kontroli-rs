@@ -1,8 +1,8 @@
 //! Shared rewrite patterns.
 
 use crate::scope::Error;
-use crate::symbol::Symbol;
 use crate::term::{fmt_appl, Term};
+use crate::Symbol;
 use alloc::vec::Vec;
 use core::{convert::TryFrom, fmt};
 

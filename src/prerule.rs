@@ -1,6 +1,6 @@
 //! Unscoped rewrite rules.
 
-use crate::preterm::Preterm;
+use crate::Preterm;
 use alloc::{string::String, vec::Vec};
 
 /// Generalised rewrite rules.

@@ -1,7 +1,7 @@
 //! Rewrite patterns not distinguishing bound and unbound symbols.
 
-use crate::preterm::Preterm;
 use crate::scope::Error;
+use crate::Preterm;
 use alloc::{string::String, vec::Vec};
 use core::convert::TryFrom;
 

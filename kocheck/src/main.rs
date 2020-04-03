@@ -8,14 +8,11 @@ mod parseerror;
 
 use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
-use kontroli::command::Command;
-use kontroli::precommand::Precommand;
 use kontroli::{parse, signature};
-use kontroli::{Signature, Symbol, Symbols};
+use kontroli::{Command, Precommand, Signature, Symbol, Symbols};
 use nom::error::VerboseError;
 use std::convert::TryInto;
-use std::io;
-use std::io::Read;
+use std::io::{self, Read};
 use std::path::PathBuf;
 use std::thread;
 use structopt::StructOpt;
