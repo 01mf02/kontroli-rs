@@ -1,7 +1,7 @@
 //! Convertibility checking.
 
-use crate::Signature;
 use crate::term::{Arg, RTerm, Term};
+use crate::Signature;
 use alloc::{vec, vec::Vec};
 
 fn step(cn1: RTerm, cn2: RTerm, cns: &mut Vec<(RTerm, RTerm)>, eta: bool) -> bool {

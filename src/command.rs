@@ -1,7 +1,7 @@
 //! Signature-changing commands.
 
 use crate::precommand::GIntroType;
-use crate::{Rule, RTerm};
+use crate::{RTerm, Rule};
 use alloc::string::String;
 
 /// Signature-changing command.
