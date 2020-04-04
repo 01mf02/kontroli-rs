@@ -92,7 +92,7 @@
 //! Some modules, such as [pattern], [term], and [state]
 //! revolve around data structures of the same name and
 //! define only basic functions proper to them.
-//! Other modules, such as [parse], [scope], and [reduce]
+//! Other modules, such as [parse], [scope], and [typing]
 //! define functions that are common to multiple data structures.
 //!
 //! For many shared data structures, we have a corresponding prestructure;
@@ -117,9 +117,9 @@
 //! [term]: term/index.html
 //! [state]: state/index.html
 //!
-//! [parse]: pattern/index.html
-//! [scope]: term/index.html
-//! [reduce]: state/index.html
+//! [parse]: parse/index.html
+//! [scope]: scope/index.html
+//! [typing]: typing/index.html
 
 extern crate alloc;
 extern crate lazy_st;
@@ -128,22 +128,22 @@ extern crate nom;
 extern crate log;
 
 pub mod command;
-pub mod convertible;
+mod convertible;
 pub mod error;
-pub mod matching;
+mod matching;
 pub mod parse;
 pub mod pattern;
 pub mod precommand;
 pub mod prepattern;
 pub mod prerule;
 pub mod preterm;
-pub mod reduce;
+mod reduce;
 pub mod rule;
 pub mod scope;
 pub mod signature;
 pub mod stack;
 pub mod state;
-pub mod subst;
+mod subst;
 pub mod symbol;
 pub mod symbols;
 pub mod term;
