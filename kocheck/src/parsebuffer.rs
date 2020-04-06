@@ -27,7 +27,7 @@ impl<R: Read, P, F> ParseBuffer<R, P, F> {
             let read_bytes = self.read.read(self.buf.space())?;
             //println!("Read {} bytes from file", read_bytes);
             self.buf.fill(read_bytes);
-            total_read_bytes = total_read_bytes + read_bytes;
+            total_read_bytes += read_bytes;
             if read_bytes == 0 || self.buf.available_space() == 0 {
                 break Ok(total_read_bytes);
             }
