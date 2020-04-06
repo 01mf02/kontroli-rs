@@ -118,19 +118,19 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
     .flatten()
 }
 
-fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), kontroli::Error> {
+fn consume(opt: &Opt, iter: impl Iterator<Item = Item>) -> Result<(), kontroli::Error> {
     let mut sig: Signature = Default::default();
     let mut syms: Symbols = Default::default();
 
     sig.eta = opt.eta;
 
     // run as long as we receive items
-    iter.try_for_each(|cmd| {
+    iter.map(|cmd| {
         // abort if there was a parse error
         let cmd = cmd?;
 
         if opt.no_scope {
-            return Ok(());
+            return Ok(None);
         }
 
         match cmd.scope(&syms)? {
@@ -142,14 +142,25 @@ fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), kontro
                 };
 
                 if opt.no_check {
-                    return Ok(());
+                    return Ok(None);
                 }
 
-                let entry = signature::Entry::new(it, &sig)?.check(&sig)?;
-                Ok(sig.insert(&sym, entry)?)
+                let entry = signature::Entry::new(it, &sig)?;
+                sig.insert(&sym, entry.clone())?;
+                Ok(Some((entry, sig.clone())))
             }
-            Command::Rule(rule) => Ok(sig.add_rule(rule)?),
+            Command::Rule(rule) => {
+                sig.add_rule(rule)?;
+                Ok(None)
+            }
         }
+    })
+    .map(|es: Result<_, kontroli::Error>| es.transpose())
+    .flatten()
+    .flatten()
+    .try_for_each(|(entry, entry_sig)| {
+        let _ = entry.check(&entry_sig);
+        Ok(())
     })
 }
 
