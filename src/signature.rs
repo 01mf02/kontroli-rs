@@ -5,8 +5,13 @@ use crate::pattern::TopPattern;
 use crate::typing;
 use crate::{RTerm, Rule, Symbol, Term};
 use alloc::{vec, vec::Vec};
-use fnv::FnvHashMap;
+use fnv::FnvBuildHasher;
+use im::hashmap::HashMap;
 
+/// Use immutable HashMap for fast signature cloning.
+type FnvHashMap<K, V> = HashMap<K, V, FnvBuildHasher>;
+
+#[derive(Clone)]
 pub struct Signature {
     pub types: FnvHashMap<Symbol, RTerm>,
     pub rules: FnvHashMap<Symbol, Vec<Rule>>,
@@ -24,11 +29,13 @@ impl Default for Signature {
 }
 
 /// Have we assured that a given term matches a given type?
+#[derive(Clone)]
 enum Check {
     Checked,
     Unchecked,
 }
 
+#[derive(Clone)]
 pub struct Entry {
     typ: RTerm,
     term: Option<(RTerm, Check)>,
@@ -123,7 +130,7 @@ impl Entry {
     pub fn check(mut self, sig: &Signature) -> Result<Self, typing::Error> {
         if let Some((term, Check::Unchecked)) = self.term {
             if term.check(&sig, self.typ.clone())? {
-                self.term = Some((term.clone(), Check::Checked));
+                self.term = Some((term, Check::Checked));
             } else {
                 return Err(typing::Error::Unconvertible);
             }

@@ -11,6 +11,7 @@ members = [
 
 [dependencies]
 fnv = "1.0.3"
+im = "14.3"
 lazy-st = { git = "https://github.com/01mf02/lazy-st", rev = "cb357e1" }
 log = "0.4.8"
 nom = "5.0"
