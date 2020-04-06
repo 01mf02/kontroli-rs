@@ -145,7 +145,8 @@ fn consume(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), kontro
                     return Ok(());
                 }
 
-                Ok(sig.insert(&sym, signature::Entry::new(it, &sig)?)?)
+                let entry = signature::Entry::new(it, &sig)?.check(&sig)?;
+                Ok(sig.insert(&sym, entry)?)
             }
             Command::Rule(rule) => Ok(sig.add_rule(rule)?),
         }

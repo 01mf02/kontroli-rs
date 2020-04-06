@@ -76,7 +76,7 @@
 //!             };
 //!
 //!             // typecheck and insert into signature
-//!             let entry: Entry = Entry::new(it, &sig)?;
+//!             let entry: Entry = Entry::new(it, &sig)?.check(&sig)?;
 //!             sig.insert(&sym, entry)?
 //!         }
 //!         // addition of a rewrite rule

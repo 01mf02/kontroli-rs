@@ -23,9 +23,15 @@ impl Default for Signature {
     }
 }
 
+/// Have we assured that a given term matches a given type?
+enum Check {
+    Checked,
+    Unchecked,
+}
+
 pub struct Entry {
     typ: RTerm,
-    term: Option<RTerm>,
+    term: Option<(RTerm, Check)>,
     rewritable: bool,
 }
 
@@ -67,7 +73,7 @@ impl Signature {
         if e.rewritable {
             let rules = match e.term {
                 None => Vec::new(),
-                Some(tm) => vec![Rule {
+                Some((tm, _check)) => vec![Rule {
                     ctx: Vec::new(),
                     lhs: TopPattern::from(Symbol::clone(sym)),
                     rhs: tm,
@@ -97,25 +103,32 @@ impl Entry {
         rewritable: bool,
         sig: &Signature,
     ) -> Result<Self, typing::Error> {
-        let typ = match oty {
-            None => term.infer(&sig)?,
+        let (typ, check) = match oty {
+            None => (term.infer(&sig)?, Check::Checked),
             Some(ty) => {
                 let _ = ty.infer(&sig)?;
-                if term.check(&sig, ty.clone())? {
-                    ty
-                } else {
-                    return Err(typing::Error::Unconvertible);
-                }
+                (ty, Check::Unchecked)
             }
         };
         match &*typ {
             Term::Kind => Err(typing::Error::UnexpectedKind),
             _ => Ok(Self {
                 typ,
-                term: Some(term),
+                term: Some((term, check)),
                 rewritable,
             }),
         }
+    }
+
+    pub fn check(mut self, sig: &Signature) -> Result<Self, typing::Error> {
+        if let Some((term, Check::Unchecked)) = self.term {
+            if term.check(&sig, self.typ.clone())? {
+                self.term = Some((term.clone(), Check::Checked));
+            } else {
+                return Err(typing::Error::Unconvertible);
+            }
+        };
+        Ok(self)
     }
 
     pub fn new(it: IntroType, sig: &Signature) -> Result<Self, typing::Error> {
