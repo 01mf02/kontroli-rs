@@ -5,11 +5,13 @@ use crate::pattern::TopPattern;
 use crate::typing;
 use crate::{RTerm, Rule, Symbol, Term};
 use alloc::{vec, vec::Vec};
-use fnv::FnvBuildHasher;
-use im::hashmap::HashMap;
 
+#[cfg(not(feature = "im-sig"))]
+use fnv::FnvHashMap;
+
+#[cfg(feature = "im-sig")]
 /// Use immutable HashMap for fast signature cloning.
-type FnvHashMap<K, V> = HashMap<K, V, FnvBuildHasher>;
+type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 
 #[derive(Clone)]
 pub struct Signature {
