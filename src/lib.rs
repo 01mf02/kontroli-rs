@@ -126,6 +126,7 @@ extern crate nom;
 #[macro_use]
 extern crate log;
 
+pub mod arc;
 pub mod pre;
 pub mod rc;
 
