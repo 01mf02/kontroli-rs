@@ -7,7 +7,7 @@ use crate::preterm::{Binder, Prearg, Preterm};
 use crate::stack::Stack;
 use crate::term::{Arg, RTerm, Term};
 use crate::{Prepattern, Prerule, Rule, Symbol, Symbols};
-use alloc::{rc::Rc, string::String, string::ToString};
+use alloc::{string::String, string::ToString};
 use core::convert::TryFrom;
 
 type Bound = Stack<String>;
@@ -72,7 +72,7 @@ impl Prearg {
             .ty
             .map(|ty| Ok(RTerm::new(ty.scopen(syms, bnd)?)))
             .transpose()?;
-        let id = Rc::new(self.id);
+        let id = Symbol::new(self.id);
         Ok(Arg { id, ty })
     }
 }

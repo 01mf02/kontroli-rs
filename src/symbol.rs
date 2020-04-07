@@ -1,6 +1,6 @@
 //! Shared strings with fast cloning, hashing and equality checking.
 
-use alloc::{rc::Rc, string::String};
+use alloc::string::String;
 use core::fmt;
 use core::hash::{Hash, Hasher};
 
@@ -26,12 +26,23 @@ use core::hash::{Hash, Hasher};
 /// you can use the [`Symbols`] type.
 ///
 /// [`Symbols`]: ../symbols/struct.Symbols.html
+
+#[cfg(not(threadsafe))]
+use alloc::rc::Rc;
+#[cfg(threadsafe)]
+use alloc::sync::Arc;
+
+#[cfg(not(threadsafe))]
+type RcS = Rc<String>;
+#[cfg(threadsafe)]
+type RcS = Arc<String>;
+
 #[derive(Clone, Debug)]
-pub struct Symbol(Rc<String>);
+pub struct Symbol(RcS);
 
 impl Symbol {
     pub fn new(s: String) -> Self {
-        Self(Rc::new(s))
+        Self(RcS::new(s))
     }
 }
 
@@ -43,7 +54,7 @@ impl Hash for Symbol {
 
 impl PartialEq for Symbol {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
+        RcS::ptr_eq(&self.0, &other.0)
     }
 }
 

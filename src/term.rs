@@ -2,15 +2,25 @@
 
 use crate::preterm::GArg;
 use crate::Symbol;
-use alloc::{rc::Rc, string::String, vec::Vec};
+use alloc::vec::Vec;
 use core::fmt;
+
+#[cfg(not(threadsafe))]
+use alloc::rc::Rc;
+#[cfg(threadsafe)]
+use alloc::sync::Arc;
+
+#[cfg(not(threadsafe))]
+type RcT = Rc<Term>;
+#[cfg(threadsafe)]
+type RcT = Arc<Term>;
 
 /// Pointer to a shared term.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct RTerm(Rc<Term>);
+pub struct RTerm(RcT);
 
 /// Argument of a binder.
-pub type Arg = GArg<Rc<String>, Option<RTerm>>;
+pub type Arg = GArg<Symbol, Option<RTerm>>;
 
 /// De Bruijn variable.
 pub type DeBruijn = usize;
@@ -85,7 +95,7 @@ where
 impl RTerm {
     /// Create a term pointer from a term.
     pub fn new(t: Term) -> Self {
-        Self(Rc::new(t))
+        Self(RcT::new(t))
     }
 
     /// Apply some terms to the term.
@@ -106,7 +116,7 @@ impl RTerm {
 
     /// Compare the memory addresses of two term pointers.
     pub fn ptr_eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
+        RcT::ptr_eq(&self.0, &other.0)
     }
 }
 
@@ -114,8 +124,8 @@ impl Arg {
     /// Compare the memory addresses of the argument components.
     pub fn ptr_eq(&self, other: &Self) -> bool {
         match (self.ty.as_ref(), other.ty.as_ref()) {
-            (None, None) => Rc::ptr_eq(&self.id, &other.id),
-            (Some(ty1), Some(ty2)) => RTerm::ptr_eq(&ty1, &ty2) && Rc::ptr_eq(&self.id, &other.id),
+            (None, None) => self.id == other.id,
+            (Some(ty1), Some(ty2)) => RTerm::ptr_eq(&ty1, &ty2) && self.id == other.id,
             _ => false,
         }
     }
