@@ -12,82 +12,6 @@ use crate::stack::Stack;
 use alloc::{string::String, string::ToString};
 use core::convert::TryFrom;
 
-type Bound = Stack<String>;
-
-impl Preterm {
-    fn scoper(self, syms: &Symbols, bnd: &mut Bound) -> Result<RTerm, Error> {
-        Ok(RTerm::new(self.scopen(syms, bnd)?))
-    }
-
-    /// Scope an open preterm using supplied bound variables.
-    pub fn scopen(self, syms: &Symbols, bnd: &mut Bound) -> Result<Term, Error> {
-        match self {
-            Self::Symb(s) => {
-                if s == "_" {
-                    Err(Error::Underscore)
-                } else if s == "Type" {
-                    Ok(Term::Type)
-                } else if let Some(idx) = bnd.iter().position(|id| *id == *s) {
-                    Ok(Term::BVar(idx))
-                } else {
-                    let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
-                    let sym = Symbol::clone(&entry);
-                    Ok(Term::Symb(sym))
-                }
-            }
-            Self::Appl(head, tail) => {
-                let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scoper(syms, bnd)).collect();
-                Ok(Term::Appl(head.scoper(syms, bnd)?, tail?))
-            }
-            Self::Bind(binder, arg, tm) => {
-                let arg = arg.scopen(syms, bnd)?;
-                bnd.with_pushed(arg.id.to_string(), |bnd| {
-                    let tm = tm.scoper(syms, bnd)?;
-                    match binder {
-                        Binder::Lam => Ok(Term::Abst(arg, tm)),
-                        Binder::Pi => Ok(Term::Prod(arg, tm)),
-                    }
-                })
-            }
-        }
-    }
-
-    /// Scope a closed term.
-    ///
-    /// ~~~
-    /// # use kontroli::rc::{Error, Symbols};
-    /// # use kontroli::rc::scope;
-    /// # use kontroli::pre::Preterm;
-    /// # use kontroli::pre::parse::parse;
-    /// let syms: Symbols = vec!["A"].into_iter().collect();
-    /// let tm = parse::<Preterm>(r"\ _ : A => _.")?;
-    /// assert_eq!(tm.scope(&syms), Err(scope::Error::Underscore));
-    /// # Ok::<_, Error>(())
-    /// ~~~
-    pub fn scope(self, syms: &Symbols) -> Result<Term, Error> {
-        self.scopen(syms, &mut Stack::new())
-    }
-}
-
-impl Prearg {
-    fn scopen(self, syms: &Symbols, bnd: &mut Bound) -> Result<Arg, Error> {
-        let ty = self
-            .ty
-            .map(|ty| Ok::<_, Error>(RTerm::new(ty.scopen(syms, bnd)?)))
-            .transpose()?;
-        let id = Symbol::new(self.id);
-        Ok(Arg { id, ty })
-    }
-}
-
-impl PreIntroType {
-    pub fn scope(self, syms: &Symbols) -> Result<IntroType, Error> {
-        let mut bnd = Stack::new();
-        self.map_type_err(|tm| tm.scoper(syms, &mut bnd))?
-            .map_term_err(|tm| tm.scoper(syms, &mut bnd))
-    }
-}
-
 #[derive(Debug, Eq, PartialEq)]
 pub enum Error {
     UndeclaredSymbol(String),
@@ -102,43 +26,127 @@ impl From<TryFromPrepatternError> for Error {
     }
 }
 
-impl Prepattern {
+type Bound = Stack<String>;
+
+impl RTerm {
+    fn scopen(tm: Preterm, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
+        Ok(Self::new(Term::scopen(tm, syms, bnd)?))
+    }
+}
+
+impl Term {
+    /// Scope an open preterm using supplied bound variables.
+    pub fn scopen(tm: Preterm, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
+        match tm {
+            Preterm::Symb(s) => {
+                if s == "_" {
+                    Err(Error::Underscore)
+                } else if s == "Type" {
+                    Ok(Self::Type)
+                } else if let Some(idx) = bnd.iter().position(|id| *id == *s) {
+                    Ok(Self::BVar(idx))
+                } else {
+                    let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
+                    let sym = Symbol::clone(&entry);
+                    Ok(Self::Symb(sym))
+                }
+            }
+            Preterm::Appl(head, tail) => {
+                let tail: Result<_, _> = tail
+                    .into_iter()
+                    .map(|tm| RTerm::scopen(tm, syms, bnd))
+                    .collect();
+                Ok(Self::Appl(RTerm::scopen(*head, syms, bnd)?, tail?))
+            }
+            Preterm::Bind(binder, arg, tm) => {
+                let arg = Arg::scopen(arg, syms, bnd)?;
+                bnd.with_pushed(arg.id.to_string(), |bnd| {
+                    let tm = RTerm::scopen(*tm, syms, bnd)?;
+                    match binder {
+                        Binder::Lam => Ok(Self::Abst(arg, tm)),
+                        Binder::Pi => Ok(Self::Prod(arg, tm)),
+                    }
+                })
+            }
+        }
+    }
+
+    /// Scope a closed term.
+    ///
+    /// ~~~
+    /// # use kontroli::rc::{Error, Symbols, Term};
+    /// # use kontroli::rc::scope;
+    /// # use kontroli::pre::Preterm;
+    /// # use kontroli::pre::parse::parse;
+    /// let syms: Symbols = vec!["A"].into_iter().collect();
+    /// let tm = parse::<Preterm>(r"\ _ : A => _.")?;
+    /// assert_eq!(Term::scope(tm, &syms), Err(scope::Error::Underscore));
+    /// # Ok::<_, Error>(())
+    /// ~~~
+    pub fn scope(tm: Preterm, syms: &Symbols) -> Result<Self, Error> {
+        Self::scopen(tm, syms, &mut Stack::new())
+    }
+}
+
+impl Arg {
+    fn scopen(arg: Prearg, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
+        let ty = arg.ty.map(|ty| RTerm::scopen(*ty, syms, bnd)).transpose()?;
+        let id = Symbol::new(arg.id);
+        Ok(Self { id, ty })
+    }
+}
+
+impl Pattern {
     /// Scope an open prepattern using supplied bound variables.
-    pub fn scopen(self, syms: &Symbols, mvar: &Bound) -> Result<Pattern, Error> {
-        let Self(s, args) = self;
+    pub fn scopen(pat: Prepattern, syms: &Symbols, mvar: &Bound) -> Result<Self, Error> {
+        let Prepattern(s, args) = pat;
 
         if s == "_" {
             assert!(args.is_empty());
-            Ok(Pattern::Joker)
+            Ok(Self::Joker)
         } else if let Some(idx) = mvar.iter().position(|id| *id == *s) {
             assert!(args.is_empty());
-            Ok(Pattern::MVar(Miller(idx)))
+            Ok(Self::MVar(Miller(idx)))
         } else {
             let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
             let sym = Symbol::clone(&entry);
-            let args: Result<_, _> = args.into_iter().map(|a| a.scopen(syms, mvar)).collect();
-            Ok(Pattern::Symb(sym, args?))
+            let args: Result<_, _> = args
+                .into_iter()
+                .map(|a| Self::scopen(a, syms, mvar))
+                .collect();
+            Ok(Self::Symb(sym, args?))
         }
     }
 }
 
-impl Prerule {
-    pub fn scope(self, syms: &Symbols) -> Result<Rule, Error> {
-        let mut ctxs = Stack::from(self.ctx.clone());
-        let ctx = self.ctx;
-        let pre = Prepattern::try_from(self.lhs)?;
-        let pat = pre.scopen(syms, &ctxs)?;
+impl Rule {
+    pub fn scope(rule: Prerule, syms: &Symbols) -> Result<Self, Error> {
+        let mut ctxs = Stack::from(rule.ctx.clone());
+        let ctx = rule.ctx;
+        let pre = Prepattern::try_from(rule.lhs)?;
+        let pat = Pattern::scopen(pre, syms, &ctxs)?;
         let lhs = TopPattern::try_from(pat)?;
-        let rhs = self.rhs.scoper(syms, &mut ctxs)?;
-        Ok(Rule { ctx, lhs, rhs })
+        let rhs = RTerm::scopen(rule.rhs, syms, &mut ctxs)?;
+        Ok(Self { ctx, lhs, rhs })
     }
 }
 
-impl Precommand {
-    pub fn scope(self, syms: &Symbols) -> Result<Command, Error> {
-        match self {
-            Self::Intro(id, args, it) => Ok(Command::Intro(id, it.parametrise(args).scope(syms)?)),
-            Self::Rule(prerule) => Ok(Command::Rule(prerule.scope(syms)?)),
+impl IntroType {
+    pub fn scope(it: PreIntroType, syms: &Symbols) -> Result<Self, Error> {
+        let mut bnd = Stack::new();
+        it.map_type_err(|tm| RTerm::scopen(*tm, syms, &mut bnd))?
+            .map_term_err(|tm| RTerm::scopen(*tm, syms, &mut bnd))
+    }
+}
+
+impl Command {
+    pub fn scope(cmd: Precommand, syms: &Symbols) -> Result<Self, Error> {
+        match cmd {
+            Precommand::Intro(id, args, it) => {
+                let it = IntroType::scope(it.parametrise(args), syms)?;
+                Ok(Self::Intro(id, it))
+            }
+            Precommand::Rule(prerule) => Ok(Self::Rule(Rule::scope(prerule, syms)?)),
         }
     }
 }

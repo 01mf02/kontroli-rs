@@ -30,20 +30,20 @@ use crate::pre::{Precommand, Prerule, Preterm};
 impl Command {
     /// Parse a command and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(parse::<Precommand>(i)?.scope(&syms)?)
+        Ok(Self::scope(parse::<Precommand>(i)?, &syms)?)
     }
 }
 
 impl Term {
     /// Parse a term and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(parse::<Preterm>(i)?.scope(&syms)?)
+        Ok(Self::scope(parse::<Preterm>(i)?, &syms)?)
     }
 }
 
 impl Rule {
     /// Parse a rule and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(parse::<Prerule>(i)?.scope(&syms)?)
+        Ok(Self::scope(parse::<Prerule>(i)?, &syms)?)
     }
 }

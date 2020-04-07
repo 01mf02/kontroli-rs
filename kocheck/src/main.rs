@@ -136,7 +136,7 @@ fn consume(opt: &Opt, iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
             return Ok(None);
         }
 
-        match cmd.scope(&syms)? {
+        match Command::scope(cmd, &syms)? {
             Command::Intro(id, it) => {
                 println!("{}", id);
                 let sym = Symbol::new(id.clone());

@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 use core::convert::TryFrom;
 
 #[derive(Clone)]
-pub struct Prepattern(String, Vec<Prepattern>);
+pub struct Prepattern(pub String, pub Vec<Prepattern>);
 
 pub struct TryFromPrepatternError;
 
