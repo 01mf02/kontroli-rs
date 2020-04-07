@@ -30,9 +30,9 @@ use nom::{
     IResult,
 };
 
-use crate::precommand::{GIntroType, Precommand};
-use crate::prerule::Prerule;
-use crate::preterm::{Binder, Prearg, Preterm};
+use super::precommand::{GIntroType, Precommand};
+use super::prerule::Prerule;
+use super::preterm::{Binder, Prearg, Preterm};
 use alloc::{boxed::Box, string::String, string::ToString, vec::Vec};
 
 /// Result of a parser.
@@ -46,8 +46,9 @@ pub trait Parser: Sized {
 /// Parse a string phrase and discard remaining input.
 ///
 /// ~~~
-/// # use kontroli::{Error, Preterm};
-/// # use kontroli::parse::parse;
+/// # use kontroli::pre::Preterm;
+/// # use kontroli::rc::Error;
+/// # use kontroli::pre::parse::parse;
 /// # use Preterm::{Symb, Appl};
 /// let preterm = parse::<Preterm>("fst x y. Nothing to see here, move along.")?;
 /// let head = Symb("fst".to_string());
@@ -62,7 +63,7 @@ pub fn parse<'a, P: Parser>(i: &'a str) -> Result<P, nom::Err<VerboseError<&'a [
 /// Parse arbitrary nesting of strings delimited by non-empty start and end tags.
 ///
 /// ~~~
-/// # use kontroli::parse::nested;
+/// # use kontroli::pre::parse::nested;
 /// let c_style = nested(b"/*", b"*/");
 /// assert!(c_style(b"/* here /* more */ */").is_ok());
 ///
@@ -75,7 +76,7 @@ pub fn parse<'a, P: Parser>(i: &'a str) -> Result<P, nom::Err<VerboseError<&'a [
 ///
 /// ~~~
 /// # use nom::combinator::map;
-/// # use kontroli::parse::nested;
+/// # use kontroli::pre::parse::nested;
 /// let bid = nested(b"{|", b"|}");
 /// assert!(bid(b"{|n|}").is_ok());
 /// assert!(bid(b"{|quoting {|n|} is fun|}").is_ok());

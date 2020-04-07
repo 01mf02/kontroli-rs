@@ -1,12 +1,14 @@
 //! Conversion from preterms to terms, from prepatterns to prepatterns etc.
 
-use crate::command::{Command, IntroType};
-use crate::pattern::{Miller, Pattern, TopPattern};
-use crate::precommand::{PreIntroType, Precommand};
-use crate::preterm::{Binder, Prearg, Preterm};
+use super::command::{Command, IntroType};
+use super::pattern::{Miller, Pattern, TopPattern};
+use super::term::{Arg, RTerm, Term};
+use super::{Rule, Symbol, Symbols};
+use crate::pre::precommand::{PreIntroType, Precommand};
+use crate::pre::prepattern::{Prepattern, TryFromPrepatternError};
+use crate::pre::preterm::{Binder, Prearg, Preterm};
+use crate::pre::Prerule;
 use crate::stack::Stack;
-use crate::term::{Arg, RTerm, Term};
-use crate::{Prepattern, Prerule, Rule, Symbol, Symbols};
 use alloc::{string::String, string::ToString};
 use core::convert::TryFrom;
 
@@ -53,9 +55,10 @@ impl Preterm {
     /// Scope a closed term.
     ///
     /// ~~~
-    /// # use kontroli::{Error, Preterm, Symbols};
-    /// # use kontroli::scope;
-    /// # use kontroli::parse::parse;
+    /// # use kontroli::rc::{Error, Symbols};
+    /// # use kontroli::rc::scope;
+    /// # use kontroli::pre::Preterm;
+    /// # use kontroli::pre::parse::parse;
     /// let syms: Symbols = vec!["A"].into_iter().collect();
     /// let tm = parse::<Preterm>(r"\ _ : A => _.")?;
     /// assert_eq!(tm.scope(&syms), Err(scope::Error::Underscore));
@@ -70,7 +73,7 @@ impl Prearg {
     fn scopen(self, syms: &Symbols, bnd: &mut Bound) -> Result<Arg, Error> {
         let ty = self
             .ty
-            .map(|ty| Ok(RTerm::new(ty.scopen(syms, bnd)?)))
+            .map(|ty| Ok::<_, Error>(RTerm::new(ty.scopen(syms, bnd)?)))
             .transpose()?;
         let id = Symbol::new(self.id);
         Ok(Arg { id, ty })
@@ -91,6 +94,12 @@ pub enum Error {
     Underscore,
     NoPrepattern,
     NoTopPattern,
+}
+
+impl From<TryFromPrepatternError> for Error {
+    fn from(_: TryFromPrepatternError) -> Self {
+        Self::NoPrepattern
+    }
 }
 
 impl Prepattern {

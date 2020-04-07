@@ -1,5 +1,6 @@
 //! Shared strings with fast cloning, hashing and equality checking.
 
+use super::sharing::RcS;
 use alloc::string::String;
 use core::fmt;
 use core::hash::{Hash, Hasher};
@@ -13,7 +14,7 @@ use core::hash::{Hash, Hasher};
 /// Note that two different symbols pointing to equivalent strings are not equal:
 ///
 /// ~~~
-/// # use kontroli::Symbol;
+/// # use kontroli::rc::Symbol;
 /// let s1 = Symbol::new("Hello".to_string());
 /// let s2 = Symbol::new("Hello".to_string());
 /// let s3 = Symbol::new("World".to_string());
@@ -26,16 +27,6 @@ use core::hash::{Hash, Hasher};
 /// you can use the [`Symbols`] type.
 ///
 /// [`Symbols`]: ../symbols/struct.Symbols.html
-
-#[cfg(not(threadsafe))]
-use alloc::rc::Rc;
-#[cfg(threadsafe)]
-use alloc::sync::Arc;
-
-#[cfg(not(threadsafe))]
-type RcS = Rc<String>;
-#[cfg(threadsafe)]
-type RcS = Arc<String>;
 
 #[derive(Clone, Debug)]
 pub struct Symbol(RcS);

@@ -1,6 +1,6 @@
 //! Common error type.
 
-use crate::{scope, signature, typing};
+use super::{scope, signature, typing};
 
 /// Common error type.
 #[derive(Debug)]

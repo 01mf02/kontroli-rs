@@ -1,19 +1,10 @@
 //! Shared terms.
 
-use crate::preterm::GArg;
-use crate::Symbol;
+use super::sharing::RcT;
+use super::Symbol;
+use crate::pre::preterm::GArg;
 use alloc::vec::Vec;
 use core::fmt;
-
-#[cfg(not(threadsafe))]
-use alloc::rc::Rc;
-#[cfg(threadsafe)]
-use alloc::sync::Arc;
-
-#[cfg(not(threadsafe))]
-type RcT = Rc<Term>;
-#[cfg(threadsafe)]
-type RcT = Arc<Term>;
 
 /// Pointer to a shared term.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

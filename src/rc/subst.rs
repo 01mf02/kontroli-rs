@@ -1,6 +1,6 @@
 //! Substitution and shifting for terms.
 
-use crate::term::{Arg, RTerm, Term};
+use super::term::{Arg, RTerm, Term};
 use alloc::vec::Vec;
 
 impl Arg {

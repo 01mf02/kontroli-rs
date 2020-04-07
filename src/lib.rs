@@ -43,9 +43,8 @@
 //! can be executed by running `cargo test`.)
 //!
 //! ~~~
-//! # use kontroli::{Command, Error, Signature, Symbol, Symbols};
-//! # use kontroli::signature;
-//! # use kontroli::signature::Entry;
+//! # use kontroli::rc::{Command, Error, Signature, Symbol, Symbols};
+//! # use kontroli::rc::signature::{self, Entry};
 //! let cmds = [
 //!     // declarations
 //!     "prop : Type.",
@@ -127,58 +126,7 @@ extern crate nom;
 #[macro_use]
 extern crate log;
 
-pub mod command;
-mod convertible;
-pub mod error;
-mod matching;
-pub mod parse;
-pub mod pattern;
-pub mod precommand;
-pub mod prepattern;
-pub mod prerule;
-pub mod preterm;
-mod reduce;
-pub mod rule;
-pub mod scope;
-pub mod signature;
-pub mod stack;
-pub mod state;
-mod subst;
-pub mod symbol;
-pub mod symbols;
-pub mod term;
-pub mod typing;
+pub mod pre;
+pub mod rc;
 
-pub use command::Command;
-pub use error::Error;
-pub use pattern::Pattern;
-pub use precommand::Precommand;
-pub use prepattern::Prepattern;
-pub use prerule::Prerule;
-pub use preterm::Preterm;
-pub use rule::Rule;
-pub use signature::Signature;
-pub use symbol::Symbol;
-pub use symbols::Symbols;
-pub use term::{RTerm, Term};
-
-impl Command {
-    /// Parse a command and scope it. Used for testing.
-    pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(parse::parse::<Precommand>(i)?.scope(&syms)?)
-    }
-}
-
-impl Term {
-    /// Parse a term and scope it. Used for testing.
-    pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(parse::parse::<Preterm>(i)?.scope(&syms)?)
-    }
-}
-
-impl Rule {
-    /// Parse a rule and scope it. Used for testing.
-    pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(parse::parse::<Prerule>(i)?.scope(&syms)?)
-    }
-}
+mod stack;

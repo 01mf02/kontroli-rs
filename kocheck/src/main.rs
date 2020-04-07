@@ -8,8 +8,11 @@ mod parseerror;
 
 use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
-use kontroli::{parse, signature};
-use kontroli::{Command, Precommand, Signature, Symbol, Symbols};
+use kontroli::pre::parse;
+use kontroli::pre::Precommand;
+use kontroli::rc::signature;
+use kontroli::rc::Error as KoError;
+use kontroli::rc::{Command, Signature, Symbol, Symbols};
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::{self, Read};
@@ -20,7 +23,7 @@ use structopt::StructOpt;
 #[derive(Debug)]
 pub enum Error {
     Io(io::Error),
-    Kontroli(kontroli::Error),
+    Ko(KoError),
 }
 
 impl From<io::Error> for Error {
@@ -29,9 +32,9 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<kontroli::Error> for Error {
-    fn from(err: kontroli::Error) -> Self {
-        Self::Kontroli(err)
+impl From<KoError> for Error {
+    fn from(err: KoError) -> Self {
+        Self::Ko(err)
     }
 }
 
@@ -102,7 +105,7 @@ struct Opt {
     files: Vec<PathBuf>,
 }
 
-type Item = Result<Precommand, kontroli::Error>;
+type Item = Result<Precommand, KoError>;
 
 fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
     use parse::{opt_lexeme, phrase, Parse, Parser};
@@ -111,14 +114,14 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
         parse,
-        fail: |_: nom::Err<VerboseError<&[u8]>>| kontroli::Error::Parse,
+        fail: |_: nom::Err<VerboseError<&[u8]>>| KoError::Parse,
     }
     // consider only the non-whitespace entries
     .map(|entry| entry.transpose())
     .flatten()
 }
 
-fn consume(opt: &Opt, iter: impl Iterator<Item = Item>) -> Result<(), kontroli::Error> {
+fn consume(opt: &Opt, iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
     let mut sig: Signature = Default::default();
     let mut syms: Symbols = Default::default();
 
@@ -155,7 +158,7 @@ fn consume(opt: &Opt, iter: impl Iterator<Item = Item>) -> Result<(), kontroli::
             }
         }
     })
-    .map(|es: Result<_, kontroli::Error>| es.transpose())
+    .map(|es: Result<_, KoError>| es.transpose())
     .flatten()
     .flatten()
     .try_for_each(|(entry, entry_sig)| {

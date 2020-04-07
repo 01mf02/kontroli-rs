@@ -1,7 +1,7 @@
 //! Convertibility checking.
 
-use crate::term::{Arg, RTerm, Term};
-use crate::Signature;
+use super::term::{Arg, RTerm, Term};
+use super::Signature;
 use alloc::{vec, vec::Vec};
 
 /// Return true if the given two terms are potentially convertible, and if so,

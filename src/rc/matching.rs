@@ -1,8 +1,8 @@
 //! Pattern matching.
 
-use crate::pattern::{Miller, Pattern, TopPattern};
-use crate::state::{RState, Stack};
-use crate::{Rule, Signature, Term};
+use super::pattern::{Miller, Pattern, TopPattern};
+use super::state::{RState, Stack};
+use super::{Rule, Signature, Term};
 use alloc::{boxed::Box, vec, vec::Vec};
 
 type Subst<'a> = Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a>;

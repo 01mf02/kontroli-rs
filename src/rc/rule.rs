@@ -1,8 +1,8 @@
 //! Rewrite rules.
 
-use crate::pattern::{Pattern, TopPattern};
-use crate::prerule::GRule;
-use crate::RTerm;
+use super::pattern::{Pattern, TopPattern};
+use super::RTerm;
+use crate::pre::prerule::GRule;
 use alloc::string::String;
 use core::fmt;
 

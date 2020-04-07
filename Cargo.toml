@@ -6,7 +6,6 @@ edition = "2018"
 
 [features]
 im-sig = ["im"]
-threadsafe = []
 
 [workspace]
 members = [

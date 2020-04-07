@@ -1,9 +1,9 @@
 //! Map from symbols to their types and associated rewrite rules.
 
-use crate::command::IntroType;
-use crate::pattern::TopPattern;
-use crate::typing;
-use crate::{RTerm, Rule, Symbol, Term};
+use super::command::IntroType;
+use super::pattern::TopPattern;
+use super::typing;
+use super::{RTerm, Rule, Symbol, Term};
 use alloc::{vec, vec::Vec};
 
 #[cfg(not(feature = "im-sig"))]

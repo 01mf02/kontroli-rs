@@ -1,7 +1,7 @@
 //! Unscoped signature-changing commands.
 
-use crate::preterm::{BPreterm, Prearg};
-use crate::Prerule;
+use super::preterm::{BPreterm, Prearg};
+use super::Prerule;
 use alloc::{boxed::Box, string::String, vec::Vec};
 
 /// Unscoped signature-changing command.

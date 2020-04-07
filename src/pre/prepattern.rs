@@ -1,15 +1,16 @@
 //! Rewrite patterns not distinguishing bound and unbound symbols.
 
-use crate::scope::Error;
-use crate::Preterm;
+use super::Preterm;
 use alloc::{string::String, vec::Vec};
 use core::convert::TryFrom;
 
 #[derive(Clone)]
 pub struct Prepattern(String, Vec<Prepattern>);
 
+pub struct TryFromPrepatternError;
+
 impl TryFrom<Preterm> for Prepattern {
-    type Error = Error;
+    type Error = TryFromPrepatternError;
 
     fn try_from(tm: Preterm) -> Result<Self, Self::Error> {
         use Preterm::*;
@@ -23,10 +24,10 @@ impl TryFrom<Preterm> for Prepattern {
                     args2.append(&mut args);
                     Self::try_from(Appl(head2, args2))
                 }
-                _ => Err(Error::NoPrepattern),
+                _ => Err(TryFromPrepatternError),
             },
             Symb(s) => Ok(Self(s, Vec::new())),
-            _ => Err(Error::NoPrepattern),
+            _ => Err(TryFromPrepatternError),
         }
     }
 }

@@ -1,6 +1,6 @@
 //! Map from strings to (shared) symbols.
 
-use crate::Symbol;
+use super::Symbol;
 use alloc::string::{String, ToString};
 use core::iter::FromIterator;
 use fnv::FnvHashMap;

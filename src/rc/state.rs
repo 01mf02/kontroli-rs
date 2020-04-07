@@ -1,8 +1,8 @@
 //! Abstract machines for the lazy evaluation of terms.
 
-use crate::reduce::WState;
+use super::reduce::WState;
+use super::{RTerm, Term};
 use crate::stack;
-use crate::{RTerm, Term};
 use alloc::rc::Rc;
 use core::cell::{Ref, RefCell, RefMut};
 use lazy_st::Thunk;
@@ -29,8 +29,8 @@ impl State {
     /// This does not yet evaluate anything, as can be seen from following example:
     ///
     /// ~~~
-    /// # use kontroli::{Error, RTerm, Signature, Symbols, Term};
-    /// # use kontroli::state::State;
+    /// # use kontroli::rc::{Error, RTerm, Signature, Symbols, Term};
+    /// # use kontroli::rc::state::State;
     /// let syms = Symbols::new();
     ///
     /// let term = Term::parse(r"(\ x => x) (\ x => x).", &syms)?;

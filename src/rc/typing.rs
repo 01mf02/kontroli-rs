@@ -1,7 +1,7 @@
 //! Type checking and type inference for terms.
 
-use crate::term::{Arg, RTerm, Term};
-use crate::Signature;
+use super::term::{Arg, RTerm, Term};
+use super::Signature;
 use core::fmt;
 
 /// Map from de Bruijn indices to associated types.
