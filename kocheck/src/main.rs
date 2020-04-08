@@ -8,7 +8,7 @@ mod parseerror;
 
 use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
-use kontroli::error::{Error as KoError, SignatureError};
+use kontroli::error::Error as KoError;
 use kontroli::pre::Precommand;
 use nom::error::VerboseError;
 use std::convert::TryInto;
@@ -132,7 +132,7 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
 }
 
 fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
-    use kontroli::rc::{Command, Signature, Symbol, Symbols, Typing};
+    use kontroli::rc::{Command, Signature, Symbols, Typing};
 
     let mut sig: Signature = Default::default();
     let mut syms: Symbols = Default::default();
@@ -151,10 +151,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Ko
         match Command::scope(cmd, &syms)? {
             Command::Intro(id, it) => {
                 println!("{}", id);
-                let sym = Symbol::new(id.clone());
-                if syms.insert(id, sym.clone()).is_some() {
-                    return Err(SignatureError::Reintroduction.into());
-                };
+                let sym = syms.insert(id)?;
 
                 if opt.no_check {
                     return Ok(());
@@ -169,7 +166,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Ko
 }
 
 fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), KoError> {
-    use kontroli::arc::{Command, Signature, Symbol, Symbols, Typing};
+    use kontroli::arc::{Command, Signature, Symbols, Typing};
     use rayon::iter::{ParallelBridge, ParallelIterator};
 
     let mut sig: Signature = Default::default();
@@ -189,10 +186,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
         match Command::scope(cmd, &syms)? {
             Command::Intro(id, it) => {
                 println!("{}", id);
-                let sym = Symbol::new(id.clone());
-                if syms.insert(id, sym.clone()).is_some() {
-                    return Err(SignatureError::Reintroduction.into());
-                };
+                let sym = syms.insert(id)?;
 
                 if opt.no_check {
                     return Ok(None);

@@ -8,6 +8,7 @@ pub enum Error {
     Parse,
     Scope(ScopeError),
     Signature(SignatureError),
+    Symbols(SymbolsError),
     Typing(TypingError),
 }
 
@@ -23,6 +24,11 @@ pub enum ScopeError {
 pub enum SignatureError {
     Reintroduction,
     NonRewritable,
+}
+
+#[derive(Debug)]
+pub enum SymbolsError {
+    Reinsertion,
 }
 
 #[derive(Debug)]
@@ -52,6 +58,12 @@ impl From<ScopeError> for Error {
 impl From<SignatureError> for Error {
     fn from(err: SignatureError) -> Self {
         Self::Signature(err)
+    }
+}
+
+impl From<SymbolsError> for Error {
+    fn from(err: SymbolsError) -> Self {
+        Self::Symbols(err)
     }
 }
 

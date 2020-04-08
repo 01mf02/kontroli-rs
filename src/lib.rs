@@ -43,8 +43,8 @@
 //! can be executed by running `cargo test`.)
 //!
 //! ~~~
-//! # use kontroli::error::{Error, SignatureError};
-//! # use kontroli::rc::{Command, Signature, Symbol, Symbols, Typing};
+//! # use kontroli::Error;
+//! # use kontroli::rc::{Command, Signature, Symbols, Typing};
 //! let cmds = [
 //!     // declarations
 //!     "prop : Type.",
@@ -67,12 +67,8 @@
 //!     match cmd {
 //!         // introduction of a new name
 //!         Command::Intro(id, it) => {
-//!             // create a symbol for the name
-//!             let sym = Symbol::new(id.clone());
 //!             // add symbol to symbol table and fail if it is not new
-//!             if syms.insert(id, sym.clone()).is_some() {
-//!                 return Err(SignatureError::Reintroduction.into());
-//!             };
+//!             let sym = syms.insert(id)?;
 //!
 //!             // typecheck and insert into signature
 //!             let typing: Typing = Typing::new(it, &sig)?.check(&sig)?;

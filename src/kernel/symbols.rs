@@ -1,6 +1,7 @@
 //! Map from strings to (shared) symbols.
 
 use super::Symbol;
+use crate::error::SymbolsError as Error;
 use alloc::string::{String, ToString};
 use core::iter::FromIterator;
 use fnv::FnvHashMap;
@@ -17,8 +18,12 @@ impl Symbols {
         self.0.get(s)
     }
 
-    pub fn insert(&mut self, s: String, sym: Symbol) -> Option<Symbol> {
-        self.0.insert(s, sym)
+    pub fn insert(&mut self, s: String) -> Result<Symbol, Error> {
+        let sym = Symbol::new(s.clone());
+        if self.0.insert(s, sym.clone()).is_some() {
+            return Err(Error::Reinsertion);
+        }
+        Ok(sym)
     }
 }
 
