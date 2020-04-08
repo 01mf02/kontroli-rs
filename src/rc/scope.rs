@@ -4,27 +4,13 @@ use super::command::{Command, IntroType};
 use super::pattern::{Miller, Pattern, TopPattern};
 use super::term::{Arg, RTerm, Term};
 use super::{Rule, Symbol, Symbols};
+use crate::error::ScopeError as Error;
 use crate::pre::precommand::{PreIntroType, Precommand};
-use crate::pre::prepattern::{Prepattern, TryFromPrepatternError};
 use crate::pre::preterm::{Binder, Prearg, Preterm};
-use crate::pre::Prerule;
+use crate::pre::{Prepattern, Prerule};
 use crate::stack::Stack;
 use alloc::{string::String, string::ToString};
 use core::convert::TryFrom;
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum Error {
-    UndeclaredSymbol(String),
-    Underscore,
-    NoPrepattern,
-    NoTopPattern,
-}
-
-impl From<TryFromPrepatternError> for Error {
-    fn from(_: TryFromPrepatternError) -> Self {
-        Self::NoPrepattern
-    }
-}
 
 type Bound = Stack<String>;
 
@@ -74,13 +60,13 @@ impl Term {
     /// Scope a closed term.
     ///
     /// ~~~
-    /// # use kontroli::rc::{Error, Symbols, Term};
-    /// # use kontroli::rc::scope;
+    /// # use kontroli::error::{Error, ScopeError};
+    /// # use kontroli::rc::{Symbols, Term};
     /// # use kontroli::pre::Preterm;
     /// # use kontroli::pre::parse::parse;
     /// let syms: Symbols = vec!["A"].into_iter().collect();
     /// let tm = parse::<Preterm>(r"\ _ : A => _.")?;
-    /// assert_eq!(Term::scope(tm, &syms), Err(scope::Error::Underscore));
+    /// assert_eq!(Term::scope(tm, &syms), Err(ScopeError::Underscore));
     /// # Ok::<_, Error>(())
     /// ~~~
     pub fn scope(tm: Preterm, syms: &Symbols) -> Result<Self, Error> {
@@ -122,9 +108,9 @@ impl Rule {
     pub fn scope(rule: Prerule, syms: &Symbols) -> Result<Self, Error> {
         let mut ctxs = Stack::from(rule.ctx.clone());
         let ctx = rule.ctx;
-        let pre = Prepattern::try_from(rule.lhs)?;
+        let pre = Prepattern::try_from(rule.lhs).map_err(|_| Error::NoPrepattern)?;
         let pat = Pattern::scopen(pre, syms, &ctxs)?;
-        let lhs = TopPattern::try_from(pat)?;
+        let lhs = TopPattern::try_from(pat).map_err(|_| Error::NoTopPattern)?;
         let rhs = RTerm::scopen(rule.rhs, syms, &mut ctxs)?;
         Ok(Self { ctx, lhs, rhs })
     }

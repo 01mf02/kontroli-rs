@@ -44,7 +44,8 @@ impl State {
     /// Evaluate the state to its weak head normal form.
     ///
     /// ~~~
-    /// # use kontroli::rc::{Error, RTerm, Signature, Symbols, Term};
+    /// # use kontroli::Error;
+    /// # use kontroli::rc::{RTerm, Signature, Symbols, Term};
     /// # use kontroli::rc::state::State;
     /// let sig = Signature::new();
     /// let syms = Symbols::new();
@@ -162,7 +163,8 @@ impl Rule {
     /// Return a new machine context containing variable assignments in case of a match.
     ///
     /// ~~~
-    /// # use kontroli::rc::{Error, RTerm, Rule, Signature, Symbols, Term};
+    /// # use kontroli::Error;
+    /// # use kontroli::rc::{RTerm, Rule, Signature, Symbols, Term};
     /// # use kontroli::rc::state::State;
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
     /// let sig = Signature::new();

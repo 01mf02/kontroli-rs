@@ -2,6 +2,8 @@
 
 use super::term::{Arg, RTerm, Term};
 use super::Signature;
+// TODO: remove pub
+pub use crate::error::TypingError as Error;
 use core::fmt;
 
 /// Map from de Bruijn indices to associated types.
@@ -38,18 +40,6 @@ impl fmt::Display for Context {
         }
         write!(f, "]")
     }
-}
-
-#[derive(Debug)]
-pub enum Error {
-    ProductExpected,
-    SortExpected,
-    BindNoType,
-    Unconvertible,
-    KindNotTypable,
-    UnexpectedKind,
-    DomainFreeAbstraction,
-    TypeAndTermEmpty,
 }
 
 impl Arg {

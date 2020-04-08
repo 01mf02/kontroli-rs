@@ -43,8 +43,9 @@
 //! can be executed by running `cargo test`.)
 //!
 //! ~~~
-//! # use kontroli::rc::{Command, Error, Signature, Symbol, Symbols};
-//! # use kontroli::rc::signature::{self, Entry};
+//! # use kontroli::error::{Error, SignatureError};
+//! # use kontroli::rc::{Command, Signature, Symbol, Symbols};
+//! # use kontroli::rc::signature::Entry;
 //! let cmds = [
 //!     // declarations
 //!     "prop : Type.",
@@ -71,7 +72,7 @@
 //!             let sym = Symbol::new(id.clone());
 //!             // add symbol to symbol table and fail if it is not new
 //!             if syms.insert(id, sym.clone()).is_some() {
-//!                 return Err(signature::Error::Reintroduction.into());
+//!                 return Err(SignatureError::Reintroduction.into());
 //!             };
 //!
 //!             // typecheck and insert into signature
@@ -130,4 +131,7 @@ pub mod arc;
 pub mod pre;
 pub mod rc;
 
+pub mod error;
 mod stack;
+
+pub use error::Error;

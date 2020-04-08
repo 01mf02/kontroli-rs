@@ -46,8 +46,8 @@ pub trait Parser: Sized {
 /// Parse a string phrase and discard remaining input.
 ///
 /// ~~~
+/// # use kontroli::Error;
 /// # use kontroli::pre::Preterm;
-/// # use kontroli::rc::Error;
 /// # use kontroli::pre::parse::parse;
 /// # use Preterm::{Symb, Appl};
 /// let preterm = parse::<Preterm>("fst x y. Nothing to see here, move along.")?;

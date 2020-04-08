@@ -1,6 +1,5 @@
 pub mod command;
 mod convertible;
-pub mod error;
 mod matching;
 pub mod pattern;
 mod reduce;
@@ -16,7 +15,6 @@ pub mod term;
 pub mod typing;
 
 pub use command::Command;
-pub use error::Error;
 pub use pattern::Pattern;
 pub use rule::Rule;
 pub use signature::Signature;
@@ -24,6 +22,7 @@ pub use symbol::Symbol;
 pub use symbols::Symbols;
 pub use term::{RTerm, Term};
 
+use crate::error::Error;
 use crate::pre::parse::parse;
 use crate::pre::{Precommand, Prerule, Preterm};
 

@@ -8,11 +8,12 @@ mod parseerror;
 
 use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
+use kontroli::error::SignatureError;
 use kontroli::pre::parse;
 use kontroli::pre::Precommand;
 use kontroli::rc::signature;
-use kontroli::rc::Error as KoError;
 use kontroli::rc::{Command, Signature, Symbol, Symbols};
+use kontroli::Error as KoError;
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::{self, Read};
@@ -141,7 +142,7 @@ fn consume(opt: &Opt, iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
                 println!("{}", id);
                 let sym = Symbol::new(id.clone());
                 if syms.insert(id, sym.clone()).is_some() {
-                    return Err(signature::Error::Reintroduction.into());
+                    return Err(SignatureError::Reintroduction.into());
                 };
 
                 if opt.no_check {

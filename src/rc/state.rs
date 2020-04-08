@@ -29,7 +29,8 @@ impl State {
     /// This does not yet evaluate anything, as can be seen from following example:
     ///
     /// ~~~
-    /// # use kontroli::rc::{Error, RTerm, Signature, Symbols, Term};
+    /// # use kontroli::Error;
+    /// # use kontroli::rc::{RTerm, Signature, Symbols, Term};
     /// # use kontroli::rc::state::State;
     /// let syms = Symbols::new();
     ///

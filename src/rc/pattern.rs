@@ -1,6 +1,5 @@
 //! Shared rewrite patterns.
 
-use super::scope::Error;
 use super::term::{fmt_appl, Term};
 use super::Symbol;
 use alloc::vec::Vec;
@@ -70,12 +69,12 @@ impl From<TopPattern> for Pattern {
 }
 
 impl TryFrom<Pattern> for TopPattern {
-    type Error = Error;
+    type Error = ();
 
     fn try_from(p: Pattern) -> Result<Self, Self::Error> {
         match p {
             Pattern::Symb(symbol, args) => Ok(TopPattern { symbol, args }),
-            _ => Err(Error::NoTopPattern),
+            _ => Err(()),
         }
     }
 }

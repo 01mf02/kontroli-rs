@@ -7,10 +7,8 @@ use core::convert::TryFrom;
 #[derive(Clone)]
 pub struct Prepattern(pub String, pub Vec<Prepattern>);
 
-pub struct TryFromPrepatternError;
-
 impl TryFrom<Preterm> for Prepattern {
-    type Error = TryFromPrepatternError;
+    type Error = ();
 
     fn try_from(tm: Preterm) -> Result<Self, Self::Error> {
         use Preterm::*;
@@ -24,10 +22,10 @@ impl TryFrom<Preterm> for Prepattern {
                     args2.append(&mut args);
                     Self::try_from(Appl(head2, args2))
                 }
-                _ => Err(TryFromPrepatternError),
+                _ => Err(()),
             },
             Symb(s) => Ok(Self(s, Vec::new())),
-            _ => Err(TryFromPrepatternError),
+            _ => Err(()),
         }
     }
 }

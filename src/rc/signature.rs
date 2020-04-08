@@ -4,6 +4,7 @@ use super::command::IntroType;
 use super::pattern::TopPattern;
 use super::typing;
 use super::{RTerm, Rule, Symbol, Term};
+use crate::error::SignatureError as Error;
 use alloc::{vec, vec::Vec};
 
 #[cfg(not(feature = "im-sig"))]
@@ -42,12 +43,6 @@ pub struct Entry {
     typ: RTerm,
     term: Option<(RTerm, Check)>,
     rewritable: bool,
-}
-
-#[derive(Debug)]
-pub enum Error {
-    Reintroduction,
-    NonRewritable,
 }
 
 impl Signature {
