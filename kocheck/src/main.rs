@@ -8,9 +8,8 @@ mod parseerror;
 
 use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
-use kontroli::error::SignatureError;
+use kontroli::error::{Error as KoError, SignatureError};
 use kontroli::pre::Precommand;
-use kontroli::Error as KoError;
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::{self, Read};
@@ -103,6 +102,9 @@ struct Opt {
     /// If this option is given without an extra argument, then
     /// the number of concurrently executed tasks is
     /// determined automatically from the number of CPUs.
+    ///
+    /// This option enables the parsing of commands in advance ("-c"),
+    /// by default with an unbounded capacity.
     #[structopt(long, short = "j")]
     jobs: Option<Option<usize>>,
 
