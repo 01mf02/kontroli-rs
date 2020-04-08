@@ -9,16 +9,12 @@ mod parseerror;
 use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
 use kontroli::error::SignatureError;
-use kontroli::pre::parse;
 use kontroli::pre::Precommand;
-use kontroli::rc::signature;
-use kontroli::rc::{Command, Signature, Symbol, Symbols};
 use kontroli::Error as KoError;
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::{self, Read};
 use std::path::PathBuf;
-use std::thread;
 use structopt::StructOpt;
 
 #[derive(Debug)]
@@ -92,10 +88,21 @@ struct Opt {
     /// If this option is used, commands are parsed and checked simultaneously.
     /// If this option is given with a number n, then
     /// maximally n commands are parsed in advance.
-    /// If this option is given without extra argument, then
+    /// If this option is given without an extra argument, then
     /// the number of commands parsed in advance is unbounded.
     ///
     /// Note that unbounded parsing can lead to high memory usage!
+    #[structopt(long, short = "c")]
+    channel_capacity: Option<Option<usize>>,
+
+    /// Typecheck concurrently
+    ///
+    /// If this option is used, type checking tasks are executed in parallel.
+    /// If this option is given with a number n, then
+    /// maximally n type checking tasks are concurrently executed.
+    /// If this option is given without an extra argument, then
+    /// the number of concurrently executed tasks is
+    /// determined automatically from the number of CPUs.
     #[structopt(long, short = "j")]
     jobs: Option<Option<usize>>,
 
@@ -109,7 +116,7 @@ struct Opt {
 type Item = Result<Precommand, KoError>;
 
 fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
-    use parse::{opt_lexeme, phrase, Parse, Parser};
+    use kontroli::pre::parse::{opt_lexeme, phrase, Parse, Parser};
     let parse: fn(&[u8]) -> Parse<_> = |i| opt_lexeme(phrase(Precommand::parse))(i);
     parsebuffer::ParseBuffer {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
@@ -122,7 +129,49 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
     .flatten()
 }
 
-fn consume(opt: &Opt, iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
+fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
+    use kontroli::rc::signature;
+    use kontroli::rc::{Command, Signature, Symbol, Symbols};
+
+    let mut sig: Signature = Default::default();
+    let mut syms: Symbols = Default::default();
+
+    sig.eta = opt.eta;
+
+    // run as long as we receive items
+    iter.try_for_each(|cmd| {
+        // abort if there was a parse error
+        let cmd = cmd?;
+
+        if opt.no_scope {
+            return Ok(());
+        }
+
+        match Command::scope(cmd, &syms)? {
+            Command::Intro(id, it) => {
+                println!("{}", id);
+                let sym = Symbol::new(id.clone());
+                if syms.insert(id, sym.clone()).is_some() {
+                    return Err(SignatureError::Reintroduction.into());
+                };
+
+                if opt.no_check {
+                    return Ok(());
+                }
+
+                let entry = signature::Entry::new(it, &sig)?.check(&sig)?;
+                Ok(sig.insert(&sym, entry)?)
+            }
+            Command::Rule(rule) => Ok(sig.add_rule(rule)?),
+        }
+    })
+}
+
+fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), KoError> {
+    use kontroli::arc::signature;
+    use kontroli::arc::{Command, Signature, Symbol, Symbols};
+    use rayon::iter::{ParallelBridge, ParallelIterator};
+
     let mut sig: Signature = Default::default();
     let mut syms: Symbols = Default::default();
 
@@ -162,6 +211,7 @@ fn consume(opt: &Opt, iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
     .map(|es: Result<_, KoError>| es.transpose())
     .flatten()
     .flatten()
+    .par_bridge()
     .try_for_each(|(entry, entry_sig)| {
         let _ = entry.check(&entry_sig);
         Ok(())
@@ -186,20 +236,43 @@ fn main() -> Result<(), Error> {
 
     let opt = Opt::from_args();
 
+    // if a precise number of parallel jobs has been given
+    if let Some(Some(jobs)) = opt.jobs {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(jobs)
+            .build_global()
+            .unwrap();
+    }
+
     // lazily produce precommands from all specified files
     let items = reads(&opt.files)
         .flat_map(|read| Ok::<_, Error>(produce(read?, &opt)))
         .flatten();
 
-    match opt.jobs {
-        Some(channel) => {
-            let (sender, receiver) = match channel {
+    let parallel = opt.jobs.is_some();
+
+    // if parallel execution is enabled, assume an unbounded channel by default
+    let channel = if parallel {
+        Some(opt.channel_capacity.unwrap_or(None))
+    } else {
+        opt.channel_capacity
+    };
+
+    match channel {
+        Some(capacity) => {
+            let (sender, receiver) = match capacity {
                 Some(capacity) => bounded(capacity),
                 None => unbounded(),
             };
 
             let optr = opt.clone();
-            let consumer = thread::spawn(move || consume(&optr, receiver.iter()));
+            let consumer = std::thread::spawn(move || {
+                if parallel {
+                    consume_par(&optr, receiver.iter())
+                } else {
+                    consume_seq(&optr, receiver.iter())
+                }
+            });
 
             items.for_each(|cmd| sender.send(cmd).unwrap());
 
@@ -210,8 +283,7 @@ fn main() -> Result<(), Error> {
             // wait for all commands to be consumed
             consumer.join().unwrap()?;
         }
-        None => consume(&opt, items)?,
+        None => consume_seq(&opt, items)?,
     }
-
     Ok(())
 }

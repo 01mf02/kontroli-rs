@@ -12,4 +12,5 @@ crossbeam-channel = "0.4.2"
 kontroli = { path = "../", features = ["im-sig"] }
 nom = "5.0"
 pretty_env_logger = "0.4"
+rayon = "1.3"
 structopt = "0.3"
