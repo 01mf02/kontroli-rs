@@ -132,8 +132,7 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
 }
 
 fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
-    use kontroli::rc::signature;
-    use kontroli::rc::{Command, Signature, Symbol, Symbols};
+    use kontroli::rc::{Command, Signature, Symbol, Symbols, Typing};
 
     let mut sig: Signature = Default::default();
     let mut syms: Symbols = Default::default();
@@ -161,8 +160,8 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Ko
                     return Ok(());
                 }
 
-                let entry = signature::Entry::new(it, &sig)?.check(&sig)?;
-                Ok(sig.insert(&sym, entry)?)
+                let typing = Typing::new(it, &sig)?.check(&sig)?;
+                Ok(sig.insert(&sym, typing)?)
             }
             Command::Rule(rule) => Ok(sig.add_rule(rule)?),
         }
@@ -170,8 +169,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Ko
 }
 
 fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), KoError> {
-    use kontroli::arc::signature;
-    use kontroli::arc::{Command, Signature, Symbol, Symbols};
+    use kontroli::arc::{Command, Signature, Symbol, Symbols, Typing};
     use rayon::iter::{ParallelBridge, ParallelIterator};
 
     let mut sig: Signature = Default::default();
@@ -200,9 +198,9 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
                     return Ok(None);
                 }
 
-                let entry = signature::Entry::new(it, &sig)?;
-                sig.insert(&sym, entry.clone())?;
-                Ok(Some((entry, sig.clone())))
+                let typing = Typing::new(it, &sig)?;
+                sig.insert(&sym, typing.clone())?;
+                Ok(Some((typing, sig.clone())))
             }
             Command::Rule(rule) => {
                 sig.add_rule(rule)?;
@@ -214,8 +212,8 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
     .flatten()
     .flatten()
     .par_bridge()
-    .try_for_each(|(entry, entry_sig)| {
-        let _ = entry.check(&entry_sig);
+    .try_for_each(|(typing, typing_sig)| {
+        let _ = typing.check(&typing_sig);
         Ok(())
     })
 }

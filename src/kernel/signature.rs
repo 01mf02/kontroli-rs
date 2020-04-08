@@ -1,9 +1,7 @@
 //! Map from symbols to their types and associated rewrite rules.
 
-use super::command::IntroType;
 use super::pattern::TopPattern;
-use super::typing;
-use super::{RTerm, Rule, Symbol, Term};
+use super::{RTerm, Rule, Symbol, Typing};
 use crate::error::SignatureError as Error;
 use alloc::{vec, vec::Vec};
 
@@ -29,20 +27,6 @@ impl Default for Signature {
             eta: false,
         }
     }
-}
-
-/// Have we assured that a given term matches a given type?
-#[derive(Clone)]
-enum Check {
-    Checked,
-    Unchecked,
-}
-
-#[derive(Clone)]
-pub struct Entry {
-    typ: RTerm,
-    term: Option<(RTerm, Check)>,
-    rewritable: bool,
 }
 
 impl Signature {
@@ -72,10 +56,10 @@ impl Signature {
         Ok(())
     }
 
-    pub fn insert(&mut self, sym: &Symbol, e: Entry) -> Result<(), Error> {
-        self.intro_type(sym.clone(), e.typ)?;
-        if e.rewritable {
-            let rules = match e.term {
+    pub fn insert(&mut self, sym: &Symbol, typing: Typing) -> Result<(), Error> {
+        self.intro_type(sym.clone(), typing.typ)?;
+        if typing.rewritable {
+            let rules = match typing.term {
                 None => Vec::new(),
                 Some((tm, _check)) => vec![Rule {
                     ctx: Vec::new(),
@@ -86,64 +70,5 @@ impl Signature {
             self.intro_rules(sym.clone(), rules)?;
         }
         Ok(())
-    }
-}
-
-impl Entry {
-    pub fn declare(typ: RTerm, rewritable: bool, sig: &Signature) -> Result<Self, typing::Error> {
-        match &*typ.infer(&sig)? {
-            Term::Kind | Term::Type => Ok(Self {
-                rewritable,
-                typ,
-                term: None,
-            }),
-            _ => Err(typing::Error::SortExpected),
-        }
-    }
-
-    pub fn define(
-        oty: Option<RTerm>,
-        term: RTerm,
-        rewritable: bool,
-        sig: &Signature,
-    ) -> Result<Self, typing::Error> {
-        let (typ, check) = match oty {
-            None => (term.infer(&sig)?, Check::Checked),
-            Some(ty) => {
-                let _ = ty.infer(&sig)?;
-                (ty, Check::Unchecked)
-            }
-        };
-        match &*typ {
-            Term::Kind => Err(typing::Error::UnexpectedKind),
-            _ => Ok(Self {
-                typ,
-                term: Some((term, check)),
-                rewritable,
-            }),
-        }
-    }
-
-    pub fn check(mut self, sig: &Signature) -> Result<Self, typing::Error> {
-        if let Some((term, Check::Unchecked)) = self.term {
-            if term.check(&sig, self.typ.clone())? {
-                self.term = Some((term, Check::Checked));
-            } else {
-                return Err(typing::Error::Unconvertible);
-            }
-        };
-        Ok(self)
-    }
-
-    pub fn new(it: IntroType, sig: &Signature) -> Result<Self, typing::Error> {
-        match it {
-            IntroType::Declaration(ty) => Self::declare(ty, false, &sig),
-            IntroType::Definition(oty, otm) => match (oty, otm) {
-                (Some(ty), None) => Self::declare(ty, true, &sig),
-                (oty, Some(tm)) => Self::define(oty, tm, true, &sig),
-                (None, None) => Err(typing::Error::TypeAndTermEmpty),
-            },
-            IntroType::Theorem(ty, tm) => Self::define(Some(ty), tm, false, &sig),
-        }
     }
 }

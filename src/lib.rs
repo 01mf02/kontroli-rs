@@ -44,8 +44,7 @@
 //!
 //! ~~~
 //! # use kontroli::error::{Error, SignatureError};
-//! # use kontroli::rc::{Command, Signature, Symbol, Symbols};
-//! # use kontroli::rc::signature::Entry;
+//! # use kontroli::rc::{Command, Signature, Symbol, Symbols, Typing};
 //! let cmds = [
 //!     // declarations
 //!     "prop : Type.",
@@ -76,8 +75,8 @@
 //!             };
 //!
 //!             // typecheck and insert into signature
-//!             let entry: Entry = Entry::new(it, &sig)?.check(&sig)?;
-//!             sig.insert(&sym, entry)?
+//!             let typing: Typing = Typing::new(it, &sig)?.check(&sig)?;
+//!             sig.insert(&sym, typing)?
 //!         }
 //!         // addition of a rewrite rule
 //!         Command::Rule(rule) => sig.add_rule(rule)?,

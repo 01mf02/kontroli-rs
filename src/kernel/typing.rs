@@ -1,10 +1,83 @@
 //! Type checking and type inference for terms.
 
+use super::command::IntroType;
 use super::term::{Arg, RTerm, Term};
+use crate::error::TypingError as Error;
 use super::Signature;
-// TODO: remove pub
-pub use crate::error::TypingError as Error;
 use core::fmt;
+
+#[derive(Clone)]
+pub struct Typing {
+    pub typ: RTerm,
+    pub term: Option<(RTerm, Check)>,
+    pub rewritable: bool,
+}
+
+/// Have we assured that a given term matches a given type?
+#[derive(Clone)]
+pub enum Check {
+    Checked,
+    Unchecked,
+}
+
+impl Typing {
+    pub fn declare(typ: RTerm, rewritable: bool, sig: &Signature) -> Result<Self, Error> {
+        match &*typ.infer(&sig)? {
+            Term::Kind | Term::Type => Ok(Self {
+                rewritable,
+                typ,
+                term: None,
+            }),
+            _ => Err(Error::SortExpected),
+        }
+    }
+
+    pub fn define(
+        oty: Option<RTerm>,
+        term: RTerm,
+        rewritable: bool,
+        sig: &Signature,
+    ) -> Result<Self, Error> {
+        let (typ, check) = match oty {
+            None => (term.infer(&sig)?, Check::Checked),
+            Some(ty) => {
+                let _ = ty.infer(&sig)?;
+                (ty, Check::Unchecked)
+            }
+        };
+        match &*typ {
+            Term::Kind => Err(Error::UnexpectedKind),
+            _ => Ok(Self {
+                typ,
+                term: Some((term, check)),
+                rewritable,
+            }),
+        }
+    }
+
+    pub fn check(mut self, sig: &Signature) -> Result<Self, Error> {
+        if let Some((term, Check::Unchecked)) = self.term {
+            if term.check(&sig, self.typ.clone())? {
+                self.term = Some((term, Check::Checked));
+            } else {
+                return Err(Error::Unconvertible);
+            }
+        };
+        Ok(self)
+    }
+
+    pub fn new(it: IntroType, sig: &Signature) -> Result<Self, Error> {
+        match it {
+            IntroType::Declaration(ty) => Self::declare(ty, false, &sig),
+            IntroType::Definition(oty, otm) => match (oty, otm) {
+                (Some(ty), None) => Self::declare(ty, true, &sig),
+                (oty, Some(tm)) => Self::define(oty, tm, true, &sig),
+                (None, None) => Err(Error::TypeAndTermEmpty),
+            },
+            IntroType::Theorem(ty, tm) => Self::define(Some(ty), tm, false, &sig),
+        }
+    }
+}
 
 /// Map from de Bruijn indices to associated types.
 pub type Context = crate::stack::Stack<RTerm>;

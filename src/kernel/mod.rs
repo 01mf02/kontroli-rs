@@ -20,6 +20,7 @@ pub use signature::Signature;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
 pub use term::{RTerm, Term};
+pub use typing::Typing;
 
 use crate::error::Error;
 use crate::pre::parse::parse;
