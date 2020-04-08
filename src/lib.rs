@@ -127,11 +127,17 @@ extern crate nom;
 #[macro_use]
 extern crate log;
 
-pub mod arc;
-pub mod pre;
-pub mod rc;
+pub mod arc {
+    use alloc::sync::Arc as Rc;
+    include!("kernel/mod.rs");
+}
+pub mod rc {
+    use alloc::rc::Rc;
+    include!("kernel/mod.rs");
+}
 
 pub mod error;
+pub mod pre;
 mod stack;
 
 pub use error::Error;

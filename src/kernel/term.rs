@@ -1,17 +1,16 @@
 //! Shared terms.
 
-use super::sharing::{RcS, RcT};
-use super::Symbol;
+use super::{Rc, Symbol};
 use crate::pre::preterm::GArg;
 use alloc::{string::String, vec::Vec};
 use core::fmt;
 
 /// Pointer to a shared term.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct RTerm(RcT);
+pub struct RTerm(Rc<Term>);
 
 /// Argument of a binder.
-pub type Arg = GArg<RcS, Option<RTerm>>;
+pub type Arg = GArg<Rc<String>, Option<RTerm>>;
 
 /// De Bruijn variable.
 pub type DeBruijn = usize;
@@ -86,7 +85,7 @@ where
 impl RTerm {
     /// Create a term pointer from a term.
     pub fn new(t: Term) -> Self {
-        Self(RcT::new(t))
+        Self(Rc::new(t))
     }
 
     /// Apply some terms to the term.
@@ -107,13 +106,13 @@ impl RTerm {
 
     /// Compare the memory addresses of two term pointers.
     pub fn ptr_eq(&self, other: &Self) -> bool {
-        RcT::ptr_eq(&self.0, &other.0)
+        Rc::ptr_eq(&self.0, &other.0)
     }
 }
 
 impl Arg {
     pub fn new(id: String, ty: Option<RTerm>) -> Self {
-        let id = RcS::new(id);
+        let id = Rc::new(id);
         Self { id, ty }
     }
 

@@ -5,7 +5,6 @@ pub mod pattern;
 mod reduce;
 pub mod rule;
 pub mod scope;
-mod sharing;
 pub mod signature;
 pub mod state;
 mod subst;
