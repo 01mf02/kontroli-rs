@@ -91,8 +91,7 @@ impl Term {
 impl Arg {
     fn scopen(arg: Prearg, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
         let ty = arg.ty.map(|ty| RTerm::scopen(*ty, syms, bnd)).transpose()?;
-        let id = Symbol::new(arg.id);
-        Ok(Self { id, ty })
+        Ok(Self::new(arg.id, ty))
     }
 }
 

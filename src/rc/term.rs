@@ -1,9 +1,9 @@
 //! Shared terms.
 
-use super::sharing::RcT;
+use super::sharing::{RcS, RcT};
 use super::Symbol;
 use crate::pre::preterm::GArg;
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 use core::fmt;
 
 /// Pointer to a shared term.
@@ -11,7 +11,7 @@ use core::fmt;
 pub struct RTerm(RcT);
 
 /// Argument of a binder.
-pub type Arg = GArg<Symbol, Option<RTerm>>;
+pub type Arg = GArg<RcS, Option<RTerm>>;
 
 /// De Bruijn variable.
 pub type DeBruijn = usize;
@@ -112,6 +112,11 @@ impl RTerm {
 }
 
 impl Arg {
+    pub fn new(id: String, ty: Option<RTerm>) -> Self {
+        let id = RcS::new(id);
+        Self { id, ty }
+    }
+
     /// Compare the memory addresses of the argument components.
     pub fn ptr_eq(&self, other: &Self) -> bool {
         match (self.ty.as_ref(), other.ty.as_ref()) {
