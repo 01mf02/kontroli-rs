@@ -122,6 +122,7 @@ extern crate nom;
 #[macro_use]
 extern crate log;
 
+#[cfg(not(doctest))]
 pub mod arc {
     use alloc::sync::Arc as Rc;
     include!("kernel/mod.rs");
