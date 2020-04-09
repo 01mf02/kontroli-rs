@@ -134,8 +134,8 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
 fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
     use kontroli::rc::{Command, Signature, Symbols, Typing};
 
-    let mut sig: Signature = Default::default();
-    let mut syms: Symbols = Default::default();
+    let mut syms: Symbols = Symbols::new();
+    let mut sig: Signature = Signature::new();
 
     sig.eta = opt.eta;
 
@@ -169,8 +169,8 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
     use kontroli::arc::{Command, Signature, Symbols, Typing};
     use rayon::iter::{ParallelBridge, ParallelIterator};
 
-    let mut sig: Signature = Default::default();
-    let mut syms: Symbols = Default::default();
+    let mut syms: Symbols = Symbols::new();
+    let mut sig: Signature = Signature::new();
 
     sig.eta = opt.eta;
 
@@ -192,6 +192,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
                     return Ok(None);
                 }
 
+                // defer checking to later
                 let typing = Typing::new(it, &sig)?;
                 sig.insert(&sym, typing.clone())?;
                 Ok(Some((typing, sig.clone())))
