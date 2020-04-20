@@ -1,7 +1,7 @@
 //! Shared rewrite patterns.
 
-use super::term::{fmt_appl, Term};
-use super::Symbol;
+use crate::fmt::application as fmt_appl;
+use super::{Term, Symbol};
 use alloc::vec::Vec;
 use core::{convert::TryFrom, fmt};
 

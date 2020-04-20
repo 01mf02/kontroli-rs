@@ -2,6 +2,7 @@
 
 use super::{Rc, Symbol};
 use crate::pre::term::GArg;
+use crate::fmt::application as fmt_appl;
 use alloc::{string::String, vec::Vec};
 use core::fmt;
 
@@ -61,25 +62,6 @@ impl fmt::Display for RTerm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         (**self).fmt(f)
     }
-}
-
-pub fn fmt_appl<H, T>(head: &H, tail: &[T], f: &mut fmt::Formatter) -> fmt::Result
-where
-    H: fmt::Display,
-    T: fmt::Display,
-{
-    let parens = !tail.is_empty();
-    if parens {
-        write!(f, "(")?;
-    };
-    write!(f, "{}", head)?;
-    for t in tail {
-        write!(f, " {}", t)?;
-    }
-    if parens {
-        write!(f, ")")?;
-    };
-    Ok(())
 }
 
 impl RTerm {

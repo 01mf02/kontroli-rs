@@ -150,6 +150,7 @@ pub mod rc {
 
 pub mod error;
 pub mod pre;
+mod fmt;
 mod stack;
 
 pub use error::Error;
