@@ -6,6 +6,23 @@ use crate::error::TypingError as Error;
 use super::Signature;
 use core::fmt;
 
+/// Normalised, verified form of introduction commands.
+///
+/// An introduction command can have many shapes:
+/// `x: A`, `x := t`, `x: A := t`, ...
+/// A typing provides a uniform presentation of introduction commands
+/// with respect to type checking.
+///
+/// When constructing a typing from an introduction command,
+/// the type `A` of the newly introduced symbol is
+/// (a) inferred from its defining term `t` if not given and
+/// (b) verified to be of a proper sort.
+/// In case a defining term `t` is given, `t` is registered,
+/// along with the information whether the type `A` was inferred from it.
+///
+/// Constructing a typing from a command of the shape `x: A := t`
+/// does *not* check whether `t: A`. For this, the `check` function can be used.
+/// This allows us to postpone and parallelise type checking.
 #[derive(Clone)]
 pub struct Typing {
     pub typ: RTerm,
@@ -55,6 +72,9 @@ impl Typing {
         }
     }
 
+    /// Verify whether `t: A` if this was not previously checked.
+    ///
+    /// Return a typing registering that `t: A` has been checked.
     pub fn check(mut self, sig: &Signature) -> Result<Self, Error> {
         if let Some((term, Check::Unchecked)) = self.term {
             if term.check(&sig, self.typ.clone())? {
