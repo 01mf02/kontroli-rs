@@ -225,6 +225,23 @@ fn reads<'a>(files: &'a [PathBuf]) -> Box<dyn Iterator<Item = Result<Box<dyn Rea
     }
 }
 
+/// Flatten an iterator of results of iterators of results into an iterator of results.
+///
+/// Source: <https://www.reddit.com/r/rust/comments/9u6846/rust_puzzle_flatten_a_nested_iterator_of_results>
+pub fn flatten_nested_results<O, I, T, E>(outer: O) -> impl Iterator<Item = Result<T, E>>
+where
+    O: Iterator<Item = Result<I, E>>,
+    I: Iterator<Item = Result<T, E>>,
+{
+    outer.flat_map(|inner_result| {
+        let (v, r) = match inner_result {
+            Ok(v) => (Some(v), None),
+            Err(e) => (None, Some(Err(e))),
+        };
+        v.into_iter().flatten().chain(r)
+    })
+}
+
 fn main() -> Result<(), Error> {
     pretty_env_logger::init();
 
@@ -239,9 +256,8 @@ fn main() -> Result<(), Error> {
     }
 
     // lazily produce precommands from all specified files
-    let mut items = reads(&opt.files)
-        .flat_map(|read| Ok::<_, Error>(produce(read?, &opt)))
-        .flatten();
+    let items = reads(&opt.files).map(|read| Ok(produce(read?, &opt)));
+    let mut items = flatten_nested_results(items);
 
     let parallel = opt.jobs.is_some();
 
