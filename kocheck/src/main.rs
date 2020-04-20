@@ -115,7 +115,7 @@ struct Opt {
     files: Vec<PathBuf>,
 }
 
-type Item = Result<Precommand, KoError>;
+type Item = Result<Precommand, Error>;
 
 fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
     use kontroli::pre::parse::{opt_lexeme, phrase, Parse, Parser};
@@ -124,14 +124,14 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
         parse,
-        fail: |_: nom::Err<VerboseError<&[u8]>>| KoError::Parse,
+        fail: |_: nom::Err<VerboseError<&[u8]>>| Error::Ko(KoError::Parse),
     }
     // consider only the non-whitespace entries
     .map(|entry| entry.transpose())
     .flatten()
 }
 
-fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), KoError> {
+fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error> {
     use kontroli::rc::{Command, Signature, Symbols, Typing};
 
     let mut syms: Symbols = Symbols::new();
@@ -139,11 +139,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Ko
 
     sig.eta = opt.eta;
 
-    // run as long as we receive items
-    iter.try_for_each(|cmd| {
-        // abort if there was a parse error
-        let cmd = cmd?;
-
+    let mut handle = |cmd: Precommand| -> Result<(), KoError> {
         if opt.no_scope {
             return Ok(());
         }
@@ -162,10 +158,13 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Ko
             }
             Command::Rule(rule) => Ok(sig.add_rule(rule)?),
         }
-    })
+    };
+
+    // run as long as we receive items, and abort if there was a parse error
+    iter.try_for_each(|cmd| handle(cmd?).map_err(Error::Ko))
 }
 
-fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), KoError> {
+fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), Error> {
     use kontroli::arc::{Command, Signature, Symbols, Typing};
     use rayon::iter::{ParallelBridge, ParallelIterator};
 
@@ -174,11 +173,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
 
     sig.eta = opt.eta;
 
-    // run as long as we receive items
-    iter.map(|cmd| {
-        // abort if there was a parse error
-        let cmd = cmd?;
-
+    let mut handle = |cmd: Precommand| -> Result<Option<(Typing, Signature)>, KoError> {
         if opt.no_scope {
             return Ok(None);
         }
@@ -202,15 +197,19 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
                 Ok(None)
             }
         }
-    })
-    .map(|es: Result<_, KoError>| es.transpose())
-    .flatten()
-    .flatten()
-    .par_bridge()
-    .try_for_each(|(typing, typing_sig)| {
-        let _ = typing.check(&typing_sig)?;
+    };
+
+    let check = |(typing, sig): (Typing, Signature)| -> Result<(), KoError> {
+        let _ = typing.check(&sig)?;
         Ok(())
-    })
+    };
+
+    // run as long as we receive items, and abort if there was a parse error
+    iter.map(|cmd| handle(cmd?).map_err(Error::Ko))
+        .map(|es| es.transpose())
+        .flatten()
+        .par_bridge()
+        .try_for_each(|ts| check(ts?).map_err(Error::Ko))
 }
 
 /// Return stdin if no files given, else lazily open and return the files.
