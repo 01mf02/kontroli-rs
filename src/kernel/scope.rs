@@ -22,7 +22,7 @@ impl RTerm {
 
 impl Term {
     /// Scope an open preterm using supplied bound variables.
-    pub fn scopen(tm: Preterm, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
+    fn scopen(tm: Preterm, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
         match tm {
             Preterm::Symb(s) => {
                 if s == "_" {
@@ -83,7 +83,7 @@ impl Arg {
 
 impl Pattern {
     /// Scope an open prepattern using supplied bound variables.
-    pub fn scopen(pat: Prepattern, syms: &Symbols, mvar: &Bound) -> Result<Self, Error> {
+    fn scopen(pat: Prepattern, syms: &Symbols, mvar: &Bound) -> Result<Self, Error> {
         let Prepattern(s, args) = pat;
 
         if s == "_" {

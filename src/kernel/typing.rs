@@ -100,7 +100,7 @@ impl Typing {
 }
 
 /// Map from de Bruijn indices to associated types.
-pub type Context = crate::stack::Stack<RTerm>;
+type Context = crate::stack::Stack<RTerm>;
 
 impl Context {
     fn get_type(&self, n: usize) -> Option<RTerm> {
@@ -161,7 +161,7 @@ impl Term {
     }
 
     /// Infer the type of an open term using supplied types of bound variables.
-    pub fn infern(&self, sig: &Signature, ctx: &mut Context) -> Result<RTerm, Error> {
+    fn infern(&self, sig: &Signature, ctx: &mut Context) -> Result<RTerm, Error> {
         debug!("infer type of {}", self);
         use Term::*;
         match self {
@@ -208,7 +208,7 @@ impl Term {
 
     /// Check whether an open term is of the given type,
     /// using supplied types of bound variables.
-    pub fn checkn(&self, sig: &Signature, ctx: &mut Context, ty_exp: RTerm) -> Result<bool, Error> {
+    fn checkn(&self, sig: &Signature, ctx: &mut Context, ty_exp: RTerm) -> Result<bool, Error> {
         debug!("check {} is of type {} when {}", self, ty_exp, ctx);
         use Term::*;
         match self {
