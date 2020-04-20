@@ -15,7 +15,7 @@
 //! a [Signature], recording types and rewrite rules attached to symbols.
 //!
 //! How is a user command processed?
-//! A command is parsed from a string to yield a [Precommand].
+//! A command is parsed from a string to yield a [precommand].
 //! The scoping operation then refines the precommand to a [Command],
 //! verifying whether the names referenced in the precommand
 //! have been previously declared in the [Symbols] table.
@@ -24,9 +24,8 @@
 //! In case of a rewrite rule, we add the rewrite rule to the signature.
 //! In case of a name introduction, we first
 //! update the [Symbols] table with the newly introduced name and
-//! verify that the given types and terms are valid by typing them,
-//! yielding a signature [Entry].
-//! Once we have an entry, we add it to the signature.
+//! verify that the given types and terms are valid, yielding a [Typing].
+//! Once we have an typing, we add it to the signature.
 //! This whole process is illustrated in the following image.
 //! The [Symbols] and [Signature] are boxed to indicate that
 //! they persist throughout the checking.
@@ -83,38 +82,53 @@
 //!
 //! # Organisation
 //!
+//! This library is divided into several modules:
+//! The [pre] module contains unshared data structures, whereas
+//! the [rc] and [arc] modules contain shared data structures.
+//! The [rc] and [arc] modules expose completely the same API,
+//! the difference being that the structures in [rc]
+//! cannot be used in multi-threaded scenarios.
+//! Due to the performance overhead incurred by the data structures in [arc],
+//! it is advisable to use these only in multi-threaded scenarios,
+//! and to prefer [rc] whenever possible.
+//!
+//! For many data structures, we have unshared and shared counterparts.
+//! We prefix the unshared counterparts with "pre-" and call it them prestructures.
+//! For example, we refer to unshared and shared commands as
+//! "precommands" and "commands", respectively.
+//! The same for preterms and terms, prerules and rules, and so on.
+//! Prestructures are constructed by the parser and
+//! refined into their corresponding shared structures by `scope` functions.
+//! Prestructures also implement the `Send` and `Sync` traits, meaning that
+//! they can be transferred and shared between threads.
+//! This allows parsing and checking to be performed in parallel.
+//!
 //! This library is organised around *data structures* and *functions*.
 //! Some modules, such as [pattern], [term], and [state]
 //! revolve around data structures of the same name and
 //! define only basic functions proper to them.
-//! Other modules, such as [parse], [scope], and [typing]
+//! Other modules, such as [parse] and [scope]
 //! define functions that are common to multiple data structures.
-//!
-//! For many shared data structures, we have a corresponding prestructure;
-//! for example, precommands for commands, preterms for terms, and so on.
-//! These prestructures are
-//! constructed by the parser and
-//! refined into their corresponding shared structures by `scope` functions.
-//! Prestructures also, unlike their corresponding shared structures,
-//! implement the `Send` and `Sync` traits, meaning that
-//! they can be transferred and shared between threads.
-//! This allows parsing and checking to be performed in parallel.
 //!
 //! [Kontroli]: https://github.com/01mf02/kontroli-rs
 //!
-//! [Symbols]: symbols/struct.Symbols.html
-//! [Signature]: signature/struct.Signature.html
-//! [Precommand]: precommand/enum.Precommand.html
-//! [Command]: command/enum.Command.html
-//! [Entry]: signature/struct.Entry.html
+//! [precommand]: pre/command/enum.Command.html
 //!
-//! [pattern]: pattern/index.html
-//! [term]: term/index.html
-//! [state]: state/index.html
+//! [Symbols]:   rc/symbols/struct.Symbols.html
+//! [Signature]: rc/signature/struct.Signature.html
+//! [Command]:   rc/command/enum.Command.html
+//! [Typing]:    rc/typing/struct.Typing.html
 //!
-//! [parse]: parse/index.html
-//! [scope]: scope/index.html
-//! [typing]: typing/index.html
+//! [pattern]: rc/pattern/index.html
+//! [term]:    rc/term/index.html
+//! [state]:   rc/state/index.html
+//!
+//! [parse]: pre/parse/index.html
+//! [scope]: rc/scope/index.html
+//!
+//! [pre]: pre/index.html
+//! [rc]:   rc/index.html
+//! [arc]: arc/index.html
 
 extern crate alloc;
 extern crate lazy_st;
@@ -122,11 +136,13 @@ extern crate nom;
 #[macro_use]
 extern crate log;
 
+/// Multi-threading kernel.
 #[cfg(not(doctest))]
 pub mod arc {
     use alloc::sync::Arc as Rc;
     include!("kernel/mod.rs");
 }
+/// Single-threading kernel.
 pub mod rc {
     use alloc::rc::Rc;
     include!("kernel/mod.rs");

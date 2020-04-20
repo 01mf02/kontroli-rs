@@ -1,3 +1,5 @@
+//! Unshared data structures and parsing.
+
 pub mod command;
 pub mod parse;
 pub mod pattern;
