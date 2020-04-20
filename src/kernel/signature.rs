@@ -11,25 +11,21 @@ type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 /// Map from symbols to their types and associated rewrite rules.
 ///
 /// Furthermore, set whether convertibility should be checked modulo eta.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Signature {
     pub types: FnvHashMap<Symbol, RTerm>,
     pub rules: FnvHashMap<Symbol, Vec<Rule>>,
     pub eta: bool,
 }
 
-impl Default for Signature {
-    fn default() -> Self {
-        Self {
-            types: Default::default(),
-            rules: Default::default(),
-            eta: false,
-        }
-    }
-}
-
 impl Signature {
     /// Construct an empty signature without eta modularity.
+    ///
+    /// ~~~
+    /// # use kontroli::rc::Signature;
+    /// let sig = Signature::new();
+    /// assert!(sig.eta == false);
+    /// ~~~
     pub fn new() -> Self {
         Default::default()
     }
