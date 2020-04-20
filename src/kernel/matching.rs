@@ -12,7 +12,7 @@ impl Stack {
         Box::new(
             self.into_iter()
                 .zip(pats)
-                .map(move |(rst, pat)| pat.matches(rst, sig))
+                .map(move |(rstate, pat)| pat.matches(rstate, sig))
                 .flatten(),
         )
     }
@@ -37,7 +37,7 @@ impl Pattern {
                     Term::Symb(st) => {
                         // The stack and pattern length have to be equal,
                         // to exclude pattern matches like `f (g a) ~ f g`.
-                        // This is unlike `TopPattern::match_stack`, which
+                        // This is unlike `TopPattern::matches`, which
                         // allows matches like `add 0 n ~ add 0`.
                         if sp == st && state.stack.len() == pats.len() {
                             state.stack.clone().into_matches(pats, sig)
