@@ -1,17 +1,17 @@
 //! Rewrite patterns not distinguishing bound and unbound symbols.
 
-use super::Preterm;
+use super::Term;
 use alloc::{string::String, vec::Vec};
 use core::convert::TryFrom;
 
 #[derive(Clone)]
-pub struct Prepattern(pub String, pub Vec<Prepattern>);
+pub struct Pattern(pub String, pub Vec<Pattern>);
 
-impl TryFrom<Preterm> for Prepattern {
+impl TryFrom<Term> for Pattern {
     type Error = ();
 
-    fn try_from(tm: Preterm) -> Result<Self, Self::Error> {
-        use Preterm::*;
+    fn try_from(tm: Term) -> Result<Self, Self::Error> {
+        use Term::*;
         match tm {
             Appl(head, mut args) => match *head {
                 Symb(s) => {

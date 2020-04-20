@@ -16,28 +16,28 @@ pub struct GArg<Id, Ty> {
     pub ty: Ty,
 }
 
-pub type BPreterm = Box<Preterm>;
+pub type BTerm = Box<Term>;
 
-pub type Prearg = GArg<String, Option<BPreterm>>;
+pub type Arg = GArg<String, Option<BTerm>>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Preterm {
+pub enum Term {
     Symb(String),
-    Appl(BPreterm, Vec<Preterm>),
-    Bind(Binder, Prearg, BPreterm),
+    Appl(BTerm, Vec<Term>),
+    Bind(Binder, Arg, BTerm),
 }
 
-impl Preterm {
-    fn bind_many(self, binders: Vec<(Binder, Prearg)>) -> Self {
+impl Term {
+    fn bind_many(self, binders: Vec<(Binder, Arg)>) -> Self {
         binders.into_iter().rev().fold(self, |acc, (binder, arg)| {
             Self::Bind(binder, arg, Box::new(acc))
         })
     }
 
-    pub fn absts(self, args: Vec<Prearg>) -> Self {
+    pub fn absts(self, args: Vec<Arg>) -> Self {
         self.bind_many(args.into_iter().map(|arg| (Binder::Lam, arg)).collect())
     }
-    pub fn prods(self, args: Vec<Prearg>) -> Self {
+    pub fn prods(self, args: Vec<Arg>) -> Self {
         self.bind_many(args.into_iter().map(|arg| (Binder::Pi, arg)).collect())
     }
 

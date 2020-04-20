@@ -5,9 +5,9 @@ use super::pattern::{Miller, Pattern, TopPattern};
 use super::term::{Arg, RTerm, Term};
 use super::{Rule, Symbol, Symbols};
 use crate::error::ScopeError as Error;
-use crate::pre::precommand::{PreIntroType, Precommand};
-use crate::pre::preterm::{Binder, Prearg, Preterm};
-use crate::pre::{Prepattern, Prerule};
+use crate::pre::command::IntroType as PreIntroType;
+use crate::pre::term::{Binder, Arg as Prearg};
+use crate::pre;
 use crate::stack::Stack;
 use alloc::{string::String, string::ToString};
 use core::convert::TryFrom;
@@ -15,16 +15,16 @@ use core::convert::TryFrom;
 type Bound = Stack<String>;
 
 impl RTerm {
-    fn scopen(tm: Preterm, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
+    fn scopen(tm: pre::Term, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
         Ok(Self::new(Term::scopen(tm, syms, bnd)?))
     }
 }
 
 impl Term {
     /// Scope an open preterm using supplied bound variables.
-    fn scopen(tm: Preterm, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
+    fn scopen(tm: pre::Term, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
         match tm {
-            Preterm::Symb(s) => {
+            pre::Term::Symb(s) => {
                 if s == "_" {
                     Err(Error::Underscore)
                 } else if s == "Type" {
@@ -37,14 +37,14 @@ impl Term {
                     Ok(Self::Symb(sym))
                 }
             }
-            Preterm::Appl(head, tail) => {
+            pre::Term::Appl(head, tail) => {
                 let tail: Result<_, _> = tail
                     .into_iter()
                     .map(|tm| RTerm::scopen(tm, syms, bnd))
                     .collect();
                 Ok(Self::Appl(RTerm::scopen(*head, syms, bnd)?, tail?))
             }
-            Preterm::Bind(binder, arg, tm) => {
+            pre::Term::Bind(binder, arg, tm) => {
                 let arg = Arg::scopen(arg, syms, bnd)?;
                 bnd.with_pushed(arg.id.to_string(), |bnd| {
                     let tm = RTerm::scopen(*tm, syms, bnd)?;
@@ -62,14 +62,14 @@ impl Term {
     /// ~~~
     /// # use kontroli::error::{Error, ScopeError};
     /// # use kontroli::rc::{Symbols, Term};
-    /// # use kontroli::pre::Preterm;
+    /// # use kontroli::pre;
     /// # use kontroli::pre::parse::parse;
     /// let syms: Symbols = vec!["A"].into_iter().collect();
-    /// let tm = parse::<Preterm>(r"\ _ : A => _.")?;
+    /// let tm = parse::<pre::Term>(r"\ _ : A => _.")?;
     /// assert_eq!(Term::scope(tm, &syms), Err(ScopeError::Underscore));
     /// # Ok::<_, Error>(())
     /// ~~~
-    pub fn scope(tm: Preterm, syms: &Symbols) -> Result<Self, Error> {
+    pub fn scope(tm: pre::Term, syms: &Symbols) -> Result<Self, Error> {
         Self::scopen(tm, syms, &mut Stack::new())
     }
 }
@@ -83,8 +83,8 @@ impl Arg {
 
 impl Pattern {
     /// Scope an open prepattern using supplied bound variables.
-    fn scopen(pat: Prepattern, syms: &Symbols, mvar: &Bound) -> Result<Self, Error> {
-        let Prepattern(s, args) = pat;
+    fn scopen(pat: pre::Pattern, syms: &Symbols, mvar: &Bound) -> Result<Self, Error> {
+        let pre::Pattern(s, args) = pat;
 
         if s == "_" {
             assert!(args.is_empty());
@@ -105,10 +105,10 @@ impl Pattern {
 }
 
 impl Rule {
-    pub fn scope(rule: Prerule, syms: &Symbols) -> Result<Self, Error> {
+    pub fn scope(rule: pre::Rule, syms: &Symbols) -> Result<Self, Error> {
         let mut ctxs = Stack::from(rule.ctx.clone());
         let ctx = rule.ctx;
-        let pre = Prepattern::try_from(rule.lhs).map_err(|_| Error::NoPrepattern)?;
+        let pre = pre::Pattern::try_from(rule.lhs).map_err(|_| Error::NoPrepattern)?;
         let pat = Pattern::scopen(pre, syms, &ctxs)?;
         let lhs = TopPattern::try_from(pat).map_err(|_| Error::NoTopPattern)?;
         let rhs = RTerm::scopen(rule.rhs, syms, &mut ctxs)?;
@@ -125,13 +125,13 @@ impl IntroType {
 }
 
 impl Command {
-    pub fn scope(cmd: Precommand, syms: &Symbols) -> Result<Self, Error> {
+    pub fn scope(cmd: pre::Command, syms: &Symbols) -> Result<Self, Error> {
         match cmd {
-            Precommand::Intro(id, args, it) => {
+            pre::Command::Intro(id, args, it) => {
                 let it = IntroType::scope(it.parametrise(args), syms)?;
                 Ok(Self::Intro(id, it))
             }
-            Precommand::Rule(prerule) => Ok(Self::Rule(Rule::scope(prerule, syms)?)),
+            pre::Command::Rule(prerule) => Ok(Self::Rule(Rule::scope(prerule, syms)?)),
         }
     }
 }

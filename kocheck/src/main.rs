@@ -9,7 +9,7 @@ mod parseerror;
 use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
 use kontroli::error::Error as KoError;
-use kontroli::pre::Precommand;
+use kontroli::pre;
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::{self, Read};
@@ -115,11 +115,11 @@ struct Opt {
     files: Vec<PathBuf>,
 }
 
-type Item = Result<Precommand, Error>;
+type Item = Result<pre::Command, Error>;
 
 fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
     use kontroli::pre::parse::{opt_lexeme, phrase, Parse, Parser};
-    let parse: fn(&[u8]) -> Parse<_> = |i| opt_lexeme(phrase(Precommand::parse))(i);
+    let parse: fn(&[u8]) -> Parse<_> = |i| opt_lexeme(phrase(pre::Command::parse))(i);
     parsebuffer::ParseBuffer {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
@@ -139,7 +139,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
 
     sig.eta = opt.eta;
 
-    let mut handle = |cmd: Precommand| -> Result<(), KoError> {
+    let mut handle = |cmd: pre::Command| -> Result<(), KoError> {
         if opt.no_scope {
             return Ok(());
         }
@@ -173,7 +173,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
 
     sig.eta = opt.eta;
 
-    let mut handle = |cmd: Precommand| -> Result<Option<(Typing, Signature)>, KoError> {
+    let mut handle = |cmd: pre::Command| -> Result<Option<(Typing, Signature)>, KoError> {
         if opt.no_scope {
             return Ok(None);
         }

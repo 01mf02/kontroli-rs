@@ -1,6 +1,6 @@
 //! Unscoped rewrite rules.
 
-use super::Preterm;
+use super::Term;
 use alloc::{string::String, vec::Vec};
 
 /// Generalised rewrite rules.
@@ -23,4 +23,4 @@ pub struct GRule<V, L, R> {
 /// This is a vast overapproximation of rules, because
 /// not every preterm is a valid rule left-hand side.
 /// Scoping takes care to separate the wheat from the chaff.
-pub type Prerule = GRule<String, Preterm, Preterm>;
+pub type Rule = GRule<String, Term, Term>;

@@ -24,25 +24,25 @@ pub use typing::Typing;
 
 use crate::error::Error;
 use crate::pre::parse::parse;
-use crate::pre::{Precommand, Prerule, Preterm};
+use crate::pre;
 
 impl Command {
     /// Parse a command and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(Self::scope(parse::<Precommand>(i)?, &syms)?)
+        Ok(Self::scope(parse::<pre::Command>(i)?, &syms)?)
     }
 }
 
 impl Term {
     /// Parse a term and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(Self::scope(parse::<Preterm>(i)?, &syms)?)
+        Ok(Self::scope(parse::<pre::Term>(i)?, &syms)?)
     }
 }
 
 impl Rule {
     /// Parse a rule and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
-        Ok(Self::scope(parse::<Prerule>(i)?, &syms)?)
+        Ok(Self::scope(parse::<pre::Rule>(i)?, &syms)?)
     }
 }

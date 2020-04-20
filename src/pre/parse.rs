@@ -30,9 +30,9 @@ use nom::{
     IResult,
 };
 
-use super::precommand::{GIntroType, Precommand};
-use super::prerule::Prerule;
-use super::preterm::{Binder, Prearg, Preterm};
+use super::command::{Command, GIntroType};
+use super::term::{Arg, Binder, Term};
+use super::Rule;
 use alloc::{boxed::Box, string::String, string::ToString, vec::Vec};
 
 /// Result of a parser.
@@ -47,10 +47,10 @@ pub trait Parser: Sized {
 ///
 /// ~~~
 /// # use kontroli::Error;
-/// # use kontroli::pre::Preterm;
+/// # use kontroli::pre::Term;
 /// # use kontroli::pre::parse::parse;
-/// # use Preterm::{Symb, Appl};
-/// let preterm = parse::<Preterm>("fst x y. Nothing to see here, move along.")?;
+/// # use Term::{Symb, Appl};
+/// let preterm = parse::<Term>("fst x y. Nothing to see here, move along.")?;
 /// let head = Symb("fst".to_string());
 /// let args = vec![Symb("x".to_string()), Symb("y".to_string())];
 /// assert_eq!(preterm, Appl(Box::new(head), args));
@@ -170,9 +170,9 @@ fn ident(i: &[u8]) -> Parse<String> {
     })(i)
 }
 
-impl Parser for Prearg {
+impl Parser for Arg {
     fn parse(i: &[u8]) -> Parse<Self> {
-        map(pair(ident, opt(lexeme(Preterm::of))), |(id, ty)| Self {
+        map(pair(ident, opt(lexeme(Term::of))), |(id, ty)| Self {
             id,
             ty,
         })(i)
@@ -214,7 +214,7 @@ impl Binder {
     }
 }
 
-impl Preterm {
+impl Term {
     fn of(i: &[u8]) -> Parse<Box<Self>> {
         preceded(char(':'), map(lexeme(Self::parse), Box::new))(i)
     }
@@ -240,26 +240,26 @@ impl Preterm {
             |(ty, bnd, tm)| {
                 let id = "$".to_string();
                 let ty = Some(Box::new(ty));
-                Self::Bind(bnd, Prearg { id, ty }, Box::new(tm))
+                Self::Bind(bnd, Arg { id, ty }, Box::new(tm))
             },
         )(i)
     }
 
     fn bind_named(i: &[u8]) -> Parse<Self> {
         map(
-            Binder::parse_named(Prearg::parse, Self::parse),
+            Binder::parse_named(Arg::parse, Self::parse),
             |(bnd, arg, tm)| Self::Bind(bnd, arg, Box::new(tm)),
         )(i)
     }
 }
 
-impl Parser for Preterm {
+impl Parser for Term {
     fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::bind_named, Self::appl, Self::bind_unnamed))(i)
     }
 }
 
-impl Parser for Prerule {
+impl Parser for Rule {
     fn parse(i: &[u8]) -> Parse<Self> {
         map(
             tuple((
@@ -270,25 +270,25 @@ impl Parser for Prerule {
                         lexeme(char(']')),
                     ),
                 ),
-                lexeme(Preterm::parse),
+                lexeme(Term::parse),
                 lexeme(tag("-->")),
-                lexeme(Preterm::parse),
+                lexeme(Term::parse),
             )),
-            |(ctx, lhs, _, rhs)| Prerule { ctx, lhs, rhs },
+            |(ctx, lhs, _, rhs)| Rule { ctx, lhs, rhs },
         )(i)
     }
 }
 
-impl Precommand {
+impl Command {
     fn definition(i: &[u8]) -> Parse<Self> {
         preceded(
             tag("def"),
             map(
                 tuple((
                     lexeme(ident),
-                    many0(lexeme(parens(Prearg::parse))),
-                    opt(lexeme(Preterm::of)),
-                    opt(lexeme(Preterm::is)),
+                    many0(lexeme(parens(Arg::parse))),
+                    opt(lexeme(Term::of)),
+                    opt(lexeme(Term::is)),
                 )),
                 |(id, params, ty, tm)| Self::Intro(id, params, GIntroType::Definition(ty, tm)),
             ),
@@ -301,9 +301,9 @@ impl Precommand {
             map(
                 tuple((
                     lexeme(ident),
-                    many0(lexeme(parens(Prearg::parse))),
-                    lexeme(Preterm::of),
-                    lexeme(Preterm::is),
+                    many0(lexeme(parens(Arg::parse))),
+                    lexeme(Term::of),
+                    lexeme(Term::is),
                 )),
                 |(id, params, ty, tm)| Self::Intro(id, params, GIntroType::Theorem(ty, tm)),
             ),
@@ -312,11 +312,7 @@ impl Precommand {
 
     fn declaration(i: &[u8]) -> Parse<Self> {
         map(
-            tuple((
-                ident,
-                many0(lexeme(parens(Prearg::parse))),
-                lexeme(Preterm::of),
-            )),
+            tuple((ident, many0(lexeme(parens(Arg::parse))), lexeme(Term::of))),
             |(id, params, ty)| Self::Intro(id, params, GIntroType::Declaration(ty)),
         )(i)
     }
@@ -326,9 +322,9 @@ impl Precommand {
     }
 }
 
-impl Parser for Precommand {
+impl Parser for Command {
     fn parse(i: &[u8]) -> Parse<Self> {
-        alt((Self::intro, map(Prerule::parse, Self::Rule)))(i)
+        alt((Self::intro, map(Rule::parse, Self::Rule)))(i)
     }
 }
 
@@ -350,7 +346,7 @@ mod tests {
 
     #[test]
     fn terms() {
-        let pt = phrase(Preterm::parse);
+        let pt = phrase(Term::parse);
         assert!(pt(b"x.").is_ok());
         assert!(pt(b":x -> x.").is_ok());
         assert!(pt(b":vec n -> vec (succ n).").is_ok());
@@ -361,7 +357,7 @@ mod tests {
 
     #[test]
     fn commands() {
-        let pc = phrase(Precommand::parse);
+        let pc = phrase(Command::parse);
         assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.").is_ok());
         assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).".as_bytes()).is_ok());
         assert!(pc(br"def x := \ x : Type Type => {|x|}.").is_ok());

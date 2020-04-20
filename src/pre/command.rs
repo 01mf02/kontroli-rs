@@ -1,13 +1,13 @@
 //! Unscoped signature-changing commands.
 
-use super::preterm::{BPreterm, Prearg};
-use super::Prerule;
+use super::term::{Arg, BTerm};
+use super::Rule;
 use alloc::{boxed::Box, string::String, vec::Vec};
 
 /// Unscoped signature-changing command.
 ///
 /// In contrast to its scoped `Command` counterpart,
-/// `Precommand`s hold (pre-)arguments for definitions/declarations.
+/// `pre::Command`s hold (pre-)arguments for definitions/declarations.
 /// For example, in the definition
 /// `f (x : A) : B := t`
 /// the argument for `f` is `(x : A)`, and
@@ -16,14 +16,14 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 ///
 /// TODO: make a test here?
 #[derive(Clone, Debug)]
-pub enum Precommand {
+pub enum Command {
     /// Introduce a new name
-    Intro(String, Vec<Prearg>, PreIntroType),
+    Intro(String, Vec<Arg>, IntroType),
     /// Add a rewrite rule
-    Rule(Prerule),
+    Rule(Rule),
 }
 
-pub type PreIntroType = GIntroType<BPreterm, BPreterm>;
+pub type IntroType = GIntroType<BTerm, BTerm>;
 
 /// The way we introduce a new name.
 #[derive(Debug, Clone)]
@@ -78,8 +78,8 @@ impl<Ty, Tm> GIntroType<Ty, Tm> {
     }
 }
 
-impl PreIntroType {
-    pub fn parametrise(self, args: Vec<Prearg>) -> Self {
+impl IntroType {
+    pub fn parametrise(self, args: Vec<Arg>) -> Self {
         self.map_type(|tm| Box::new(tm.prods(args.clone())))
             .map_term(|tm| Box::new(tm.absts(args)))
     }
