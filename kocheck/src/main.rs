@@ -208,7 +208,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
     .flatten()
     .par_bridge()
     .try_for_each(|(typing, typing_sig)| {
-        let _ = typing.check(&typing_sig);
+        let _ = typing.check(&typing_sig)?;
         Ok(())
     })
 }
