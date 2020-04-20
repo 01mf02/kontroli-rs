@@ -239,7 +239,7 @@ fn main() -> Result<(), Error> {
     }
 
     // lazily produce precommands from all specified files
-    let items = reads(&opt.files)
+    let mut items = reads(&opt.files)
         .flat_map(|read| Ok::<_, Error>(produce(read?, &opt)))
         .flatten();
 
@@ -268,7 +268,9 @@ fn main() -> Result<(), Error> {
                 }
             });
 
-            items.for_each(|cmd| sender.send(cmd).unwrap());
+            // sending fails prematurely if consumption fails
+            // in that case, get the error below
+            let _ = items.try_for_each(|cmd| sender.send(cmd));
 
             // signalise that we are done sending precommands
             // (otherwise the consumer will eventually wait forever)
