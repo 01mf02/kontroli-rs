@@ -1,8 +1,8 @@
 //! Shared terms.
 
 use super::{Rc, Symbol};
-use crate::pre::term::GArg;
 use crate::fmt::application as fmt_appl;
+use crate::pre::term::GArg;
 use alloc::{string::String, vec::Vec};
 use core::fmt;
 
