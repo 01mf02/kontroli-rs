@@ -13,6 +13,8 @@ pub mod symbols;
 pub mod term;
 pub mod typing;
 
+use super::Rc;
+
 pub use command::Command;
 pub use pattern::Pattern;
 pub use rule::Rule;
@@ -23,8 +25,8 @@ pub use term::{RTerm, Term};
 pub use typing::Typing;
 
 use crate::error::Error;
-use crate::pre::parse::parse;
 use crate::pre;
+use crate::pre::parse::parse;
 
 impl Command {
     /// Parse a command and scope it. Used for testing.

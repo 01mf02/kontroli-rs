@@ -136,20 +136,25 @@ extern crate nom;
 #[macro_use]
 extern crate log;
 
+pub mod pre;
+
 /// Multi-threading kernel.
 #[cfg(not(doctest))]
 pub mod arc {
     use alloc::sync::Arc as Rc;
-    include!("kernel/mod.rs");
+    #[path = "../kernel/mod.rs"]
+    mod kernel;
+    pub use kernel::*;
 }
 /// Single-threading kernel.
 pub mod rc {
     use alloc::rc::Rc;
-    include!("kernel/mod.rs");
+    #[path = "../kernel/mod.rs"]
+    mod kernel;
+    pub use kernel::*;
 }
 
 pub mod error;
-pub mod pre;
 mod fmt;
 mod stack;
 
