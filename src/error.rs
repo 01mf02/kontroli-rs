@@ -18,6 +18,7 @@ pub enum ScopeError {
     Underscore,
     NoPrepattern,
     NoTopPattern,
+    PatternArguments,
 }
 
 #[derive(Debug)]
@@ -41,6 +42,7 @@ pub enum TypingError {
     UnexpectedKind,
     DomainFreeAbstraction,
     TypeAndTermEmpty,
+    TypeNotFound,
 }
 
 impl<'a> From<nom::Err<nom::error::VerboseError<&'a [u8]>>> for Error {

@@ -2,8 +2,8 @@
 
 use super::command::IntroType;
 use super::term::{Arg, RTerm, Term};
-use crate::error::TypingError as Error;
 use super::Signature;
+use crate::error::TypingError as Error;
 use core::fmt;
 
 /// Normalised, verified form of introduction commands.
@@ -167,8 +167,8 @@ impl Term {
         match self {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(RTerm::new(Kind)),
-            Symb(s) => Ok(sig.types.get(&s).unwrap().clone()),
-            BVar(x) => Ok(ctx.get_type(*x).unwrap()),
+            Symb(s) => Ok(sig.types.get(&s).ok_or(Error::TypeNotFound)?.clone()),
+            BVar(x) => Ok(ctx.get_type(*x).ok_or(Error::TypeNotFound)?),
             Appl(f, args) => {
                 args.iter()
                     .try_fold(f.infern(sig, ctx)?, |ty, arg| match &*ty.whnf(sig) {

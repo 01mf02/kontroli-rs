@@ -5,9 +5,9 @@ use super::pattern::{Miller, Pattern, TopPattern};
 use super::term::{Arg, RTerm, Term};
 use super::{Rule, Symbol, Symbols};
 use crate::error::ScopeError as Error;
-use crate::pre::command::IntroType as PreIntroType;
-use crate::pre::term::{Binder, Arg as Prearg};
 use crate::pre;
+use crate::pre::command::IntroType as PreIntroType;
+use crate::pre::term::{Arg as Prearg, Binder};
 use crate::stack::Stack;
 use alloc::{string::String, string::ToString};
 use core::convert::TryFrom;
@@ -87,10 +87,14 @@ impl Pattern {
         let pre::Pattern(s, args) = pat;
 
         if s == "_" {
-            assert!(args.is_empty());
+            if !args.is_empty() {
+                return Err(Error::PatternArguments);
+            }
             Ok(Self::Joker)
         } else if let Some(idx) = mvar.iter().position(|id| *id == *s) {
-            assert!(args.is_empty());
+            if !args.is_empty() {
+                return Err(Error::PatternArguments);
+            }
             Ok(Self::MVar(Miller(idx)))
         } else {
             let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;

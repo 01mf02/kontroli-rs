@@ -70,7 +70,10 @@ impl Rule {
         let mut subst = vec![vec![]; self.ctx.len()];
         for i in self.lhs.matches(stack, sig) {
             let (m, st1) = i?;
-            subst.get_mut(m.0).expect("subst").push(st1)
+            // the next line should not fail, unless
+            // the pattern contains more variables than indicated in the context
+            // (which scoping is designed to rule out)
+            subst.get_mut(m.0)?.push(st1)
         }
         Some(subst)
     }
