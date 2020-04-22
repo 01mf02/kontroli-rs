@@ -1,3 +1,4 @@
+(; Sudoku solver, originally written by Gaspard Ferey and François Thiré ;)
 
 ind : Type.
 1 : ind.
