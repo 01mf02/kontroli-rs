@@ -7,4 +7,4 @@
 	$(MAKE) --silent $*.deps | \
 	  tr ' ' '\n' | awk '!a[$$0]++' | \
 	  grep -v ".deps" | \
-	  xargs kontroli
+	  xargs kocheck
