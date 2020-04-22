@@ -1,0 +1,30 @@
+(; Booleans ;)
+
+Bool : Type.
+T : Bool.
+F : Bool.
+
+def and : :Bool -> :Bool -> Bool.
+[] and F _ --> F.
+[] and _ F --> F.
+[] and T T --> T.
+
+def or : :Bool -> :Bool -> Bool.
+[] or T _ --> T.
+[] or _ T --> T.
+[] or F F --> F.
+
+def not : :Bool -> Bool.
+[] not T --> F.
+[] not F --> T.
+
+def iif : :Bool -> :Bool -> Bool.
+[] iif T T --> T.
+[] iif T F --> F.
+[] iif F T --> F.
+[] iif F F --> T.
+
+def impl : :Bool -> :Bool -> Bool.
+[] impl F _ --> T.
+[] impl T T --> T.
+[] impl T F --> F.
