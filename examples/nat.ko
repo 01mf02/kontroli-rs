@@ -13,12 +13,6 @@ def 6 := succ 5.
 def 7 := succ 6.
 def 8 := succ 7.
 def 9 := succ 8.
-def A := succ 9.
-def B := succ A.
-def C := succ B.
-def D := succ C.
-def E := succ D.
-def F := succ E.
 
 (; Addition ;)
 def add : :Nat -> :Nat -> Nat.
