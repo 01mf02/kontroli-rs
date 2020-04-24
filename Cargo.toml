@@ -18,3 +18,13 @@ nom = "5.0"
 
 [profile.release]
 codegen-units = 1
+
+[lib]
+bench = false
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "bench"
+harness = false
