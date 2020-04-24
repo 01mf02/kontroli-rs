@@ -99,4 +99,13 @@ Dataset       | Size DK | Size KO | Parse DK | Parse KO
 HOL.Inductive |    74MB |    75MB |    10.1s |     7.8s
 HOL.List      |  2481MB |  2489MB |   386.4s |   192.2s
 
+# Development
+
+A few useful commands for developing Kontroli:
+
+* Generating documentation: `cargo doc --open`
+* Running tests: `cargo test`
+* Running benchmarks: `cargo bench -- --sample-size 10`
+
+
 [Dedukti]: https://deducteam.github.io/
