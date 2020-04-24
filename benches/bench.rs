@@ -56,20 +56,25 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let fpure = read(PathBuf::from("examples/pure.ko"));
     let ppure = parse(&fpure);
 
-    let bol = parse(&read(PathBuf::from("examples/bool.ko")));
+    let boole = parse(&read(PathBuf::from("examples/bool.ko")));
     let nat = parse(&read(PathBuf::from("examples/nat.ko")));
     let sudoku = parse(&read(PathBuf::from("examples/sudoku/sudoku.ko")));
     let sudoku_easy = parse(&read(PathBuf::from("examples/sudoku/solve_easy.ko")));
+    let or_n = parse(&read(PathBuf::from("examples/bench/or_n.ko")));
 
-    let sudo = [bol, sudoku, sudoku_easy].concat();
+    let cmd = b"def eq : Dep (fib (mul 2 4)) := dep (fib (mul 4 2)).";
+    let fib8 = [nat.clone(), parse(cmd)].concat();
 
-    let cmd = b"def fail : Dep (fib 9) := dep (succ 9).";
-    let fib9 = [nat, parse(cmd)].concat();
+    let cmd = b"def eq : Bool_Dep (or_n (mul 2 4)) := bool_dep F.";
+    let or8 = [boole.clone(), nat, or_n, parse(cmd)].concat();
+
+    let sudo = [boole, sudoku, sudoku_easy].concat();
 
     c.bench_function("parse", |b| b.iter(|| parse(&fpure)));
-    c.bench_function("fib9", |b| b.iter(|| assert!(check(fib9.clone()).is_err())));
-    c.bench_function("pure", |b| b.iter(|| assert!(check(ppure.clone()).is_ok())));
-    c.bench_function("sudo", |b| b.iter(|| assert!(check(sudo.clone()).is_ok())));
+    c.bench_function("fib8", |b| b.iter(|| check(fib8.clone()).unwrap()));
+    c.bench_function("or8", |b| b.iter(|| check(or8.clone()).unwrap()));
+    c.bench_function("pure", |b| b.iter(|| check(ppure.clone()).unwrap()));
+    c.bench_function("sudo", |b| b.iter(|| check(sudo.clone()).unwrap()));
 }
 
 criterion_group!(benches, criterion_benchmark);

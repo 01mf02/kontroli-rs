@@ -1,0 +1,11 @@
+(; depends on nat.ko ;)
+
+def inf : Nat.
+[] inf --> succ inf.
+
+def to_zero : :Nat -> Nat.
+[X] to_zero (succ X) --> to_zero X.
+
+def does_not_terminate :
+  Dep (to_zero inf) :=
+  dep (to_zero (succ inf)).

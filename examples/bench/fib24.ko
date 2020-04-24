@@ -1,0 +1,3 @@
+def eq :
+  Dep (fib (mul 3 8)) :=
+  dep (fib (mul 8 3)).
