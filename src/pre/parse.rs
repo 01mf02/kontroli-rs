@@ -282,17 +282,15 @@ impl Parser for Term {
     }
 }
 
+fn idents(i: &[u8]) -> Parse<Vec<String>> {
+    separated_list(lexeme(char(',')), lexeme(ident))(i)
+}
+
 impl Parser for Rule {
     fn parse(i: &[u8]) -> Parse<Self> {
         map(
             tuple((
-                preceded(
-                    char('['),
-                    terminated(
-                        separated_list(lexeme(char(',')), lexeme(ident)),
-                        lexeme(char(']')),
-                    ),
-                ),
+                delimited(char('['), idents, lexeme(char(']'))),
                 lexeme(Term::parse),
                 lexeme(tag("-->")),
                 lexeme(Term::parse),
