@@ -107,7 +107,19 @@ fn nested_post<'a>(start: &'a [u8], end: &'a [u8]) -> impl Fn(&'a [u8]) -> Parse
 }
 
 /// Parse a (potentially nested) comment.
-fn comment(i: &[u8]) -> Parse<&[u8]> {
+///
+/// ~~~
+/// # use kontroli::pre::parse::comment;
+/// assert!(comment(b"(; ;)").is_ok());
+/// assert!(comment(b"(; ; ;; ) ); ;)").is_ok());
+/// assert!(comment(b"(; a normal comment ;)").is_ok());
+/// assert!(comment(r"(;💖;)".as_bytes()).is_ok());
+/// assert!(comment(b"(;;)").is_ok());
+///
+/// assert!(comment(b"(; ").is_err());
+/// assert!(comment(b" ;)").is_err());
+/// ~~~
+pub fn comment(i: &[u8]) -> Parse<&[u8]> {
     nested(b"(;", b";)")(i)
 }
 
@@ -254,6 +266,17 @@ impl Term {
 }
 
 impl Parser for Term {
+    /// ~~~
+    /// # use kontroli::pre::parse::{Parser, phrase};
+    /// # use kontroli::pre::Term;
+    /// let pt = phrase(Term::parse);
+    /// assert!(pt(b"x.").is_ok());
+    /// assert!(pt(b":x -> x.").is_ok());
+    /// assert!(pt(b":vec n -> vec (succ n).").is_ok());
+    /// assert!(pt(b"! x -> x.").is_ok());
+    /// assert!(pt(br"\ x => x.").is_ok());
+    /// assert!(pt(b"! A : eta {|prop|type|} -> eps ({|Pure.eq|const|} {|prop|type|} ({|Pure.prop|const|} A) A).").is_ok());
+    /// ~~~
     fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::bind_named, Self::appl, Self::bind_unnamed))(i)
     }
@@ -323,43 +346,15 @@ impl Command {
 }
 
 impl Parser for Command {
+    /// ~~~
+    /// # use kontroli::pre::parse::{Parser, phrase};
+    /// # use kontroli::pre::Command;
+    /// let pc = phrase(Command::parse);
+    /// assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.").is_ok());
+    /// assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).".as_bytes()).is_ok());
+    /// assert!(pc(br"def x := \ x : Type Type => {|x|}.").is_ok());
+    /// ~~~
     fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::intro, map(Rule::parse, Self::Rule)))(i)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn comments() {
-        assert!(comment(b"(; ;)").is_ok());
-        assert!(comment(b"(; ; ;; ) ); ;)").is_ok());
-        assert!(comment(b"(; a normal comment ;)").is_ok());
-        assert!(comment(r"(;💖;)".as_bytes()).is_ok());
-        assert!(comment(b"(;;)").is_ok());
-
-        assert!(comment(b"(; ").is_err());
-        assert!(comment(b" ;)").is_err());
-    }
-
-    #[test]
-    fn terms() {
-        let pt = phrase(Term::parse);
-        assert!(pt(b"x.").is_ok());
-        assert!(pt(b":x -> x.").is_ok());
-        assert!(pt(b":vec n -> vec (succ n).").is_ok());
-        assert!(pt(b"! x -> x.").is_ok());
-        assert!(pt(br"\ x => x.").is_ok());
-        assert!(pt(b"! A : eta {|prop|type|} -> eps ({|Pure.eq|const|} {|prop|type|} ({|Pure.prop|const|} A) A).").is_ok());
-    }
-
-    #[test]
-    fn commands() {
-        let pc = phrase(Command::parse);
-        assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.").is_ok());
-        assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).".as_bytes()).is_ok());
-        assert!(pc(br"def x := \ x : Type Type => {|x|}.").is_ok());
     }
 }
