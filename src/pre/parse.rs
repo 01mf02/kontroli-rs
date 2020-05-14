@@ -14,8 +14,8 @@
 //!   because we know by assumption that the whole parser is lexed.)
 //! * If a parser consists of an alternative of parsers `alt(p1, ..., pn)`,
 //!   then its lexed version should be
-//!   the lexed alternative of parsers `lexeme(alt(p1, ..., pn))` instead of
-//!   the alternative of lexed parsers `alt(lexeme(p1), ..., lexeme(pn))`.
+//!   the lexed alternative of parsers `lex(alt(p1, ..., pn))` instead of
+//!   the alternative of lexed parsers `alt(lex(p1), ..., lex(pn))`.
 //!   This avoids redoing the lexing for all alternatives.
 
 use nom::{
@@ -128,7 +128,7 @@ fn space(i: &[u8]) -> Parse<Vec<&[u8]>> {
 }
 
 /// Parse whitespace/comments to `None` and given function to `Some`.
-pub fn opt_lexeme<'a, O1: Clone, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<Option<O1>>
+pub fn opt_lex<'a, O1: Clone, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<Option<O1>>
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
 {
@@ -140,7 +140,7 @@ where
 }
 
 /// Strip away space before parsing with the given function.
-fn lexeme<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
+fn lex<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
 {
@@ -151,7 +151,7 @@ fn parens<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
 {
-    delimited(char('('), lexeme(inner), lexeme(char(')')))
+    delimited(char('('), lex(inner), lex(char(')')))
 }
 
 /// Parse a phrase, i.e. a given function terminated by a dot.
@@ -161,7 +161,7 @@ pub fn phrase<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
 {
-    terminated(inner, lexeme(char('.')))
+    terminated(inner, lex(char('.')))
 }
 
 /// Parse bracket-surrounded identifier, like `{| anything \o/ goes |}`.
@@ -184,10 +184,7 @@ fn ident(i: &[u8]) -> Parse<String> {
 
 impl Parser for Arg {
     fn parse(i: &[u8]) -> Parse<Self> {
-        map(pair(ident, opt(lexeme(Term::of))), |(id, ty)| Self {
-            id,
-            ty,
-        })(i)
+        map(pair(ident, opt(lex(Term::of))), |(id, ty)| Self { id, ty })(i)
     }
 }
 
@@ -205,7 +202,7 @@ impl Binder {
         F: Fn(&'a [u8]) -> Parse<'a, O1>,
         G: Fn(&'a [u8]) -> Parse<'a, O2>,
     {
-        preceded(char(':'), tuple((lexeme(f), lexeme(Self::post), lexeme(g))))
+        preceded(char(':'), tuple((lex(f), lex(Self::post), lex(g))))
     }
 
     fn parse_named<'a, O1, O2, F, G>(f: F, g: G) -> impl Fn(&'a [u8]) -> Parse<(Self, O1, O2)>
@@ -214,7 +211,7 @@ impl Binder {
         G: Fn(&'a [u8]) -> Parse<'a, O2>,
     {
         map_opt(
-            tuple((Self::pre, lexeme(f), lexeme(Self::post), lexeme(g))),
+            tuple((Self::pre, lex(f), lex(Self::post), lex(g))),
             |(bnd, x, arr, y)| {
                 if bnd == arr {
                     Some((bnd, x, y))
@@ -228,11 +225,11 @@ impl Binder {
 
 impl Term {
     fn of(i: &[u8]) -> Parse<Box<Self>> {
-        preceded(char(':'), map(lexeme(Self::parse), Box::new))(i)
+        preceded(char(':'), map(lex(Self::parse), Box::new))(i)
     }
 
     fn is(i: &[u8]) -> Parse<Box<Self>> {
-        preceded(tag(":="), map(lexeme(Self::parse), Box::new))(i)
+        preceded(tag(":="), map(lex(Self::parse), Box::new))(i)
     }
 
     fn sterm(i: &[u8]) -> Parse<Self> {
@@ -241,7 +238,7 @@ impl Term {
 
     fn appl(i: &[u8]) -> Parse<Self> {
         map(
-            pair(Self::sterm, many0(lexeme(Self::sterm))),
+            pair(Self::sterm, many0(lex(Self::sterm))),
             |(head, tail)| Self::apply(head, tail),
         )(i)
     }
@@ -282,26 +279,28 @@ impl Parser for Term {
     }
 }
 
+/// Parse a (potentially empty) list of comma-separated identifiers.
 fn idents(i: &[u8]) -> Parse<Vec<String>> {
-    separated_list(lexeme(char(',')), lexeme(ident))(i)
+    separated_list(lex(char(',')), lex(ident))(i)
 }
 
 impl Parser for Rule {
     fn parse(i: &[u8]) -> Parse<Self> {
         map(
             tuple((
-                delimited(char('['), idents, lexeme(char(']'))),
-                lexeme(Term::parse),
-                lexeme(tag("-->")),
-                lexeme(Term::parse),
+                delimited(char('['), idents, lex(char(']'))),
+                lex(Term::parse),
+                lex(tag("-->")),
+                lex(Term::parse),
             )),
             |(ctx, lhs, _, rhs)| Rule { ctx, lhs, rhs },
         )(i)
     }
 }
 
-fn id_args(i: &[u8]) -> Parse<(String, Vec<Arg>)> {
-    pair(ident, many0(lexeme(parens(Arg::parse))))(i)
+/// Parse an identifier followed by an arbitrary number of arguments.
+fn ident_args(i: &[u8]) -> Parse<(String, Vec<Arg>)> {
+    pair(ident, many0(lex(parens(Arg::parse))))(i)
 }
 
 impl Command {
@@ -309,11 +308,7 @@ impl Command {
         preceded(
             tag("def"),
             map(
-                tuple((
-                    lexeme(id_args),
-                    opt(lexeme(Term::of)),
-                    opt(lexeme(Term::is)),
-                )),
+                tuple((lex(ident_args), opt(lex(Term::of)), opt(lex(Term::is)))),
                 |((id, args), ty, tm)| Self::Intro(id, args, GIntroType::Definition(ty, tm)),
             ),
         )(i)
@@ -323,14 +318,14 @@ impl Command {
         preceded(
             tag("thm"),
             map(
-                tuple((lexeme(id_args), lexeme(Term::of), lexeme(Term::is))),
+                tuple((lex(ident_args), lex(Term::of), lex(Term::is))),
                 |((id, args), ty, tm)| Self::Intro(id, args, GIntroType::Theorem(ty, tm)),
             ),
         )(i)
     }
 
     fn declaration(i: &[u8]) -> Parse<Self> {
-        map(tuple((id_args, lexeme(Term::of))), |((id, args), ty)| {
+        map(tuple((ident_args, lex(Term::of))), |((id, args), ty)| {
             Self::Intro(id, args, GIntroType::Declaration(ty))
         })(i)
     }

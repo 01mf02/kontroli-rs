@@ -118,8 +118,8 @@ struct Opt {
 type Item = Result<pre::Command, Error>;
 
 fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
-    use kontroli::pre::parse::{opt_lexeme, phrase, Parse, Parser};
-    let parse: fn(&[u8]) -> Parse<_> = |i| opt_lexeme(phrase(pre::Command::parse))(i);
+    use kontroli::pre::parse::{opt_lex, phrase, Parse, Parser};
+    let parse: fn(&[u8]) -> Parse<_> = |i| opt_lex(phrase(pre::Command::parse))(i);
     parsebuffer::ParseBuffer {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,

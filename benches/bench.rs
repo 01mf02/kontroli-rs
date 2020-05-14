@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kontroli::pre::parse::{opt_lexeme, phrase, Parser};
+use kontroli::pre::parse::{opt_lex, phrase, Parser};
 use kontroli::rc::{Command, Signature, Symbols, Typing};
 use kontroli::{pre, Error};
 use std::io::Read;
@@ -39,7 +39,7 @@ fn read(file: PathBuf) -> Vec<u8> {
 fn parse(mut buffer: &[u8]) -> Vec<pre::Command> {
     let mut cmds = Vec::new();
     loop {
-        match opt_lexeme(phrase(pre::Command::parse))(buffer) {
+        match opt_lex(phrase(pre::Command::parse))(buffer) {
             Ok((i, x)) => {
                 buffer = i;
                 if let Some(cmd) = x {
