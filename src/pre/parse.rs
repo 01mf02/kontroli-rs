@@ -302,18 +302,21 @@ impl Parser for Rule {
     }
 }
 
+fn id_args(i: &[u8]) -> Parse<(String, Vec<Arg>)> {
+    pair(ident, many0(lexeme(parens(Arg::parse))))(i)
+}
+
 impl Command {
     fn definition(i: &[u8]) -> Parse<Self> {
         preceded(
             tag("def"),
             map(
                 tuple((
-                    lexeme(ident),
-                    many0(lexeme(parens(Arg::parse))),
+                    lexeme(id_args),
                     opt(lexeme(Term::of)),
                     opt(lexeme(Term::is)),
                 )),
-                |(id, params, ty, tm)| Self::Intro(id, params, GIntroType::Definition(ty, tm)),
+                |((id, args), ty, tm)| Self::Intro(id, args, GIntroType::Definition(ty, tm)),
             ),
         )(i)
     }
@@ -322,22 +325,16 @@ impl Command {
         preceded(
             tag("thm"),
             map(
-                tuple((
-                    lexeme(ident),
-                    many0(lexeme(parens(Arg::parse))),
-                    lexeme(Term::of),
-                    lexeme(Term::is),
-                )),
-                |(id, params, ty, tm)| Self::Intro(id, params, GIntroType::Theorem(ty, tm)),
+                tuple((lexeme(id_args), lexeme(Term::of), lexeme(Term::is))),
+                |((id, args), ty, tm)| Self::Intro(id, args, GIntroType::Theorem(ty, tm)),
             ),
         )(i)
     }
 
     fn declaration(i: &[u8]) -> Parse<Self> {
-        map(
-            tuple((ident, many0(lexeme(parens(Arg::parse))), lexeme(Term::of))),
-            |(id, params, ty)| Self::Intro(id, params, GIntroType::Declaration(ty)),
-        )(i)
+        map(tuple((id_args, lexeme(Term::of))), |((id, args), ty)| {
+            Self::Intro(id, args, GIntroType::Declaration(ty))
+        })(i)
     }
 
     fn intro(i: &[u8]) -> Parse<Self> {
