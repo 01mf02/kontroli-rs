@@ -208,16 +208,14 @@ impl Binder {
         F: Fn(&'a [u8]) -> Parse<'a, O1>,
         G: Fn(&'a [u8]) -> Parse<'a, O2>,
     {
-        map_opt(
-            tuple((Self::pre, lex(f), lex(Self::post), lex(g))),
-            |(bnd, x, arr, y)| {
-                if bnd == arr {
-                    Some((bnd, x, y))
-                } else {
-                    None
-                }
-            },
-        )
+        let check = |(bnd, x, arr, y)| {
+            if bnd == arr {
+                Some((bnd, x, y))
+            } else {
+                None
+            }
+        };
+        map_opt(tuple((Self::pre, lex(f), lex(Self::post), lex(g))), check)
     }
 }
 
@@ -235,28 +233,22 @@ impl Term {
     }
 
     fn appl(i: &[u8]) -> Parse<Self> {
-        map(
-            pair(Self::sterm, many0(lex(Self::sterm))),
-            |(head, tail)| Self::apply(head, tail),
-        )(i)
+        let app = |(head, tail)| Self::apply(head, tail);
+        map(pair(Self::sterm, many0(lex(Self::sterm))), app)(i)
     }
 
     fn bind_unnamed(i: &[u8]) -> Parse<Self> {
-        map(
-            Binder::parse_unnamed(Self::appl, Self::parse),
-            |(ty, bnd, tm)| {
-                let id = "$".to_string();
-                let ty = Some(Box::new(ty));
-                Self::Bind(bnd, Arg { id, ty }, Box::new(tm))
-            },
-        )(i)
+        let bind = |(ty, bnd, tm)| {
+            let id = "$".to_string();
+            let ty = Some(Box::new(ty));
+            Self::Bind(bnd, Arg { id, ty }, Box::new(tm))
+        };
+        map(Binder::parse_unnamed(Self::appl, Self::parse), bind)(i)
     }
 
     fn bind_named(i: &[u8]) -> Parse<Self> {
-        map(
-            Binder::parse_named(Arg::parse, Self::parse),
-            |(bnd, arg, tm)| Self::Bind(bnd, arg, Box::new(tm)),
-        )(i)
+        let bind = |(bnd, arg, tm)| Self::Bind(bnd, arg, Box::new(tm));
+        map(Binder::parse_named(Arg::parse, Self::parse), bind)(i)
     }
 }
 
