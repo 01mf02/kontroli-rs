@@ -23,7 +23,7 @@ use nom::{
     bytes::streaming::{is_not, tag, take_until, take_while1},
     character::is_alphanumeric,
     character::streaming::{char, multispace0, one_of},
-    combinator::{map, map_opt, opt, recognize, value},
+    combinator::{map, map_opt, map_res, opt, recognize, value},
     error::VerboseError,
     multi::{many0, separated_list},
     sequence::{delimited, pair, preceded, terminated, tuple},
@@ -176,10 +176,8 @@ fn normal_ident(i: &[u8]) -> Parse<&[u8]> {
 }
 
 fn ident(i: &[u8]) -> Parse<String> {
-    map(alt((bracket_ident, normal_ident)), |i| {
-        // TODO: do not panic on invalid UTF-8
-        alloc::str::from_utf8(i).map(String::from).unwrap()
-    })(i)
+    let ident_u8 = alt((bracket_ident, normal_ident));
+    map_res(ident_u8, |i| alloc::str::from_utf8(i).map(String::from))(i)
 }
 
 impl Parser for Arg {
