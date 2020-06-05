@@ -138,7 +138,12 @@ impl<'s> fmt::Display for Context<'s> {
 impl<'s> Arg<'s> {
     /// Check whether the bound variable's type (if present)
     /// has a proper type and is convertible with the given type.
-    fn checkn(&self, sig: &Signature<'s>, ctx: &mut Context<'s>, ty_exp: &RTerm<'s>) -> Result<bool, Error> {
+    fn checkn(
+        &self,
+        sig: &Signature<'s>,
+        ctx: &mut Context<'s>,
+        ty_exp: &RTerm<'s>,
+    ) -> Result<bool, Error> {
         match self.ty.clone() {
             None => Ok(true),
             Some(ty) => {
@@ -208,7 +213,12 @@ impl<'s> Term<'s> {
 
     /// Check whether an open term is of the given type,
     /// using supplied types of bound variables.
-    fn checkn(&self, sig: &Signature<'s>, ctx: &mut Context<'s>, ty_exp: RTerm<'s>) -> Result<bool, Error> {
+    fn checkn(
+        &self,
+        sig: &Signature<'s>,
+        ctx: &mut Context<'s>,
+        ty_exp: RTerm<'s>,
+    ) -> Result<bool, Error> {
         debug!("check {} is of type {} when {}", self, ty_exp, ctx);
         use Term::*;
         match self {

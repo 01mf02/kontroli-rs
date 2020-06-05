@@ -145,7 +145,10 @@ impl<'s> RTerm<'s> {
 /// This is used for checking nonlinear pattern matches, because there
 /// we want to ensure that all states that were
 /// matched with the same variable are convertible.
-fn all_convertible<'s>(mut iter: impl Iterator<Item = RState<'s>>, sig: &Signature<'s>) -> Option<RTTerm<'s>> {
+fn all_convertible<'s>(
+    mut iter: impl Iterator<Item = RState<'s>>,
+    sig: &Signature<'s>,
+) -> Option<RTTerm<'s>> {
     // assure that we have at least one term
     let tm = RTTerm::new(iter.next()?);
     for stn in iter {
