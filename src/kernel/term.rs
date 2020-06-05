@@ -8,33 +8,33 @@ use core::fmt;
 
 /// Pointer to a shared term.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct RTerm(Rc<Term>);
+pub struct RTerm<'s>(Rc<Term<'s>>);
 
 /// Argument of a binder.
-pub type Arg = GArg<Rc<String>, Option<RTerm>>;
+pub type Arg<'s> = GArg<Rc<String>, Option<RTerm<'s>>>;
 
 /// De Bruijn variable.
 pub type DeBruijn = usize;
 
 /// Shared term for the lambda-Pi calculus.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Term {
+pub enum Term<'s> {
     Kind,
     Type,
-    Symb(Symbol),
+    Symb(Symbol<'s>),
     BVar(DeBruijn),
-    Appl(RTerm, Vec<RTerm>),
-    Abst(Arg, RTerm),
-    Prod(Arg, RTerm),
+    Appl(RTerm<'s>, Vec<RTerm<'s>>),
+    Abst(Arg<'s>, RTerm<'s>),
+    Prod(Arg<'s>, RTerm<'s>),
 }
 
-impl Default for Term {
+impl<'s> Default for Term<'s> {
     fn default() -> Self {
         Self::Type
     }
 }
 
-impl fmt::Display for Arg {
+impl<'s> fmt::Display for Arg<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.id)?;
         if let Some(ty) = self.ty.as_ref() {
@@ -44,7 +44,7 @@ impl fmt::Display for Arg {
     }
 }
 
-impl fmt::Display for Term {
+impl<'s> fmt::Display for Term<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Kind => write!(f, "Kind"),
@@ -58,20 +58,20 @@ impl fmt::Display for Term {
     }
 }
 
-impl fmt::Display for RTerm {
+impl<'s> fmt::Display for RTerm<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         (**self).fmt(f)
     }
 }
 
-impl RTerm {
+impl<'s> RTerm<'s> {
     /// Create a term pointer from a term.
-    pub fn new(t: Term) -> Self {
+    pub fn new(t: Term<'s>) -> Self {
         Self(Rc::new(t))
     }
 
     /// Apply some terms to the term.
-    pub fn apply(self, mut args: Vec<RTerm>) -> Self {
+    pub fn apply(self, mut args: Vec<RTerm<'s>>) -> Self {
         if args.is_empty() {
             self
         } else {
@@ -92,8 +92,8 @@ impl RTerm {
     }
 }
 
-impl Arg {
-    pub fn new(id: String, ty: Option<RTerm>) -> Self {
+impl<'s> Arg<'s> {
+    pub fn new(id: String, ty: Option<RTerm<'s>>) -> Self {
         let id = Rc::new(id);
         Self { id, ty }
     }
@@ -108,8 +108,8 @@ impl Arg {
     }
 }
 
-impl core::ops::Deref for RTerm {
-    type Target = Term;
+impl<'s> core::ops::Deref for RTerm<'s> {
+    type Target = Term<'s>;
 
     fn deref(&self) -> &Self::Target {
         &*self.0

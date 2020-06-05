@@ -6,6 +6,9 @@ use std::io::Read;
 use std::path::PathBuf;
 
 fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
+    use colosseum::unsync::Arena;
+
+    let arena = Arena::new();
     let mut syms = Symbols::new();
     let mut sig = Signature::new();
 
@@ -14,6 +17,7 @@ fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
         match cmd {
             // introduction of a new name
             Command::Intro(id, it) => {
+                let id: &str = arena.alloc(id);
                 // add symbol to symbol table and fail if it is not new
                 let sym = syms.insert(id)?;
 

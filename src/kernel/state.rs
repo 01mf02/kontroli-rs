@@ -17,13 +17,13 @@ use lazy_st::Thunk;
 /// *Sadhana*. **34**: 71–144.
 /// doi: [10.1007/s12046-009-0003-3](https://doi.org/10.1007%2Fs12046-009-0003-3).
 #[derive(Clone, Default)]
-pub struct State {
-    pub ctx: Context,
-    pub term: RTerm,
-    pub stack: Stack,
+pub struct State<'s> {
+    pub ctx: Context<'s>,
+    pub term: RTerm<'s>,
+    pub stack: Stack<'s>,
 }
 
-impl State {
+impl<'s> State<'s> {
     /// Construct a new state from a reference to a term.
     ///
     /// This does not yet evaluate anything, as can be seen from following example:
@@ -41,7 +41,7 @@ impl State {
     /// assert!(RTerm::ptr_eq(&RTerm::from(state), &rterm));
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn new(term: RTerm) -> Self {
+    pub fn new(term: RTerm<'s>) -> Self {
         Self {
             ctx: Context::new(),
             term,
@@ -51,22 +51,22 @@ impl State {
 }
 
 /// Map from de Bruijn indices in the term of the abstract machine to lazy terms.
-pub type Context = stack::Stack<RTTerm>;
+pub type Context<'s> = stack::Stack<RTTerm<'s>>;
 
 /// Arguments to the abstract machine term.
-pub type Stack = stack::Stack<RState>;
+pub type Stack<'s> = stack::Stack<RState<'s>>;
 
 /// A shared lazy term constructed from a shared mutable state.
 #[derive(Clone)]
-pub struct RTTerm(Rc<Thunk<RState, RTerm>>);
+pub struct RTTerm<'s>(Rc<Thunk<RState<'s>, RTerm<'s>>>);
 
-impl RTTerm {
-    pub fn new(st: RState) -> Self {
+impl<'s> RTTerm<'s> {
+    pub fn new(st: RState<'s>) -> Self {
         Self(Rc::new(Thunk::new(st)))
     }
 
     /// Force evaluation of the lazy term.
-    pub fn force(&self) -> &RTerm {
+    pub fn force(&self) -> &RTerm<'s> {
         &**self.0
     }
 }
@@ -77,36 +77,36 @@ impl RTTerm {
 /// because evaluation requires a signature and
 /// because we sometimes wish to access the original state.
 #[derive(Clone)]
-pub struct RState(Rc<RefCell<WState>>);
+pub struct RState<'s>(Rc<RefCell<WState<'s>>>);
 
-impl RState {
-    pub fn new(wst: WState) -> Self {
+impl<'s> RState<'s> {
+    pub fn new(wst: WState<'s>) -> Self {
         Self(Rc::new(RefCell::new(wst)))
     }
 
-    pub fn borrow(&self) -> Ref<WState> {
+    pub fn borrow(&self) -> Ref<WState<'s>> {
         self.0.borrow()
     }
 
-    pub fn borrow_mut(&self) -> RefMut<WState> {
+    pub fn borrow_mut(&self) -> RefMut<WState<'s>> {
         self.0.borrow_mut()
     }
 }
 
-impl lazy_st::Evaluate<RTerm> for RState {
-    fn evaluate(self) -> RTerm {
+impl<'s> lazy_st::Evaluate<RTerm<'s>> for RState<'s> {
+    fn evaluate(self) -> RTerm<'s> {
         RTerm::from(self)
     }
 }
 
-impl From<RState> for RTerm {
-    fn from(s: RState) -> Self {
+impl<'s> From<RState<'s>> for RTerm<'s> {
+    fn from(s: RState<'s>) -> Self {
         RTerm::from(s.borrow_state().clone())
     }
 }
 
-impl From<State> for RTerm {
-    fn from(state: State) -> Self {
+impl<'s> From<State<'s>> for RTerm<'s> {
+    fn from(state: State<'s>) -> Self {
         state
             .term
             .psubst(&state.ctx)
@@ -114,8 +114,8 @@ impl From<State> for RTerm {
     }
 }
 
-impl RTerm {
-    fn psubst(self, args: &Context) -> Self {
+impl<'s> RTerm<'s> {
+    fn psubst(self, args: &Context<'s>) -> Self {
         if args.is_empty() {
             self
         } else {
@@ -124,7 +124,7 @@ impl RTerm {
     }
 }
 
-fn psubst(args: &Context) -> impl Fn(usize, usize) -> RTerm + '_ {
+fn psubst<'s, 'c>(args: &'c Context<'s>) -> impl Fn(usize, usize) -> RTerm<'s> + 'c {
     move |n: usize, k: usize| match args.get(n - k) {
         Some(arg) => arg.force().clone() << k,
         None => RTerm::new(Term::BVar(n - args.len())),

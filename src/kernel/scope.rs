@@ -14,15 +14,15 @@ use core::convert::TryFrom;
 
 type Bound = Stack<String>;
 
-impl RTerm {
-    fn scopen(tm: pre::Term, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
+impl<'s> RTerm<'s> {
+    fn scopen(tm: pre::Term, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Self, Error> {
         Ok(Self::new(Term::scopen(tm, syms, bnd)?))
     }
 }
 
-impl Term {
+impl<'s> Term<'s> {
     /// Scope an open preterm using supplied bound variables.
-    fn scopen(tm: pre::Term, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
+    fn scopen(tm: pre::Term, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Self, Error> {
         match tm {
             pre::Term::Symb(s) => {
                 if s == "_" {
@@ -69,21 +69,21 @@ impl Term {
     /// assert_eq!(Term::scope(tm, &syms), Err(ScopeError::Underscore));
     /// # Ok::<_, Error>(())
     /// ~~~
-    pub fn scope(tm: pre::Term, syms: &Symbols) -> Result<Self, Error> {
+    pub fn scope(tm: pre::Term, syms: &Symbols<'s>) -> Result<Self, Error> {
         Self::scopen(tm, syms, &mut Stack::new())
     }
 }
 
-impl Arg {
-    fn scopen(arg: Prearg, syms: &Symbols, bnd: &mut Bound) -> Result<Self, Error> {
+impl<'s> Arg<'s> {
+    fn scopen(arg: Prearg, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Self, Error> {
         let ty = arg.ty.map(|ty| RTerm::scopen(*ty, syms, bnd)).transpose()?;
         Ok(Self::new(arg.id, ty))
     }
 }
 
-impl Pattern {
+impl<'s> Pattern<'s> {
     /// Scope an open prepattern using supplied bound variables.
-    fn scopen(pat: pre::Pattern, syms: &Symbols, mvar: &Bound) -> Result<Self, Error> {
+    fn scopen(pat: pre::Pattern, syms: &Symbols<'s>, mvar: &Bound) -> Result<Self, Error> {
         let pre::Pattern(s, args) = pat;
 
         if s == "_" {
@@ -108,8 +108,8 @@ impl Pattern {
     }
 }
 
-impl Rule {
-    pub fn scope(rule: pre::Rule, syms: &Symbols) -> Result<Self, Error> {
+impl<'s> Rule<'s> {
+    pub fn scope(rule: pre::Rule, syms: &Symbols<'s>) -> Result<Self, Error> {
         let mut ctxs = Stack::from(rule.ctx.clone());
         let ctx = rule.ctx;
         let pre = pre::Pattern::try_from(rule.lhs).map_err(|_| Error::NoPrepattern)?;
@@ -120,16 +120,16 @@ impl Rule {
     }
 }
 
-impl IntroType {
-    pub fn scope(it: PreIntroType, syms: &Symbols) -> Result<Self, Error> {
+impl<'s> IntroType<'s> {
+    pub fn scope(it: PreIntroType, syms: &Symbols<'s>) -> Result<Self, Error> {
         let mut bnd = Stack::new();
         it.map_type_err(|tm| RTerm::scopen(*tm, syms, &mut bnd))?
             .map_term_err(|tm| RTerm::scopen(*tm, syms, &mut bnd))
     }
 }
 
-impl Command {
-    pub fn scope(cmd: pre::Command, syms: &Symbols) -> Result<Self, Error> {
+impl<'s> Command<'s> {
+    pub fn scope(cmd: pre::Command, syms: &Symbols<'s>) -> Result<Self, Error> {
         match cmd {
             pre::Command::Intro(id, args, it) => {
                 let it = IntroType::scope(it.parametrise(args), syms)?;

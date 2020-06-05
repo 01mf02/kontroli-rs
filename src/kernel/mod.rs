@@ -28,23 +28,23 @@ use crate::error::Error;
 use crate::pre;
 use crate::pre::parse::parse;
 
-impl Command {
+impl<'s> Command<'s> {
     /// Parse a command and scope it. Used for testing.
-    pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
+    pub fn parse(i: &str, syms: &Symbols<'s>) -> Result<Self, Error> {
         Ok(Self::scope(parse::<pre::Command>(i)?, &syms)?)
     }
 }
 
-impl Term {
+impl<'s> Term<'s> {
     /// Parse a term and scope it. Used for testing.
-    pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
+    pub fn parse(i: &str, syms: &Symbols<'s>) -> Result<Self, Error> {
         Ok(Self::scope(parse::<pre::Term>(i)?, &syms)?)
     }
 }
 
-impl Rule {
+impl<'s> Rule<'s> {
     /// Parse a rule and scope it. Used for testing.
-    pub fn parse(i: &str, syms: &Symbols) -> Result<Self, Error> {
+    pub fn parse(i: &str, syms: &Symbols<'s>) -> Result<Self, Error> {
         Ok(Self::scope(parse::<pre::Rule>(i)?, &syms)?)
     }
 }

@@ -44,6 +44,7 @@
 //! ~~~
 //! # use kontroli::Error;
 //! # use kontroli::rc::{Command, Signature, Symbols, Typing};
+//! # use colosseum::unsync::Arena;
 //! let cmds = [
 //!     // declarations
 //!     "prop : Type.",
@@ -57,6 +58,7 @@
 //!     r"thm imp_refl (x : prop) : proof (imp x x) := \ p : proof x => p.",
 //! ];
 //!
+//! let arena = Arena::new();
 //! let mut syms = Symbols::new();
 //! let mut sig = Signature::new();
 //!
@@ -66,6 +68,7 @@
 //!     match cmd {
 //!         // introduction of a new name
 //!         Command::Intro(id, it) => {
+//!             let id: &str = arena.alloc(id);
 //!             // add symbol to symbol table and fail if it is not new
 //!             let sym = syms.insert(id)?;
 //!

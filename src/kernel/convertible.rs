@@ -6,7 +6,7 @@ use alloc::{vec, vec::Vec};
 
 /// Return true if the given two terms are potentially convertible, and if so,
 /// add convertibility constraints that have to be fulfilled.
-fn step(cn1: RTerm, cn2: RTerm, cns: &mut Vec<(RTerm, RTerm)>, eta: bool) -> bool {
+fn step<'s>(cn1: RTerm<'s>, cn2: RTerm<'s>, cns: &mut Vec<(RTerm<'s>, RTerm<'s>)>, eta: bool) -> bool {
     use Term::*;
     match (&*cn1, &*cn2) {
         (Kind, Kind) | (Type, Type) => true,
@@ -39,9 +39,9 @@ fn step(cn1: RTerm, cn2: RTerm, cns: &mut Vec<(RTerm, RTerm)>, eta: bool) -> boo
     }
 }
 
-impl RTerm {
+impl<'s> RTerm<'s> {
     /// Return true if the given terms have a common redex.
-    pub fn convertible(tm1: Self, tm2: Self, sig: &Signature) -> bool {
+    pub fn convertible(tm1: Self, tm2: Self, sig: &Signature<'s>) -> bool {
         let mut cns = vec![(tm1, tm2)];
         loop {
             match cns.pop() {

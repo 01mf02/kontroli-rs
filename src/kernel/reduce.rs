@@ -5,19 +5,19 @@ use super::{RTerm, Rule, Signature, Term};
 use core::cell::Ref;
 
 /// A version of `State` that tracks whether it was reduced to WHNF yet.
-pub struct WState {
-    state: State,
+pub struct WState<'s> {
+    state: State<'s>,
     whnfed: bool,
 }
 
-impl WState {
-    fn new(state: State) -> WState {
+impl<'s> WState<'s> {
+    fn new(state: State<'s>) -> Self {
         let whnfed = false;
         Self { state, whnfed }
     }
 
     /// Replace the state with its WHNF if it was not in WHNF before.
-    fn whnf(&mut self, sig: &Signature) {
+    fn whnf(&mut self, sig: &Signature<'s>) {
         if self.whnfed {
             return;
         }
@@ -28,19 +28,19 @@ impl WState {
     }
 }
 
-impl RState {
+impl<'s> RState<'s> {
     /// Replace the state with its WHNF if it was not in WHNF before.
-    pub fn whnf(&self, sig: &Signature) {
+    pub fn whnf(&self, sig: &Signature<'s>) {
         self.borrow_mut().whnf(sig)
     }
 
     /// Obtain a reference to the state.
-    pub fn borrow_state(&self) -> Ref<State> {
+    pub fn borrow_state(&self) -> Ref<State<'s>> {
         Ref::map(self.borrow(), |wst| &wst.state)
     }
 }
 
-impl State {
+impl<'s> State<'s> {
     /// Evaluate the state to its weak head normal form.
     ///
     /// ~~~
@@ -59,7 +59,7 @@ impl State {
     /// assert_eq!(*whnf.term, expected);
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn whnf(self, sig: &Signature) -> Self {
+    pub fn whnf(self, sig: &Signature<'s>) -> Self {
         use Term::*;
         let Self {
             mut ctx,
@@ -130,9 +130,9 @@ impl State {
     }
 }
 
-impl RTerm {
+impl<'s> RTerm<'s> {
     /// Return the weak head normal form of the term.
-    pub fn whnf(self, sig: &Signature) -> Self {
+    pub fn whnf(self, sig: &Signature<'s>) -> Self {
         trace!("whnf of {}", self);
         Self::from(State::new(self).whnf(sig))
     }
@@ -145,7 +145,7 @@ impl RTerm {
 /// This is used for checking nonlinear pattern matches, because there
 /// we want to ensure that all states that were
 /// matched with the same variable are convertible.
-fn all_convertible(mut iter: impl Iterator<Item = RState>, sig: &Signature) -> Option<RTTerm> {
+fn all_convertible<'s>(mut iter: impl Iterator<Item = RState<'s>>, sig: &Signature<'s>) -> Option<RTTerm<'s>> {
     // assure that we have at least one term
     let tm = RTTerm::new(iter.next()?);
     for stn in iter {
@@ -157,7 +157,7 @@ fn all_convertible(mut iter: impl Iterator<Item = RState>, sig: &Signature) -> O
     Some(tm)
 }
 
-impl Rule {
+impl<'s> Rule<'s> {
     /// Determine whether the stack of an abstract machine matches the rule's LHS.
     ///
     /// Return a new machine context containing variable assignments in case of a match.
@@ -179,7 +179,7 @@ impl Rule {
     /// assert_eq!(vec![Term::parse("f.", &syms)?], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn match_flatten(&self, stack: &Stack, sig: &Signature) -> Option<Context> {
+    pub fn match_flatten(&self, stack: &Stack<'s>, sig: &Signature<'s>) -> Option<Context<'s>> {
         self.matches(stack, sig)?
             .into_iter()
             .map(|s| all_convertible(s.into_iter(), sig))

@@ -132,8 +132,10 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
 }
 
 fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error> {
+    use colosseum::unsync::Arena;
     use kontroli::rc::{Command, Signature, Symbols, Typing};
 
+    let arena = Arena::new();
     let mut syms: Symbols = Symbols::new();
     let mut sig: Signature = Signature::new();
 
@@ -147,6 +149,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
         match Command::scope(cmd, &syms)? {
             Command::Intro(id, it) => {
                 println!("{}", id);
+                let id: &str = arena.alloc(id);
                 let sym = syms.insert(id)?;
 
                 if opt.no_check {
@@ -164,16 +167,22 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
     iter.try_for_each(|cmd| handle(cmd?).map_err(Error::Ko))
 }
 
+
 fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), Error> {
+    use colosseum::sync::Arena;
     use kontroli::arc::{Command, Signature, Symbols, Typing};
     use rayon::iter::{ParallelBridge, ParallelIterator};
 
+    // this is required to constrain the lifetimes to be equal
+    type Check<'s> = (Typing<'s>, Signature<'s>);
+
+    let arena = Arena::new();
     let mut syms: Symbols = Symbols::new();
     let mut sig: Signature = Signature::new();
 
     sig.eta = opt.eta;
 
-    let mut handle = |cmd: pre::Command| -> Result<Option<(Typing, Signature)>, KoError> {
+    let mut handle = |cmd: pre::Command| -> Result<Option<Check>, KoError> {
         if opt.no_scope {
             return Ok(None);
         }
@@ -181,6 +190,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
         match Command::scope(cmd, &syms)? {
             Command::Intro(id, it) => {
                 println!("{}", id);
+                let id: &str = arena.alloc(id);
                 let sym = syms.insert(id)?;
 
                 if opt.no_check {
@@ -199,7 +209,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
         }
     };
 
-    let check = |(typing, sig): (Typing, Signature)| -> Result<(), KoError> {
+    let check = |(typing, sig): Check| -> Result<(), KoError> {
         let _ = typing.check(&sig)?;
         Ok(())
     };

@@ -24,9 +24,9 @@ use core::fmt;
 /// does *not* check whether `t: A`. For this, the `check` function can be used.
 /// This allows us to postpone and parallelise type checking.
 #[derive(Clone)]
-pub struct Typing {
-    pub typ: RTerm,
-    pub term: Option<(RTerm, Check)>,
+pub struct Typing<'s> {
+    pub typ: RTerm<'s>,
+    pub term: Option<(RTerm<'s>, Check)>,
     pub rewritable: bool,
 }
 
@@ -37,8 +37,8 @@ pub enum Check {
     Unchecked,
 }
 
-impl Typing {
-    pub fn declare(typ: RTerm, rewritable: bool, sig: &Signature) -> Result<Self, Error> {
+impl<'s> Typing<'s> {
+    pub fn declare(typ: RTerm<'s>, rewritable: bool, sig: &Signature<'s>) -> Result<Self, Error> {
         match &*typ.infer(&sig)? {
             Term::Kind | Term::Type => Ok(Self {
                 rewritable,
@@ -50,10 +50,10 @@ impl Typing {
     }
 
     pub fn define(
-        oty: Option<RTerm>,
-        term: RTerm,
+        oty: Option<RTerm<'s>>,
+        term: RTerm<'s>,
         rewritable: bool,
-        sig: &Signature,
+        sig: &Signature<'s>,
     ) -> Result<Self, Error> {
         let (typ, check) = match oty {
             None => (term.infer(&sig)?, Check::Checked),
@@ -75,7 +75,7 @@ impl Typing {
     /// Verify whether `t: A` if this was not previously checked.
     ///
     /// Return a typing registering that `t: A` has been checked.
-    pub fn check(mut self, sig: &Signature) -> Result<Self, Error> {
+    pub fn check(mut self, sig: &Signature<'s>) -> Result<Self, Error> {
         if let Some((term, Check::Unchecked)) = self.term {
             if term.check(&sig, self.typ.clone())? {
                 self.term = Some((term, Check::Checked));
@@ -86,7 +86,7 @@ impl Typing {
         Ok(self)
     }
 
-    pub fn new(it: IntroType, sig: &Signature) -> Result<Self, Error> {
+    pub fn new(it: IntroType<'s>, sig: &Signature<'s>) -> Result<Self, Error> {
         match it {
             IntroType::Declaration(ty) => Self::declare(ty, false, &sig),
             IntroType::Definition(oty, otm) => match (oty, otm) {
@@ -100,23 +100,23 @@ impl Typing {
 }
 
 /// Map from de Bruijn indices to associated types.
-type Context = crate::stack::Stack<RTerm>;
+type Context<'s> = crate::stack::Stack<RTerm<'s>>;
 
-impl Context {
-    fn get_type(&self, n: usize) -> Option<RTerm> {
+impl<'s> Context<'s> {
+    fn get_type(&self, n: usize) -> Option<RTerm<'s>> {
         Some(self.get(n)?.clone() << (n + 1))
     }
 
-    fn bind<A, F>(&mut self, arg: RTerm, f: F) -> Result<A, Error>
+    fn bind<A, F>(&mut self, arg: RTerm<'s>, f: F) -> Result<A, Error>
     where
-        F: FnOnce(&mut Context) -> Result<A, Error>,
+        F: FnOnce(&mut Context<'s>) -> Result<A, Error>,
     {
         self.with_pushed(arg, f)
     }
 
-    fn bind_of_type<A, F>(&mut self, sig: &Signature, arg: RTerm, f: F) -> Result<A, Error>
+    fn bind_of_type<A, F>(&mut self, sig: &Signature<'s>, arg: RTerm<'s>, f: F) -> Result<A, Error>
     where
-        F: FnOnce(&mut Context) -> Result<A, Error>,
+        F: FnOnce(&mut Context<'s>) -> Result<A, Error>,
     {
         match &*arg.clone().infern(sig, self)? {
             Term::Type => self.bind(arg, f),
@@ -125,7 +125,7 @@ impl Context {
     }
 }
 
-impl fmt::Display for Context {
+impl<'s> fmt::Display for Context<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
         for (i, x) in self.iter().enumerate() {
@@ -135,10 +135,10 @@ impl fmt::Display for Context {
     }
 }
 
-impl Arg {
+impl<'s> Arg<'s> {
     /// Check whether the bound variable's type (if present)
     /// has a proper type and is convertible with the given type.
-    fn checkn(&self, sig: &Signature, ctx: &mut Context, ty_exp: &RTerm) -> Result<bool, Error> {
+    fn checkn(&self, sig: &Signature<'s>, ctx: &mut Context<'s>, ty_exp: &RTerm<'s>) -> Result<bool, Error> {
         match self.ty.clone() {
             None => Ok(true),
             Some(ty) => {
@@ -149,19 +149,19 @@ impl Arg {
     }
 }
 
-impl Term {
+impl<'s> Term<'s> {
     /// Infer the type of a closed term.
-    pub fn infer(&self, sig: &Signature) -> Result<RTerm, Error> {
+    pub fn infer(&self, sig: &Signature<'s>) -> Result<RTerm<'s>, Error> {
         self.infern(sig, &mut Context::new())
     }
 
     /// Check whether a closed term is of a given type.
-    pub fn check(&self, sig: &Signature, ty_exp: RTerm) -> Result<bool, Error> {
+    pub fn check(&self, sig: &Signature<'s>, ty_exp: RTerm<'s>) -> Result<bool, Error> {
         self.checkn(sig, &mut Context::new(), ty_exp)
     }
 
     /// Infer the type of an open term using supplied types of bound variables.
-    fn infern(&self, sig: &Signature, ctx: &mut Context) -> Result<RTerm, Error> {
+    fn infern(&self, sig: &Signature<'s>, ctx: &mut Context<'s>) -> Result<RTerm<'s>, Error> {
         debug!("infer type of {}", self);
         use Term::*;
         match self {
@@ -208,7 +208,7 @@ impl Term {
 
     /// Check whether an open term is of the given type,
     /// using supplied types of bound variables.
-    fn checkn(&self, sig: &Signature, ctx: &mut Context, ty_exp: RTerm) -> Result<bool, Error> {
+    fn checkn(&self, sig: &Signature<'s>, ctx: &mut Context<'s>, ty_exp: RTerm<'s>) -> Result<bool, Error> {
         debug!("check {} is of type {} when {}", self, ty_exp, ctx);
         use Term::*;
         match self {

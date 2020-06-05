@@ -1,7 +1,5 @@
 //! Shared strings with fast cloning, hashing and equality checking.
 
-use super::Rc;
-use alloc::string::String;
 use core::fmt;
 use core::hash::{Hash, Hasher};
 
@@ -15,10 +13,14 @@ use core::hash::{Hash, Hasher};
 ///
 /// ~~~
 /// # use kontroli::rc::Symbol;
-/// let s1 = Symbol::new("Hello".to_string());
-/// let s2 = Symbol::new("Hello".to_string());
-/// let s3 = Symbol::new("World".to_string());
+/// let h1 = String::from("Hello");
+/// let h2 = String::from("Hello");
+/// let wl = String::from("World");
+/// let s1 = Symbol::new(&h1);
+/// let s2 = Symbol::new(&h2);
+/// let s3 = Symbol::new(&wl);
 /// assert_eq!(s1, s1);
+/// assert_eq!(s1, s1.clone());
 /// assert_ne!(s1, s2);
 /// assert_ne!(s1, s3);
 /// ~~~
@@ -28,30 +30,30 @@ use core::hash::{Hash, Hasher};
 ///
 /// [`Symbols`]: ../symbols/struct.Symbols.html
 
-#[derive(Clone, Debug)]
-pub struct Symbol(Rc<String>);
+#[derive(Copy, Clone, Debug)]
+pub struct Symbol<'s>(&'s str);
 
-impl Symbol {
-    pub fn new(s: String) -> Self {
-        Self(Rc::new(s))
+impl<'s> Symbol<'s> {
+    pub fn new(s: &'s str) -> Self {
+        Self(s)
     }
 }
 
-impl Hash for Symbol {
+impl<'s> Hash for Symbol<'s> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        core::ptr::hash(&**self.0, state)
+        core::ptr::hash(&*self.0, state)
     }
 }
 
-impl PartialEq for Symbol {
+impl<'s> PartialEq for Symbol<'s> {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
+        core::ptr::eq(self.0, other.0)
     }
 }
 
-impl Eq for Symbol {}
+impl<'s> Eq for Symbol<'s> {}
 
-impl fmt::Display for Symbol {
+impl<'s> fmt::Display for Symbol<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }

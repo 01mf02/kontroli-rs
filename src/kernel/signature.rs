@@ -12,13 +12,13 @@ type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 ///
 /// Furthermore, set whether convertibility should be checked modulo eta.
 #[derive(Clone, Default)]
-pub struct Signature {
-    pub types: FnvHashMap<Symbol, RTerm>,
-    pub rules: FnvHashMap<Symbol, Vec<Rule>>,
+pub struct Signature<'s> {
+    pub types: FnvHashMap<Symbol<'s>, RTerm<'s>>,
+    pub rules: FnvHashMap<Symbol<'s>, Vec<Rule<'s>>>,
     pub eta: bool,
 }
 
-impl Signature {
+impl<'s> Signature<'s> {
     /// Construct an empty signature without eta modularity.
     ///
     /// ~~~
@@ -30,14 +30,14 @@ impl Signature {
         Default::default()
     }
 
-    fn intro_type(&mut self, sym: Symbol, typ: RTerm) -> Result<(), Error> {
+    fn intro_type(&mut self, sym: Symbol<'s>, typ: RTerm<'s>) -> Result<(), Error> {
         if self.types.insert(sym, typ).is_some() {
             return Err(Error::Reintroduction);
         }
         Ok(())
     }
 
-    fn intro_rules(&mut self, sym: Symbol, rules: Vec<Rule>) -> Result<(), Error> {
+    fn intro_rules(&mut self, sym: Symbol<'s>, rules: Vec<Rule<'s>>) -> Result<(), Error> {
         if self.rules.insert(sym, rules).is_some() {
             return Err(Error::Reintroduction);
         }
@@ -45,7 +45,7 @@ impl Signature {
     }
 
     /// Add a rewrite rule to an existing symbol.
-    pub fn add_rule(&mut self, rule: Rule) -> Result<(), Error> {
+    pub fn add_rule(&mut self, rule: Rule<'s>) -> Result<(), Error> {
         self.rules
             .get_mut(&rule.lhs.symbol)
             .ok_or(Error::NonRewritable)?
@@ -54,7 +54,7 @@ impl Signature {
     }
 
     /// Introduce a new symbol with given typing.
-    pub fn insert(&mut self, sym: &Symbol, typing: Typing) -> Result<(), Error> {
+    pub fn insert(&mut self, sym: &Symbol<'s>, typing: Typing<'s>) -> Result<(), Error> {
         self.intro_type(sym.clone(), typing.typ)?;
         if typing.rewritable {
             let rules = match typing.term {

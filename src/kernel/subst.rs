@@ -3,29 +3,29 @@
 use super::term::{Arg, RTerm, Term};
 use alloc::vec::Vec;
 
-impl Arg {
+impl<'s> Arg<'s> {
     /// Return the substitution of an argument.
     fn subst<S>(self, subst: &S, k: usize) -> Self
     where
-        S: Fn(usize, usize) -> RTerm,
+        S: Fn(usize, usize) -> RTerm<'s>,
     {
         let ty = self.ty.map(|ty| ty.apply_subst(subst, k));
         Self { id: self.id, ty }
     }
 
     /// Return the substitution of an argument and a term.
-    fn subst_bound<S>(self, tm: RTerm, subst: &S, k: usize) -> (Self, RTerm)
+    fn subst_bound<S>(self, tm: RTerm<'s>, subst: &S, k: usize) -> (Self, RTerm<'s>)
     where
-        S: Fn(usize, usize) -> RTerm,
+        S: Fn(usize, usize) -> RTerm<'s>,
     {
         (self.subst(subst, k), tm.apply_subst(subst, k + 1))
     }
 }
 
-impl RTerm {
+impl<'s> RTerm<'s> {
     pub fn apply_subst<S>(self, subst: &S, k: usize) -> Self
     where
-        S: Fn(usize, usize) -> RTerm,
+        S: Fn(usize, usize) -> RTerm<'s>,
     {
         match &*self {
             Term::BVar(n) if *n >= k => subst(*n, k),
@@ -61,12 +61,12 @@ impl RTerm {
         }
     }
 
-    pub fn subst(self, u: &RTerm) -> Self {
+    pub fn subst(self, u: &RTerm<'s>) -> Self {
         self.apply_subst(&psubst_single(u), 0)
     }
 }
 
-fn psubst_single(u: &RTerm) -> impl Fn(usize, usize) -> RTerm + '_ {
+fn psubst_single<'s, 't>(u: &'t RTerm<'s>) -> impl Fn(usize, usize) -> RTerm<'s> + 't {
     move |n: usize, k: usize| {
         if n == k {
             u.clone() << k
@@ -76,7 +76,8 @@ fn psubst_single(u: &RTerm) -> impl Fn(usize, usize) -> RTerm + '_ {
     }
 }
 
-impl core::ops::Shl<usize> for RTerm {
+/// Definition of `<<` for terms.
+impl<'s> core::ops::Shl<usize> for RTerm<'s> {
     type Output = Self;
 
     fn shl(self, rhs: usize) -> Self::Output {

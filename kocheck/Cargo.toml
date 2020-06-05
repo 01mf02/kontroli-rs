@@ -8,6 +8,7 @@ edition = "2018"
 bytecount = "0.6"
 byte-unit = "3.0"
 circular = "0.3"
+colosseum = "0.2"
 crossbeam-channel = "0.4.2"
 kontroli = { path = "../" }
 nom = "5.0"

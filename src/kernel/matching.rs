@@ -5,10 +5,10 @@ use super::state::{RState, Stack};
 use super::{Rule, Signature, Term};
 use alloc::{boxed::Box, vec, vec::Vec};
 
-type Subst<'a> = Box<dyn Iterator<Item = Option<(Miller, RState)>> + 'a>;
+type Subst<'s, 'a> = Box<dyn Iterator<Item = Option<(Miller, RState<'s>)>> + 'a>;
 
-impl Stack {
-    fn into_matches<'a>(self, pats: &'a [Pattern], sig: &'a Signature) -> Subst<'a> {
+impl<'s> Stack<'s> {
+    fn into_matches<'a>(self, pats: &'a [Pattern<'s>], sig: &'a Signature<'s>) -> Subst<'s, 'a> {
         Box::new(
             self.into_iter()
                 .zip(pats)
@@ -17,7 +17,7 @@ impl Stack {
         )
     }
 
-    fn matches<'a>(&'a self, pats: &'a [Pattern], sig: &'a Signature) -> Subst<'a> {
+    fn matches<'a>(&'a self, pats: &'a [Pattern<'s>], sig: &'a Signature<'s>) -> Subst<'s, 'a> {
         Box::new(
             self.iter()
                 .zip(pats)
@@ -27,8 +27,8 @@ impl Stack {
     }
 }
 
-impl Pattern {
-    fn matches<'a>(&'a self, rstate: RState, sig: &'a Signature) -> Subst<'a> {
+impl<'s> Pattern<'s> {
+    fn matches<'a>(&'a self, rstate: RState<'s>, sig: &'a Signature<'s>) -> Subst<'s, 'a> {
         match self {
             Self::Symb(sp, pats) => {
                 rstate.whnf(sig);
@@ -54,8 +54,8 @@ impl Pattern {
     }
 }
 
-impl TopPattern {
-    fn matches<'a>(&'a self, stack: &'a Stack, sig: &'a Signature) -> Subst<'a> {
+impl<'s> TopPattern<'s> {
+    fn matches<'a>(&'a self, stack: &'a Stack<'s>, sig: &'a Signature<'s>) -> Subst<'s, 'a> {
         if stack.len() < self.args.len() {
             // we do not have enough arguments on the stack to match against
             return Box::new(core::iter::once(None));
@@ -65,8 +65,8 @@ impl TopPattern {
     }
 }
 
-impl Rule {
-    pub fn matches(&self, stack: &Stack, sig: &Signature) -> Option<Vec<Vec<RState>>> {
+impl<'s> Rule<'s> {
+    pub fn matches(&self, stack: &Stack<'s>, sig: &Signature<'s>) -> Option<Vec<Vec<RState<'s>>>> {
         let mut subst = vec![vec![]; self.ctx.len()];
         for i in self.lhs.matches(stack, sig) {
             let (m, st1) = i?;
