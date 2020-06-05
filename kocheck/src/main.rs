@@ -167,7 +167,6 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
     iter.try_for_each(|cmd| handle(cmd?).map_err(Error::Ko))
 }
 
-
 fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), Error> {
     use colosseum::sync::Arena;
     use kontroli::arc::{Command, Signature, Symbols, Typing};

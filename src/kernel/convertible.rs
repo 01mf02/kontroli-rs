@@ -4,9 +4,11 @@ use super::term::{Arg, RTerm, Term};
 use super::Signature;
 use alloc::{vec, vec::Vec};
 
+type Constraint<'s> = (RTerm<'s>, RTerm<'s>);
+
 /// Return true if the given two terms are potentially convertible, and if so,
 /// add convertibility constraints that have to be fulfilled.
-fn step<'s>(cn1: RTerm<'s>, cn2: RTerm<'s>, cns: &mut Vec<(RTerm<'s>, RTerm<'s>)>, eta: bool) -> bool {
+fn step<'s>((cn1, cn2): Constraint<'s>, cns: &mut Vec<Constraint<'s>>, eta: bool) -> bool {
     use Term::*;
     match (&*cn1, &*cn2) {
         (Kind, Kind) | (Type, Type) => true,
@@ -47,7 +49,7 @@ impl<'s> RTerm<'s> {
             match cns.pop() {
                 Some((cn1, cn2)) => {
                     trace!("convertible: {} ~? {}", cn1, cn2);
-                    if cn1 != cn2 && !step(cn1.whnf(sig), cn2.whnf(sig), &mut cns, sig.eta) {
+                    if cn1 != cn2 && !step((cn1.whnf(sig), cn2.whnf(sig)), &mut cns, sig.eta) {
                         break false;
                     }
                 }
