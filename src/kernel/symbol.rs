@@ -1,4 +1,4 @@
-//! Shared strings with fast cloning, hashing and equality checking.
+//! Shared strings with fast copying, hashing and equality checking.
 
 use core::fmt;
 use core::hash::{Hash, Hasher};
@@ -9,20 +9,34 @@ use core::hash::{Hash, Hasher};
 /// Cloning, hashing, and equality checking is performed on
 /// the address of the pointer, making them constant-time operations.
 ///
-/// Note that two different symbols pointing to equivalent strings are not equal:
+/// Note that two different symbols pointing to equivalent strings
+/// are not equal, as well as their hashes:
 ///
 /// ~~~
 /// # use kontroli::rc::Symbol;
+/// # use std::collections::hash_map::DefaultHasher;
+/// # use std::hash::{Hash, Hasher};
 /// let h1 = String::from("Hello");
 /// let h2 = String::from("Hello");
 /// let wl = String::from("World");
 /// let s1 = Symbol::new(&h1);
 /// let s2 = Symbol::new(&h2);
 /// let s3 = Symbol::new(&wl);
+///
 /// assert_eq!(s1, s1);
 /// assert_eq!(s1, s1.clone());
 /// assert_ne!(s1, s2);
 /// assert_ne!(s1, s3);
+///
+/// let mut hasher = DefaultHasher::new();
+/// s1.hash(&mut hasher);
+/// let s1_hash = hasher.finish();
+///
+/// let mut hasher = DefaultHasher::new();
+/// s2.hash(&mut hasher);
+/// let s2_hash = hasher.finish();
+///
+/// assert_ne!(s1_hash, s2_hash);
 /// ~~~
 ///
 /// To consistently assign the same symbols to equivalent strings,
@@ -41,7 +55,7 @@ impl<'s> Symbol<'s> {
 
 impl<'s> Hash for Symbol<'s> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        core::ptr::hash(&*self.0, state)
+        core::ptr::hash(self.0, state)
     }
 }
 
