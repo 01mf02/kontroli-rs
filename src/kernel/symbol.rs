@@ -28,15 +28,14 @@ use core::hash::{Hash, Hasher};
 /// assert_ne!(s1, s2);
 /// assert_ne!(s1, s3);
 ///
-/// let mut hasher = DefaultHasher::new();
-/// s1.hash(&mut hasher);
-/// let s1_hash = hasher.finish();
+/// let hash = |s: Symbol| -> u64 {
+///     let mut hasher = DefaultHasher::new();
+///     s.hash(&mut hasher);
+///     hasher.finish()
+/// };
 ///
-/// let mut hasher = DefaultHasher::new();
-/// s2.hash(&mut hasher);
-/// let s2_hash = hasher.finish();
-///
-/// assert_ne!(s1_hash, s2_hash);
+/// assert_eq!(hash(s1), hash(s1.clone()));
+/// assert_ne!(hash(s1), hash(s2));
 /// ~~~
 ///
 /// To consistently assign the same symbols to equivalent strings,
