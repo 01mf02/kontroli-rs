@@ -1,4 +1,4 @@
-//! Shared rewrite patterns.
+//! Rewrite patterns.
 
 use super::{Symbol, Term};
 use crate::fmt::application as fmt_appl;
@@ -22,16 +22,9 @@ use core::{convert::TryFrom, fmt};
 /// Function Variables, and Simple Unification.
 /// J. Log. Comput. 1(4): 497-536 (1991).
 /// doi: [10.1093/logcom/1.4.497](https://doi.org/10.1093/logcom/1.4.497)
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Miller(pub usize);
+pub type Miller = usize;
 
-impl fmt::Display for Miller {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "μ{}", self.0)
-    }
-}
-
-/// Shared rewrite pattern.
+/// Rewrite pattern.
 ///
 /// This may be nonlinear; e.g. `eq X X` is a valid pattern.
 #[derive(Clone)]
@@ -83,7 +76,7 @@ impl<'s> fmt::Display for Pattern<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Symb(s, pats) => fmt_appl(&Term::Symb(*s), pats, f),
-            Self::MVar(m) => m.fmt(f),
+            Self::MVar(m) => write!(f, "μ{}", m),
             Self::Joker => write!(f, "_"),
         }
     }

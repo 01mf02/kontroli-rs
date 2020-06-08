@@ -10,6 +10,7 @@ use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
 use kontroli::error::Error as KoError;
 use kontroli::pre;
+use kontroli::scope::{self, Symbols};
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::{self, Read};
@@ -133,7 +134,7 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
 
 fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error> {
     use colosseum::unsync::Arena;
-    use kontroli::rc::{Command, Signature, Symbols, Typing};
+    use kontroli::rc::{Command, Signature, Typing};
 
     let arena = Arena::new();
     let mut syms: Symbols = Symbols::new();
@@ -146,7 +147,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
             return Ok(());
         }
 
-        match Command::scope(cmd, &syms)? {
+        match Command::from(scope::Command::scope(cmd, &syms)?) {
             Command::Intro(id, it) => {
                 println!("{}", id);
                 let id: &str = arena.alloc(id);
@@ -169,7 +170,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
 
 fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), Error> {
     use colosseum::sync::Arena;
-    use kontroli::arc::{Command, Signature, Symbols, Typing};
+    use kontroli::arc::{Command, Signature, Typing};
     use rayon::iter::{ParallelBridge, ParallelIterator};
 
     // this is required to constrain the lifetimes to be equal
@@ -186,7 +187,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
             return Ok(None);
         }
 
-        match Command::scope(cmd, &syms)? {
+        match Command::from(scope::Command::scope(cmd, &syms)?) {
             Command::Intro(id, it) => {
                 println!("{}", id);
                 let id: &str = arena.alloc(id);

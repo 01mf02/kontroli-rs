@@ -43,7 +43,8 @@
 //!
 //! ~~~
 //! # use kontroli::Error;
-//! # use kontroli::rc::{Command, Signature, Symbols, Typing};
+//! # use kontroli::scope::Symbols;
+//! # use kontroli::rc::{Command, Signature, Typing};
 //! # use colosseum::unsync::Arena;
 //! let cmds = [
 //!     // declarations
@@ -140,6 +141,7 @@ extern crate nom;
 extern crate log;
 
 pub mod pre;
+pub mod scope;
 
 /// Multi-threading kernel.
 #[cfg(not(doctest))]

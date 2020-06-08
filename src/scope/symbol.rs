@@ -13,7 +13,7 @@ use core::hash::{Hash, Hasher};
 /// are not equal, as well as their hashes:
 ///
 /// ~~~
-/// # use kontroli::rc::Symbol;
+/// # use kontroli::scope::Symbol;
 /// # use std::collections::hash_map::DefaultHasher;
 /// # use std::hash::{Hash, Hasher};
 /// let h1 = String::from("Hello");

@@ -30,7 +30,8 @@ impl<'s> State<'s> {
     ///
     /// ~~~
     /// # use kontroli::Error;
-    /// # use kontroli::rc::{RTerm, Signature, Symbols, Term};
+    /// # use kontroli::scope::Symbols;
+    /// # use kontroli::rc::{RTerm, Signature, Term};
     /// # use kontroli::rc::state::State;
     /// let syms = Symbols::new();
     ///

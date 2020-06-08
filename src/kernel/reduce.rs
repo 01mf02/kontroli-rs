@@ -45,7 +45,8 @@ impl<'s> State<'s> {
     ///
     /// ~~~
     /// # use kontroli::Error;
-    /// # use kontroli::rc::{RTerm, Signature, Symbols, Term};
+    /// # use kontroli::scope::Symbols;
+    /// # use kontroli::rc::{RTerm, Signature, Term};
     /// # use kontroli::rc::state::State;
     /// let sig = Signature::new();
     /// let syms = Symbols::new();
@@ -167,7 +168,8 @@ impl<'s> Rule<'s> {
     ///
     /// ~~~
     /// # use kontroli::Error;
-    /// # use kontroli::rc::{RTerm, Rule, Signature, Symbols, Term};
+    /// # use kontroli::scope::Symbols;
+    /// # use kontroli::rc::{RTerm, Rule, Signature, Term};
     /// # use kontroli::rc::state::State;
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
     /// let sig = Signature::new();
