@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use kontroli::pre::parse::{opt_lex, phrase, Parser};
 use kontroli::rc::{Command, Signature, Typing};
-use kontroli::scope::{self, Symbols};
+use kontroli::scope::Symbols;
 use kontroli::{pre, Error};
 use std::io::Read;
 use std::path::PathBuf;
@@ -14,7 +14,7 @@ fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
     let mut sig = Signature::new();
 
     for c in cmds.into_iter() {
-        let cmd: Command = Command::from(scope::Command::scope(c, &syms)?);
+        let cmd: Command = Command::from(c.scope(&syms)?);
         match cmd {
             // introduction of a new name
             Command::Intro(id, it) => {

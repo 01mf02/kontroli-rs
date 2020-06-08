@@ -10,7 +10,7 @@ use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
 use kontroli::error::Error as KoError;
 use kontroli::pre;
-use kontroli::scope::{self, Symbols};
+use kontroli::scope::Symbols;
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::{self, Read};
@@ -147,7 +147,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
             return Ok(());
         }
 
-        match Command::from(scope::Command::scope(cmd, &syms)?) {
+        match Command::from(cmd.scope(&syms)?) {
             Command::Intro(id, it) => {
                 println!("{}", id);
                 let id: &str = arena.alloc(id);
@@ -187,7 +187,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
             return Ok(None);
         }
 
-        match Command::from(scope::Command::scope(cmd, &syms)?) {
+        match Command::from(cmd.scope(&syms)?) {
             Command::Intro(id, it) => {
                 println!("{}", id);
                 let id: &str = arena.alloc(id);

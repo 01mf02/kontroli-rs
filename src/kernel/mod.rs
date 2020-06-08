@@ -25,34 +25,25 @@ pub use typing::Typing;
 
 use crate::error::Error;
 use crate::pre::{self, parse::parse};
-use crate::scope::{self, Symbol, Symbols};
+use crate::scope::{Symbol, Symbols};
 
 impl<'s> Command<'s> {
     /// Parse a command and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols<'s>) -> Result<Self, Error> {
-        Ok(Self::from(scope::Command::scope(
-            parse::<pre::Command>(i)?,
-            &syms,
-        )?))
+        Ok(Self::from(parse::<pre::Command>(i)?.scope(&syms)?))
     }
 }
 
 impl<'s> Term<'s> {
     /// Parse a term and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols<'s>) -> Result<Self, Error> {
-        Ok(Self::from(scope::Term::scope(
-            parse::<pre::Term>(i)?,
-            &syms,
-        )?))
+        Ok(Self::from(parse::<pre::Term>(i)?.scope(&syms)?))
     }
 }
 
 impl<'s> Rule<'s> {
     /// Parse a rule and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols<'s>) -> Result<Self, Error> {
-        Ok(Self::from(scope::Rule::scope(
-            parse::<pre::Rule>(i)?,
-            &syms,
-        )?))
+        Ok(Self::from(parse::<pre::Rule>(i)?.scope(&syms)?))
     }
 }

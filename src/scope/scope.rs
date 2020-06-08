@@ -14,41 +14,38 @@ use core::convert::TryFrom;
 
 type Bound = Stack<String>;
 
-impl<'s> Term<'s> {
-    fn scoper(tm: pre::Term, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<RTerm<'s>, Error> {
-        Ok(RTerm::new(Self::scopen(tm, syms, bnd)?))
+impl pre::Term {
+    fn scoper<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<RTerm<'s>, Error> {
+        Ok(RTerm::new(self.scopen(syms, bnd)?))
     }
 
     /// Scope an open preterm using supplied bound variables.
-    fn scopen(tm: pre::Term, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Self, Error> {
-        match tm {
-            pre::Term::Symb(s) => {
+    fn scopen<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Term<'s>, Error> {
+        match self {
+            Self::Symb(s) => {
                 if s == "_" {
                     Err(Error::Underscore)
                 } else if s == "Type" {
-                    Ok(Self::Type)
+                    Ok(Term::Type)
                 } else if let Some(idx) = bnd.iter().position(|id| *id == *s) {
-                    Ok(Self::BVar(idx))
+                    Ok(Term::BVar(idx))
                 } else {
                     let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
                     let sym = Symbol::clone(&entry);
-                    Ok(Self::Symb(sym))
+                    Ok(Term::Symb(sym))
                 }
             }
-            pre::Term::Appl(head, tail) => {
-                let tail: Result<_, _> = tail
-                    .into_iter()
-                    .map(|tm| Term::scopen(tm, syms, bnd))
-                    .collect();
-                Ok(Self::Appl(Term::scoper(*head, syms, bnd)?, tail?))
+            Self::Appl(head, tail) => {
+                let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scopen(syms, bnd)).collect();
+                Ok(Term::Appl(head.scoper(syms, bnd)?, tail?))
             }
-            pre::Term::Bind(binder, arg, tm) => {
-                let arg = Arg::scopen(arg, syms, bnd)?;
+            Self::Bind(binder, arg, tm) => {
+                let arg = arg.scopen(syms, bnd)?;
                 bnd.with_pushed(arg.id.to_string(), |bnd| {
-                    let tm = Term::scoper(*tm, syms, bnd)?;
+                    let tm = tm.scoper(syms, bnd)?;
                     match binder {
-                        Binder::Lam => Ok(Self::Abst(arg, tm)),
-                        Binder::Pi => Ok(Self::Prod(arg, tm)),
+                        Binder::Lam => Ok(Term::Abst(arg, tm)),
+                        Binder::Pi => Ok(Term::Prod(arg, tm)),
                     }
                 })
             }
@@ -62,77 +59,70 @@ impl<'s> Term<'s> {
     /// # use kontroli::pre::{self, parse::parse};
     /// # use kontroli::scope::{Symbols, Term};
     /// let syms: Symbols = vec!["A"].into_iter().collect();
-    /// let tm = parse::<pre::Term>(r"\ _ : A => _.")?;
-    /// assert_eq!(Term::scope(tm, &syms), Err(ScopeError::Underscore));
+    /// let tm = parse::<pre::Term>(r"\ _ : A => _.")?.scope(&syms);
+    /// assert_eq!(tm, Err(ScopeError::Underscore));
     /// # Ok::<_, Error>(())
     /// ~~~
-    pub fn scope(tm: pre::Term, syms: &Symbols<'s>) -> Result<Self, Error> {
-        Self::scopen(tm, syms, &mut Stack::new())
+    pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Term<'s>, Error> {
+        self.scopen(syms, &mut Stack::new())
     }
 }
 
-impl<'s> Arg<'s> {
-    fn scopen(arg: Prearg, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Self, Error> {
-        let ty = arg.ty.map(|ty| Term::scoper(*ty, syms, bnd)).transpose()?;
-        Ok(Self::new(arg.id, ty))
+impl Prearg {
+    fn scopen<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Arg<'s>, Error> {
+        let ty = self.ty.map(|ty| ty.scoper(syms, bnd)).transpose()?;
+        Ok(Arg::new(self.id, ty))
     }
 }
 
-impl<'s> Pattern<'s> {
+impl pre::Pattern {
     /// Scope an open prepattern using supplied bound variables.
-    fn scopen(pat: pre::Pattern, syms: &Symbols<'s>, mvar: &Bound) -> Result<Self, Error> {
-        let pre::Pattern(s, args) = pat;
+    fn scopen<'s>(self, syms: &Symbols<'s>, mvar: &Bound) -> Result<Pattern<'s>, Error> {
+        let Self(s, args) = self;
 
         if s == "_" {
             if !args.is_empty() {
                 return Err(Error::PatternArguments);
             }
-            Ok(Self::Joker)
+            Ok(Pattern::Joker)
         } else if let Some(idx) = mvar.iter().position(|id| *id == *s) {
             if !args.is_empty() {
                 return Err(Error::PatternArguments);
             }
-            Ok(Self::MVar(idx))
+            Ok(Pattern::MVar(idx))
         } else {
-            let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
-            let sym = Symbol::clone(&entry);
-            let args: Result<_, _> = args
-                .into_iter()
-                .map(|a| Self::scopen(a, syms, mvar))
-                .collect();
-            Ok(Self::Symb(sym, args?))
+            let sym = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
+            let args: Result<_, _> = args.into_iter().map(|a| a.scopen(syms, mvar)).collect();
+            Ok(Pattern::Symb(sym, args?))
         }
     }
 }
 
-impl<'s> Rule<'s> {
-    pub fn scope(rule: pre::Rule, syms: &Symbols<'s>) -> Result<Self, Error> {
-        let mut ctxs = Stack::from(rule.ctx.clone());
-        let ctx = rule.ctx;
-        let pre = pre::Pattern::try_from(rule.lhs).map_err(|_| Error::NoPrepattern)?;
-        let pat = Pattern::scopen(pre, syms, &ctxs)?;
+impl pre::Rule {
+    pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Rule<'s>, Error> {
+        let mut ctxs = Stack::from(self.ctx.clone());
+        let ctx = self.ctx;
+        let pre = pre::Pattern::try_from(self.lhs).map_err(|_| Error::NoPrepattern)?;
+        let pat = pre.scopen(syms, &ctxs)?;
         let lhs = TopPattern::try_from(pat).map_err(|_| Error::NoTopPattern)?;
-        let rhs = Term::scoper(rule.rhs, syms, &mut ctxs)?;
-        Ok(Self { ctx, lhs, rhs })
+        let rhs = self.rhs.scoper(syms, &mut ctxs)?;
+        Ok(Rule { ctx, lhs, rhs })
     }
 }
 
-impl<'s> IntroType<'s> {
-    pub fn scope(it: PreIntroType, syms: &Symbols<'s>) -> Result<Self, Error> {
+impl PreIntroType {
+    pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<IntroType<'s>, Error> {
         let mut bnd = Stack::new();
-        it.map_type_err(|tm| Term::scoper(*tm, syms, &mut bnd))?
-            .map_term_err(|tm| Term::scoper(*tm, syms, &mut bnd))
+        self.map_type_err(|tm| tm.scoper(syms, &mut bnd))?
+            .map_term_err(|tm| tm.scoper(syms, &mut bnd))
     }
 }
 
-impl<'s> Command<'s> {
-    pub fn scope(cmd: pre::Command, syms: &Symbols<'s>) -> Result<Self, Error> {
-        match cmd {
-            pre::Command::Intro(id, args, it) => {
-                let it = IntroType::scope(it.parametrise(args), syms)?;
-                Ok(Self::Intro(id, it))
-            }
-            pre::Command::Rule(prerule) => Ok(Self::Rule(Rule::scope(prerule, syms)?)),
+impl pre::Command {
+    pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Command<'s>, Error> {
+        match self {
+            Self::Intro(id, args, it) => Ok(Command::Intro(id, it.parametrise(args).scope(syms)?)),
+            Self::Rule(prerule) => Ok(Command::Rule(prerule.scope(syms)?)),
         }
     }
 }
