@@ -2,12 +2,12 @@
 
 use super::command::{Command, IntroType};
 use super::pattern::{Pattern, TopPattern};
-use super::term::{Arg, RTerm, Term};
-use super::{Rc, Rule};
+use super::rterm::{Arg, RTerm};
+use super::{Rc, Rule, Term};
 use crate::scope::command::{Command as SCommand, IntroType as SIntroType};
 use crate::scope::pattern::{Pattern as SPattern, TopPattern as STopPattern};
-use crate::scope::term::{Arg as SArg, RTerm as SRTerm, Term as STerm};
-use crate::scope::Rule as SRule;
+use crate::scope::rterm::{Arg as SArg, RTerm as SRTerm};
+use crate::scope::{Rule as SRule, Term as STerm};
 
 impl<'s> From<STerm<'s>> for Term<'s> {
     fn from(tm: STerm<'s>) -> Self {

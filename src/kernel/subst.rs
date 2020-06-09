@@ -1,6 +1,7 @@
 //! Substitution and shifting for terms.
 
-use super::term::{Arg, RTerm, Term};
+use super::rterm::{Arg, RTerm};
+use super::Term;
 use alloc::vec::Vec;
 
 impl<'s> Arg<'s> {

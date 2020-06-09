@@ -9,7 +9,8 @@ pub mod term;
 
 pub use command::Command;
 pub use pattern::Pattern;
+pub use rterm::RTerm;
 pub use rule::Rule;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
-pub use term::{RTerm, Term};
+pub use term::Term;

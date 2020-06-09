@@ -1,11 +1,10 @@
 //! Terms for the lambda-Pi calculus.
 
+use super::rterm::{Arg, RTerm};
 use super::Symbol;
 use crate::fmt::application as fmt_appl;
 use alloc::vec::Vec;
 use core::fmt;
-// TODO: remove
-pub use super::rterm::{Arg, RTerm};
 
 /// De Bruijn variable.
 pub type DeBruijn = usize;

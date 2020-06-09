@@ -1,7 +1,7 @@
 //! Convertibility checking.
 
-use super::term::{Arg, RTerm, Term};
-use super::Signature;
+use super::rterm::{Arg, RTerm};
+use super::{Signature, Term};
 use alloc::{vec, vec::Vec};
 
 type Constraint<'s> = (RTerm<'s>, RTerm<'s>);

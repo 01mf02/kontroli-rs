@@ -2,8 +2,8 @@
 
 use super::command::{Command, IntroType};
 use super::pattern::{Pattern, TopPattern};
-use super::term::{Arg, RTerm, Term};
-use super::{Rule, Symbol, Symbols};
+use super::rterm::{Arg, RTerm};
+use super::{Rule, Symbol, Symbols, Term};
 use crate::error::ScopeError as Error;
 use crate::pre;
 use crate::pre::command::IntroType as PreIntroType;
