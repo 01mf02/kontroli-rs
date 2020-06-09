@@ -71,7 +71,7 @@ impl pre::Term {
 impl Prearg {
     fn scopen<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Arg<'s>, Error> {
         let ty = self.ty.map(|ty| ty.scoper(syms, bnd)).transpose()?;
-        Ok(Arg::new(self.id, ty))
+        Ok(Arg { id: self.id, ty })
     }
 }
 
