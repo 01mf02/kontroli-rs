@@ -1,10 +1,11 @@
-//! Map from strings to (shared) symbols.
+//! Maps from strings to (shared) symbols.
 
 use super::Symbol;
 use crate::error::SymbolsError as Error;
 use core::iter::FromIterator;
 use fnv::FnvHashSet;
 
+/// Map from strings to (shared) symbols.
 #[derive(Default)]
 pub struct Symbols<'s>(FnvHashSet<&'s str>);
 

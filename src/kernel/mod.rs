@@ -7,9 +7,9 @@ pub mod pattern;
 mod reduce;
 pub mod rterm;
 #[path = "../scope/rule.rs"]
-pub mod rule;
+mod rule;
 mod share;
-pub mod signature;
+mod signature;
 pub mod state;
 mod subst;
 #[path = "../scope/term.rs"]

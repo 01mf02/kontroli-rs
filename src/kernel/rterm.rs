@@ -1,3 +1,5 @@
+//! Pointers to shared terms.
+
 use super::{Rc, Term};
 use crate::pre::term::GArg;
 use alloc::{string::String, vec::Vec};

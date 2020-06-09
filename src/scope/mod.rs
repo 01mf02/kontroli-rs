@@ -1,10 +1,10 @@
 pub mod command;
 pub mod pattern;
 pub mod rterm;
-pub mod rule;
-pub mod scope;
-pub mod symbol;
-pub mod symbols;
+mod rule;
+mod scope;
+mod symbol;
+mod symbols;
 pub mod term;
 
 pub use command::Command;

@@ -1,3 +1,5 @@
+//! Pointers to terms.
+
 use super::Term;
 use crate::pre::term::GArg;
 

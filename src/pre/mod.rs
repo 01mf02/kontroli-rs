@@ -2,7 +2,7 @@
 
 pub mod command;
 pub mod parse;
-pub mod pattern;
+mod pattern;
 pub mod rule;
 pub mod term;
 
