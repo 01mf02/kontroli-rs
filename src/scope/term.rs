@@ -2,38 +2,29 @@
 
 use super::Symbol;
 use crate::fmt::application as fmt_appl;
-use crate::pre::term::GArg;
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::vec::Vec;
 use core::fmt;
-
-/// Pointer to a term.
-pub type RTerm<'s> = Box<Term<'s>>;
-
-/// Argument of a binder.
-pub type Arg<'s> = GArg<String, Option<RTerm<'s>>>;
+// TODO: remove
+pub use super::rterm::{Arg, RTerm};
 
 /// De Bruijn variable.
 pub type DeBruijn = usize;
 
 /// Term for the lambda-Pi calculus.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Term<'s> {
     Kind,
     Type,
     Symb(Symbol<'s>),
     BVar(DeBruijn),
-    Appl(RTerm<'s>, Vec<Term<'s>>),
+    Appl(RTerm<'s>, Vec<RTerm<'s>>),
     Abst(Arg<'s>, RTerm<'s>),
     Prod(Arg<'s>, RTerm<'s>),
 }
 
-impl<'s> fmt::Display for Arg<'s> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.id)?;
-        if let Some(ty) = self.ty.as_ref() {
-            write!(f, " : {}", ty)?;
-        }
-        Ok(())
+impl<'s> Default for Term<'s> {
+    fn default() -> Self {
+        Self::Type
     }
 }
 
@@ -48,11 +39,5 @@ impl<'s> fmt::Display for Term<'s> {
             Self::Abst(arg, tm) => write!(f, "(λ {}. {})", arg, tm),
             Self::Prod(arg, tm) => write!(f, "(Π {}. {})", arg, tm),
         }
-    }
-}
-
-impl<'s> Arg<'s> {
-    pub fn new(id: String, ty: Option<RTerm<'s>>) -> Self {
-        Self { id, ty }
     }
 }

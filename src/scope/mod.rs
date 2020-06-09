@@ -1,5 +1,6 @@
 pub mod command;
 pub mod pattern;
+pub mod rterm;
 pub mod rule;
 pub mod scope;
 pub mod symbol;

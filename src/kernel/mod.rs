@@ -5,12 +5,14 @@ mod matching;
 #[path = "../scope/pattern.rs"]
 pub mod pattern;
 mod reduce;
+pub mod rterm;
 #[path = "../scope/rule.rs"]
 pub mod rule;
 mod share;
 pub mod signature;
 pub mod state;
 mod subst;
+#[path = "../scope/term.rs"]
 pub mod term;
 pub mod typing;
 
@@ -18,9 +20,10 @@ use super::Rc;
 
 pub use command::Command;
 pub use pattern::Pattern;
+pub use rterm::RTerm;
 pub use rule::Rule;
 pub use signature::Signature;
-pub use term::{RTerm, Term};
+pub use term::Term;
 pub use typing::Typing;
 
 use crate::error::Error;

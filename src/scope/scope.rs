@@ -36,7 +36,7 @@ impl pre::Term {
                 }
             }
             Self::Appl(head, tail) => {
-                let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scopen(syms, bnd)).collect();
+                let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scoper(syms, bnd)).collect();
                 Ok(Term::Appl(head.scoper(syms, bnd)?, tail?))
             }
             Self::Bind(binder, arg, tm) => {

@@ -1,6 +1,7 @@
 //! Unshared terms, not distinguishing bound and unbound symbols.
 
 use alloc::{boxed::Box, string::String, vec::Vec};
+use core::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Binder {
@@ -53,5 +54,15 @@ impl Term {
                 _ => Self::Appl(Box::new(self), args),
             }
         }
+    }
+}
+
+impl<Id: fmt::Display, Ty: fmt::Display> fmt::Display for GArg<Id, Option<Ty>> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.id)?;
+        if let Some(ty) = self.ty.as_ref() {
+            write!(f, " : {}", ty)?;
+        }
+        Ok(())
     }
 }

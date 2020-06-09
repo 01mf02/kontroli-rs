@@ -16,10 +16,9 @@ impl<'s> From<STerm<'s>> for Term<'s> {
             STerm::Type => Self::Type,
             STerm::Symb(s) => Self::Symb(s),
             STerm::BVar(b) => Self::BVar(b),
-            STerm::Appl(tm, args) => Self::Appl(
-                RTerm::from(tm),
-                args.into_iter().map(Self::from).map(RTerm::new).collect(),
-            ),
+            STerm::Appl(tm, args) => {
+                Self::Appl(RTerm::from(tm), args.into_iter().map(RTerm::from).collect())
+            }
             STerm::Abst(arg, tm) => Self::Abst(Arg::from(arg), RTerm::from(tm)),
             STerm::Prod(arg, tm) => Self::Prod(Arg::from(arg), RTerm::from(tm)),
         }
