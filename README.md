@@ -74,9 +74,6 @@ lambda abstractions and dependent products.
 That is, a lambda abstraction
 `x : A => y : B => x` in Dedukti becomes
 `\ x : A => \ y : B => x` in Kontroli.
-Furthermore, an independent product
-`A -> B` in Dedukti becomes
-`:A -> B` in Kontroli.
 This eliminates [left-recursion](https://en.wikipedia.org/wiki/Left_recursion)
 from the grammar, thus allowing for a greatly simplified parser in Kontroli.
 
@@ -86,7 +83,7 @@ Examples of the syntax can be seen in
 
 To obtain a Dedukti from a Kontroli file, use:
 
-    sed -e 's/\\ //g' -e 's/! //g'  -e 's/:\([^ =]\)/\1/g' file.ko > file.dk
+    sed -e 's/\\ //g' -e 's/! //g' file.ko > file.dk
 
 # Performance
 

@@ -33,7 +33,7 @@ use nom::{
 use super::command::{Command, GIntroType};
 use super::term::{Arg, Binder, Term};
 use super::Rule;
-use alloc::{boxed::Box, string::String, string::ToString, vec::Vec};
+use alloc::{boxed::Box, string::String, vec::Vec};
 
 /// Result of a parser.
 pub type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
@@ -182,7 +182,8 @@ fn ident(i: &[u8]) -> Parse<String> {
 
 impl Parser for Arg {
     fn parse(i: &[u8]) -> Parse<Self> {
-        map(pair(ident, opt(lex(Term::of))), |(id, ty)| Self { id, ty })(i)
+        let of = preceded(char(':'), map(lex(Term::appl), Box::new));
+        map(pair(ident, opt(lex(of))), |(id, ty)| Self { id, ty })(i)
     }
 }
 
@@ -193,14 +194,6 @@ impl Binder {
 
     fn post(i: &[u8]) -> Parse<Self> {
         alt((value(Self::Lam, tag("=>")), value(Self::Pi, tag("->"))))(i)
-    }
-
-    fn parse_unnamed<'a, O1, O2, F, G>(f: F, g: G) -> impl Fn(&'a [u8]) -> Parse<(O1, Self, O2)>
-    where
-        F: Fn(&'a [u8]) -> Parse<'a, O1>,
-        G: Fn(&'a [u8]) -> Parse<'a, O2>,
-    {
-        preceded(char(':'), tuple((lex(f), lex(Self::post), lex(g))))
     }
 
     fn parse_named<'a, O1, O2, F, G>(f: F, g: G) -> impl Fn(&'a [u8]) -> Parse<(Self, O1, O2)>
@@ -237,13 +230,12 @@ impl Term {
         map(pair(Self::sterm, many0(lex(Self::sterm))), app)(i)
     }
 
-    fn bind_unnamed(i: &[u8]) -> Parse<Self> {
-        let bind = |(ty, bnd, tm)| {
-            let id = "$".to_string();
-            let ty = Some(Box::new(ty));
-            Self::Bind(bnd, Arg { id, ty }, Box::new(tm))
-        };
-        map(Binder::parse_unnamed(Self::appl, Self::parse), bind)(i)
+    fn appl_or_bind_unnamed(i: &[u8]) -> Parse<Self> {
+        let bind = pair(lex(Binder::post), lex(Self::parse));
+        map(pair(Self::appl, opt(bind)), |(app, bind)| match bind {
+            None => app,
+            Some((binder, bound)) => Self::Bind(binder, Arg::from(app), Box::new(bound)),
+        })(i)
     }
 
     fn bind_named(i: &[u8]) -> Parse<Self> {
@@ -258,14 +250,15 @@ impl Parser for Term {
     /// # use kontroli::pre::Term;
     /// let pt = phrase(Term::parse);
     /// assert!(pt(b"x.").is_ok());
-    /// assert!(pt(b":x -> x.").is_ok());
-    /// assert!(pt(b":vec n -> vec (succ n).").is_ok());
+    /// assert!(pt(b"x -> x.").is_ok());
+    /// assert!(pt(b"N -> N -> N.").is_ok());
+    /// assert!(pt(b"vec n -> vec (succ n).").is_ok());
     /// assert!(pt(b"! x -> x.").is_ok());
     /// assert!(pt(br"\ x => x.").is_ok());
     /// assert!(pt(b"! A : eta {|prop|type|} -> eps ({|Pure.eq|const|} {|prop|type|} ({|Pure.prop|const|} A) A).").is_ok());
     /// ~~~
     fn parse(i: &[u8]) -> Parse<Self> {
-        alt((Self::bind_named, Self::appl, Self::bind_unnamed))(i)
+        alt((Self::bind_named, Self::appl_or_bind_unnamed))(i)
     }
 }
 
@@ -330,6 +323,7 @@ impl Parser for Command {
     /// # use kontroli::pre::parse::{Parser, phrase};
     /// # use kontroli::pre::Command;
     /// let pc = phrase(Command::parse);
+    /// assert!(pc(b"imp : prop -> prop -> prop.").is_ok());
     /// assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.").is_ok());
     /// assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).".as_bytes()).is_ok());
     /// assert!(pc(br"def x := \ x : Type Type => {|x|}.").is_ok());

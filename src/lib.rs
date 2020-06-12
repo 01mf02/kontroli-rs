@@ -49,11 +49,11 @@
 //! let cmds = [
 //!     // declarations
 //!     "prop : Type.",
-//!     "imp : :prop -> :prop -> prop.",
+//!     "imp : prop -> prop -> prop.",
 //!
 //!     // definition with a rewrite rule
-//!     "def proof : :prop -> Type.",
-//!     "[x, y] proof (imp x y) --> :proof x -> proof y.",
+//!     "def proof : prop -> Type.",
+//!     "[x, y] proof (imp x y) --> proof x -> proof y.",
 //!
 //!     // theorem
 //!     r"thm imp_refl (x : prop) : proof (imp x x) := \ p : proof x => p.",

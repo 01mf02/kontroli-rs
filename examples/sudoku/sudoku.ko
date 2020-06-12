@@ -12,7 +12,7 @@ Ind : Type.
 9 : Ind.
 X : Ind.
 
-def S : :Ind -> Ind.
+def S : Ind -> Ind.
 [] S 1 --> 2.
 [] S 2 --> 3.
 [] S 3 --> 4.
@@ -23,7 +23,7 @@ def S : :Ind -> Ind.
 [] S 8 --> 9.
 [] S 9 --> X.
 
-def trunc3 : :Ind -> Ind.
+def trunc3 : Ind -> Ind.
 []  trunc3 1 --> 1.
 []  trunc3 2 --> 1.
 []  trunc3 3 --> 1.
@@ -35,7 +35,7 @@ def trunc3 : :Ind -> Ind.
 []  trunc3 9 --> 7.
 
 
-def eq : :Ind -> :Ind -> Bool.
+def eq : Ind -> Ind -> Bool.
 [x]   eq x x --> T.
 [x,y] eq x y --> F.
 
@@ -43,12 +43,12 @@ def eq : :Ind -> :Ind -> Bool.
 
 
 Line : Type.
-l : :Ind -> :Ind -> :Ind -> :Ind -> :Ind -> :Ind -> :Ind -> :Ind -> :Ind -> Line.
+l : Ind -> Ind -> Ind -> Ind -> Ind -> Ind -> Ind -> Ind -> Ind -> Line.
 
 def Sudo : Type.
-def c : :Line -> :Line -> :Line -> :Line -> :Line -> :Line -> :Line -> :Line -> :Line -> Sudo.
+def c : Line -> Line -> Line -> Line -> Line -> Line -> Line -> Line -> Line -> Sudo.
 
-def getl : :Ind -> :Line -> Ind.
+def getl : Ind -> Line -> Ind.
 [x] getl 1 (l x _ _ _ _ _ _ _ _) --> x.
 [x] getl 2 (l _ x _ _ _ _ _ _ _) --> x.
 [x] getl 3 (l _ _ x _ _ _ _ _ _) --> x.
@@ -59,7 +59,7 @@ def getl : :Ind -> :Line -> Ind.
 [x] getl 8 (l _ _ _ _ _ _ _ x _) --> x.
 [x] getl 9 (l _ _ _ _ _ _ _ _ x) --> x.
 
-def getc : :Ind -> :Sudo -> Line.
+def getc : Ind -> Sudo -> Line.
 [x] getc 1 (c x _ _ _ _ _ _ _ _) --> x.
 [x] getc 2 (c _ x _ _ _ _ _ _ _) --> x.
 [x] getc 3 (c _ _ x _ _ _ _ _ _) --> x.
@@ -73,7 +73,7 @@ def getc : :Ind -> :Sudo -> Line.
 
 
 
-def setl : :Ind -> :Ind -> :Line -> Line.
+def setl : Ind -> Ind -> Line -> Line.
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 1 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l k  x2 x3 x4 x5 x6 x7 x8 x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 2 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 k  x3 x4 x5 x6 x7 x8 x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 3 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 k  x4 x5 x6 x7 x8 x9).
@@ -84,7 +84,7 @@ def setl : :Ind -> :Ind -> :Line -> Line.
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 8 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 x6 x7 k  x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 9 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 x6 x7 x8 k ).
 
-def setc : :Ind -> :(:Line -> Line) -> :Sudo -> Sudo.
+def setc : Ind -> (Line -> Line) -> Sudo -> Sudo.
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 1 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c (k x1) x2 x3 x4 x5 x6 x7 x8 x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 2 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 (k x2) x3 x4 x5 x6 x7 x8 x9).
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 3 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 (k x3) x4 x5 x6 x7 x8 x9).
@@ -102,28 +102,28 @@ def E : Line := l X X X X X X X X X.
 def empty_sudo : Sudo := c E E E E E E E E E.
 
 
-def get : :Ind -> :Ind -> :Sudo -> Ind.
+def get : Ind -> Ind -> Sudo -> Ind.
 [i,j,s] get i j s --> getl j (getc i s).
 
-def set : :Ind -> :Ind -> :Ind -> :Sudo -> Sudo.
+def set : Ind -> Ind -> Ind -> Sudo -> Sudo.
 [i,j,k,s] set i j k s --> setc i (setl j k) s.
 
 
-def exists' : :(:Ind -> Bool) -> :Ind -> Bool.
+def exists' : (Ind -> Bool) -> Ind -> Bool.
 [f  ] exists' f X --> F.
 [f,i] exists' f i --> or (f i) (exists' f (S i)).
 
-def exists : :(:Ind -> Bool) -> Bool := \ f => exists' f 1.
+def exists : (Ind -> Bool) -> Bool := \ f => exists' f 1.
 
 
 
-def mem_line : :Ind -> :Ind -> :Ind -> :Sudo -> Bool.
+def mem_line : Ind -> Ind -> Ind -> Sudo -> Bool.
 [i,j,k,s] mem_line i j k s --> exists (\ i': Ind => eq (get i' j s) k).
 
-def mem_col  : :Ind -> :Ind -> :Ind -> :Sudo -> Bool.
+def mem_col  : Ind -> Ind -> Ind -> Sudo -> Bool.
 [i,j,k,s] mem_col i j k s --> exists (\ j': Ind => eq (get i j' s) k).
 
-def mem_squ  : :Ind -> :Ind -> :Ind -> :Sudo -> Bool.
+def mem_squ  : Ind -> Ind -> Ind -> Sudo -> Bool.
 [i,j,k,s] mem_squ i j k s -->
   (\ i': Ind =>
    \ j': Ind =>
@@ -140,7 +140,7 @@ def mem_squ  : :Ind -> :Ind -> :Ind -> :Sudo -> Bool.
   (trunc3 i) (trunc3 j).
 
 
-def check : :Ind -> :Ind -> :Ind -> :Sudo -> Bool :=
+def check : Ind -> Ind -> Ind -> Sudo -> Bool :=
 \ i => \ j => \ k => \ s =>
      and (not (mem_line i j k s))
    ( and (not (mem_col  i j k s))
@@ -148,19 +148,19 @@ def check : :Ind -> :Ind -> :Ind -> :Sudo -> Bool :=
 
 
 Solution : Type.
-success : :Sudo -> Solution.
+success : Sudo -> Solution.
 fail : Solution.
 
 
-def ite : :Bool -> :Solution -> :Solution -> Solution.
+def ite : Bool -> Solution -> Solution -> Solution.
 [x] ite T x _ --> x.
 [x] ite F _ x --> x.
 
-def iffail : :Solution -> :Solution -> Solution.
+def iffail : Solution -> Solution -> Solution.
 [x] iffail (success x) _ --> success x.
 [d] iffail fail     d --> d.
 
-def solve : :Ind -> :Ind -> :Ind -> :Sudo -> Solution.
+def solve : Ind -> Ind -> Ind -> Sudo -> Solution.
 [i,s]     solve i X _ s --> solve (S i) 1 1 s.
 [  s]     solve X _ _ s --> success s.
 [i,j,s]   solve i j X s --> fail.
@@ -178,8 +178,8 @@ def solve : :Ind -> :Ind -> :Ind -> :Sudo -> Solution.
     (solve i (S j) 1 s).
 
 
-def solve_sudo : :Sudo -> Solution := \ s => solve 1 1 1 s.
+def solve_sudo : Sudo -> Solution := \ s => solve 1 1 1 s.
 
 (; A dependent type used to check equality ;)
-Dep: :Solution -> Type.
+Dep: Solution -> Type.
 dep : ! s: Solution -> Dep s.

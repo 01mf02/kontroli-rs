@@ -1,6 +1,6 @@
 //! Unshared terms, not distinguishing bound and unbound symbols.
 
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, string::String, string::ToString, vec::Vec};
 use core::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,6 +20,14 @@ pub struct GArg<Id, Ty> {
 pub type BTerm = Box<Term>;
 
 pub type Arg = GArg<String, Option<BTerm>>;
+
+impl From<Term> for Arg {
+    fn from(ty: Term) -> Self {
+        let id = "$".to_string();
+        let ty = Some(Box::new(ty));
+        Self { id, ty }
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Term {

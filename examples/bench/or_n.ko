@@ -1,6 +1,6 @@
-def or_n : :Nat -> Bool.
+def or_n : Nat -> Bool.
 [N] or_n (succ N) --> or (or_n N) (or_n N).
 [ ] or_n 0        --> F.
 
-Bool_Dep : :Bool -> Type.
+Bool_Dep : Bool -> Type.
 bool_dep : ! b : Bool -> Bool_Dep b.
