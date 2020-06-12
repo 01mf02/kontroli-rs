@@ -1,0 +1,23 @@
+(; Adding additional arguments via rewriting, by Gaspard Ferey. ;)
+
+N : Type.
+0 : N.
+S : N -> N.
+
+A : Type.
+List : N -> Type.
+
+def magic : N -> N -> Type.
+[n  ] magic n 0      -->  List n.
+[n,i] magic n (S i)  -->  A -> magic n i.
+cons : ! n : N -> magic n n.
+
+def checks
+  : A -> A -> A -> List (S (S (S 0)))
+  := cons (S (S (S 0))).
+
+(;
+def fails
+  : A -> A -> A -> List (S (S (S 0)))
+  := cons (S (S (0))).
+;)
