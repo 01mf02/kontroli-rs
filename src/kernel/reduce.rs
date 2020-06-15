@@ -45,16 +45,16 @@ impl<'s> State<'s> {
     ///
     /// ~~~
     /// # use kontroli::Error;
-    /// # use kontroli::scope::Symbols;
+    /// # use kontroli::scope::{Term as STerm, Symbols};
     /// # use kontroli::rc::{RTerm, Signature, Term};
     /// # use kontroli::rc::state::State;
     /// let sig = Signature::new();
     /// let syms = Symbols::new();
     ///
-    /// let term = Term::parse(r"(x => x) (x => x).", &syms)?;
+    /// let term = Term::from(STerm::parse(r"(x => x) (x => x).", &syms)?);
     /// let whnf = State::new(RTerm::new(term)).whnf(&sig);
     ///
-    /// let expected = Term::parse(r"(x => x).", &syms)?;
+    /// let expected = Term::from(STerm::parse(r"(x => x).", &syms)?);
     /// assert!(whnf.ctx.is_empty());
     /// assert!(whnf.stack.is_empty());
     /// assert_eq!(*whnf.term, expected);
@@ -168,20 +168,21 @@ impl<'s> Rule<'s> {
     ///
     /// ~~~
     /// # use kontroli::Error;
-    /// # use kontroli::scope::Symbols;
+    /// # use kontroli::scope::{Rule as SRule, Term as STerm, Symbols};
     /// # use kontroli::rc::{RTerm, Rule, Signature, Term};
     /// # use kontroli::rc::state::State;
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
     /// let sig = Signature::new();
     ///
-    /// let rule = Rule::parse("[A] id A --> A.", &syms)?;
-    /// let term = Term::parse("id f a.", &syms)?;
+    /// let rule = Rule::from(SRule::parse("[A] id A --> A.", &syms)?);
+    /// let term = Term::from(STerm::parse("id f a.", &syms)?);
     ///
     /// let stack = State::new(RTerm::new(term)).whnf(&sig).stack;
     /// let subst = rule.match_flatten(&stack, &sig).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
     ///
-    /// assert_eq!(vec![Term::parse("f.", &syms)?], subst.collect::<Vec<_>>());
+    /// let expected = Term::from(STerm::parse("f.", &syms)?);
+    /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~
     pub fn match_flatten(&self, stack: &Stack<'s>, sig: &Signature<'s>) -> Option<Context<'s>> {
