@@ -65,7 +65,7 @@
 //!
 //! for c in cmds.iter() {
 //!     // parse to Precommand and scope to Command in one go
-//!     let cmd: Command = Command::parse(c, &syms)?;
+//!     let cmd: Command<String> = Command::parse(c, &syms)?;
 //!     match cmd {
 //!         // introduction of a new name
 //!         Command::Intro(id, it) => {

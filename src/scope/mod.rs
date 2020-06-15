@@ -1,4 +1,5 @@
 pub mod command;
+pub mod intro;
 pub mod pattern;
 pub mod rterm;
 mod rule;
@@ -8,6 +9,7 @@ mod symbols;
 pub mod term;
 
 pub use command::Command;
+pub use intro::IntroType;
 pub use pattern::Pattern;
 pub use rterm::RTerm;
 pub use rule::Rule;

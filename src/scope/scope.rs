@@ -1,13 +1,12 @@
 //! Conversion from preterms to terms, from prepatterns to prepatterns etc.
 
-use super::command::{Command, IntroType};
 use super::pattern::{Pattern, TopPattern};
 use super::rterm::{Arg, RTerm};
-use super::{Rule, Symbol, Symbols, Term};
+use super::{Command, IntroType, Rule, Symbol, Symbols, Term};
 use crate::error::ScopeError as Error;
 use crate::pre;
-use crate::pre::command::IntroType as PreIntroType;
 use crate::pre::term::{Arg as Prearg, Binder};
+use crate::pre::IntroType as PreIntroType;
 use crate::stack::Stack;
 use alloc::{string::String, string::ToString};
 use core::convert::TryFrom;
@@ -119,7 +118,7 @@ impl PreIntroType {
 }
 
 impl pre::Command {
-    pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Command<'s>, Error> {
+    pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Command<'s, String>, Error> {
         match self {
             Self::Intro(id, args, it) => Ok(Command::Intro(id, it.parametrise(args).scope(syms)?)),
             Self::Rule(prerule) => Ok(Command::Rule(prerule.scope(syms)?)),

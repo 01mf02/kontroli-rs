@@ -1,8 +1,7 @@
 //! Type checking and type inference for terms.
 
-use super::command::IntroType;
 use super::rterm::{Arg, RTerm};
-use super::{Signature, Term};
+use super::{IntroType, Signature, Term};
 use crate::error::TypingError as Error;
 use core::fmt;
 

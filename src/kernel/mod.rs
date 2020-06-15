@@ -1,6 +1,8 @@
 #[path = "../scope/command.rs"]
 pub mod command;
 mod convertible;
+#[path = "../scope/intro.rs"]
+mod intro;
 mod matching;
 #[path = "../scope/pattern.rs"]
 pub mod pattern;
@@ -19,6 +21,7 @@ pub mod typing;
 use super::Rc;
 
 pub use command::Command;
+pub use intro::IntroType;
 pub use pattern::Pattern;
 pub use rterm::RTerm;
 pub use rule::Rule;
@@ -30,7 +33,7 @@ use crate::error::Error;
 use crate::pre::{self, parse::parse};
 use crate::scope::{Symbol, Symbols};
 
-impl<'s> Command<'s> {
+impl<'s> Command<'s, alloc::string::String> {
     /// Parse a command and scope it. Used for testing.
     pub fn parse(i: &str, syms: &Symbols<'s>) -> Result<Self, Error> {
         Ok(Self::from(parse::<pre::Command>(i)?.scope(&syms)?))

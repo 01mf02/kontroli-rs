@@ -14,7 +14,7 @@ fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
     let mut sig = Signature::new();
 
     for c in cmds.into_iter() {
-        let cmd: Command = Command::from(c.scope(&syms)?);
+        let cmd: Command<String> = Command::from(c.scope(&syms)?);
         match cmd {
             // introduction of a new name
             Command::Intro(id, it) => {

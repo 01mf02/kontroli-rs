@@ -1,13 +1,11 @@
 //! Convert from scoped to shared structures.
 
-use super::command::{Command, IntroType};
 use super::pattern::{Pattern, TopPattern};
 use super::rterm::{Arg, RTerm};
-use super::{Rc, Rule, Term};
-use crate::scope::command::{Command as SCommand, IntroType as SIntroType};
+use super::{Command, IntroType, Rc, Rule, Term};
 use crate::scope::pattern::{Pattern as SPattern, TopPattern as STopPattern};
 use crate::scope::rterm::{Arg as SArg, RTerm as SRTerm};
-use crate::scope::{Rule as SRule, Term as STerm};
+use crate::scope::{Command as SCommand, IntroType as SIntroType, Rule as SRule, Term as STerm};
 
 impl<'s> From<STerm<'s>> for Term<'s> {
     fn from(tm: STerm<'s>) -> Self {
@@ -75,8 +73,8 @@ impl<'s> From<SIntroType<'s>> for IntroType<'s> {
     }
 }
 
-impl<'s> From<SCommand<'s>> for Command<'s> {
-    fn from(cmd: SCommand<'s>) -> Self {
+impl<'s, Id> From<SCommand<'s, Id>> for Command<'s, Id> {
+    fn from(cmd: SCommand<'s, Id>) -> Self {
         match cmd {
             SCommand::Intro(id, it) => Self::Intro(id, IntroType::from(it)),
             SCommand::Rule(rule) => Self::Rule(Rule::from(rule)),

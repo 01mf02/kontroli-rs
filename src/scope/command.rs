@@ -1,16 +1,24 @@
 //! Signature-changing commands.
 
-use super::{RTerm, Rule};
-use crate::pre::command::GIntroType;
+use super::{IntroType, RTerm, Rule};
 use alloc::string::String;
 
 /// Signature-changing command.
-pub enum Command<'s> {
+pub enum Command<'s, Id> {
     /// Introduce a new name
-    Intro(String, IntroType<'s>),
+    Intro(Id, IntroType<'s>),
     /// Add a rewrite rule
     Rule(Rule<'s>),
 }
 
-/// The way we introduce a new name.
-pub type IntroType<'s> = GIntroType<RTerm<'s>, RTerm<'s>>;
+impl<'s, Id> Command<'s, Id> {
+    pub fn map_id_err<F, Id2, E>(self, f: F) -> Result<Command<'s, Id2>, E>
+    where
+        F: FnOnce(Id) -> Result<Id2, E>,
+    {
+        match self {
+            Self::Intro(id, it) => Ok(Command::Intro(f(id)?, it)),
+            Self::Rule(rule) => Ok(Command::Rule(rule)),
+        }
+    }
+}
