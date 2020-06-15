@@ -14,7 +14,7 @@ It is also a testbed for parallelising type checking.
 # Usage
 
 Kontroli requires at least Rust 1.40.
-On recent Debian-based systems, this can be installed via:
+On a recent Ubuntu system, this can be installed via:
 
     sudo apt install rustc
 
