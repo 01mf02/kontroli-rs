@@ -56,7 +56,7 @@
 //!     "[x, y] proof (imp x y) --> proof x -> proof y.",
 //!
 //!     // theorem
-//!     r"thm imp_refl (x : prop) : proof (imp x x) := \ p : proof x => p.",
+//!     r"thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p.",
 //! ];
 //!
 //! let arena = Arena::new();

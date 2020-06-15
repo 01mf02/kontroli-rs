@@ -43,4 +43,4 @@ def fib : Nat -> Nat.
 
 (; A dependent type used to check equality ;)
 Dep : Nat -> Type.
-dep : ! n : Nat -> Dep n.
+dep : n : Nat -> Dep n.

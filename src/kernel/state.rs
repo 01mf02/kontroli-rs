@@ -35,7 +35,7 @@ impl<'s> State<'s> {
     /// # use kontroli::rc::state::State;
     /// let syms = Symbols::new();
     ///
-    /// let term = Term::parse(r"(\ x => x) (\ x => x).", &syms)?;
+    /// let term = Term::parse(r"(x => x) (x => x).", &syms)?;
     /// let rterm = RTerm::new(term);
     ///
     /// let state = State::new(rterm.clone());

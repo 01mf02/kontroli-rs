@@ -59,7 +59,7 @@ impl pre::Term {
     /// # use kontroli::pre::{self, parse::parse};
     /// # use kontroli::scope::{Symbols, Term};
     /// let syms: Symbols = vec!["A"].into_iter().collect();
-    /// let tm = parse::<pre::Term>(r"\ _ : A => _.")?.scope(&syms);
+    /// let tm = parse::<pre::Term>(r"_ : A => _.")?.scope(&syms);
     /// assert_eq!(tm, Err(ScopeError::Underscore));
     /// # Ok::<_, Error>(())
     /// ~~~

@@ -3,4 +3,4 @@ def or_n : Nat -> Bool.
 [ ] or_n 0        --> F.
 
 Bool_Dep : Bool -> Type.
-bool_dep : ! b : Bool -> Bool_Dep b.
+bool_dep : b : Bool -> Bool_Dep b.

@@ -43,11 +43,6 @@ Kontroli tries to be the following:
 
 There are a few differences with respect to Dedukti:
 
-* Kontroli's syntax is not left-recursive, in order to simplify parsing.
-  As a result, Kontroli cannot directly read most of today's Dedukti files, but
-  converting Kontroli to Dedukti files is only a matter of
-  [a `sed` one-liner](#syntax).
-  (Dedukti could be also easily extended to read/write Kontroli syntax.)
 * Kontroli does not support higher-order rewrite rules,
   as they would make the whole program considerably more complex,
   thus contradicting the idea of a small type checker.
@@ -68,22 +63,10 @@ There are a few differences with respect to Dedukti:
 
 # Syntax
 
-Kontroli implements a small subset of Dedukti's syntax,
-modulo the addition of a prefix binder in front of
-lambda abstractions and dependent products.
-That is, a lambda abstraction
-`x : A => y : B => x` in Dedukti becomes
-`\ x : A => \ y : B => x` in Kontroli.
-This eliminates [left-recursion](https://en.wikipedia.org/wiki/Left_recursion)
-from the grammar, thus allowing for a greatly simplified parser in Kontroli.
-
+Kontroli implements a subset of Dedukti's syntax.
 Examples of the syntax can be seen in
 [examples/nat.ko](examples/nat.ko) or
 [examples/pure.ko](examples/pure.ko).
-
-To obtain a Dedukti from a Kontroli file, use:
-
-    sed -e 's/\\ //g' -e 's/! //g' file.ko > file.dk
 
 # Performance
 

@@ -51,10 +51,10 @@ impl<'s> State<'s> {
     /// let sig = Signature::new();
     /// let syms = Symbols::new();
     ///
-    /// let term = Term::parse(r"(\ x => x) (\ x => x).", &syms)?;
+    /// let term = Term::parse(r"(x => x) (x => x).", &syms)?;
     /// let whnf = State::new(RTerm::new(term)).whnf(&sig);
     ///
-    /// let expected = Term::parse(r"(\ x => x).", &syms)?;
+    /// let expected = Term::parse(r"(x => x).", &syms)?;
     /// assert!(whnf.ctx.is_empty());
     /// assert!(whnf.stack.is_empty());
     /// assert_eq!(*whnf.term, expected);

@@ -10,7 +10,7 @@ List : N -> Type.
 def magic : N -> N -> Type.
 [n  ] magic n 0      -->  List n.
 [n,i] magic n (S i)  -->  A -> magic n i.
-cons : ! n : N -> magic n n.
+cons : n : N -> magic n n.
 
 def checks
   : A -> A -> A -> List (S (S (S 0)))

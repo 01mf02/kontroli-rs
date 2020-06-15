@@ -113,20 +113,20 @@ def exists' : (Ind -> Bool) -> Ind -> Bool.
 [f  ] exists' f X --> F.
 [f,i] exists' f i --> or (f i) (exists' f (S i)).
 
-def exists : (Ind -> Bool) -> Bool := \ f => exists' f 1.
+def exists : (Ind -> Bool) -> Bool := f => exists' f 1.
 
 
 
 def mem_line : Ind -> Ind -> Ind -> Sudo -> Bool.
-[i,j,k,s] mem_line i j k s --> exists (\ i': Ind => eq (get i' j s) k).
+[i,j,k,s] mem_line i j k s --> exists (i': Ind => eq (get i' j s) k).
 
 def mem_col  : Ind -> Ind -> Ind -> Sudo -> Bool.
-[i,j,k,s] mem_col i j k s --> exists (\ j': Ind => eq (get i j' s) k).
+[i,j,k,s] mem_col i j k s --> exists (j': Ind => eq (get i j' s) k).
 
 def mem_squ  : Ind -> Ind -> Ind -> Sudo -> Bool.
 [i,j,k,s] mem_squ i j k s -->
-  (\ i': Ind =>
-   \ j': Ind =>
+  (i': Ind =>
+   j': Ind =>
     (or (eq (get i'         j'         s) k)
     (or (eq (get (S i')     j'         s) k)
     (or (eq (get (S (S i')) j'         s) k)
@@ -141,7 +141,7 @@ def mem_squ  : Ind -> Ind -> Ind -> Sudo -> Bool.
 
 
 def check : Ind -> Ind -> Ind -> Sudo -> Bool :=
-\ i => \ j => \ k => \ s =>
+  i => j => k => s =>
      and (not (mem_line i j k s))
    ( and (not (mem_col  i j k s))
          (not (mem_squ  i j k s))).
@@ -178,8 +178,8 @@ def solve : Ind -> Ind -> Ind -> Sudo -> Solution.
     (solve i (S j) 1 s).
 
 
-def solve_sudo : Sudo -> Solution := \ s => solve 1 1 1 s.
+def solve_sudo : Sudo -> Solution := s => solve 1 1 1 s.
 
 (; A dependent type used to check equality ;)
 Dep: Solution -> Type.
-dep : ! s: Solution -> Dep s.
+dep : s: Solution -> Dep s.

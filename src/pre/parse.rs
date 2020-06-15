@@ -23,7 +23,7 @@ use nom::{
     bytes::streaming::{is_not, tag, take_until, take_while1},
     character::is_alphanumeric,
     character::streaming::{char, multispace0, one_of},
-    combinator::{map, map_opt, map_res, opt, recognize, value},
+    combinator::{map, map_res, opt, recognize, value},
     error::VerboseError,
     multi::{many0, separated_list},
     sequence::{delimited, pair, preceded, terminated, tuple},
@@ -182,39 +182,34 @@ fn ident(i: &[u8]) -> Parse<String> {
 
 impl Parser for Arg {
     fn parse(i: &[u8]) -> Parse<Self> {
-        let of = preceded(char(':'), map(lex(Term::appl), Box::new));
-        map(pair(ident, opt(lex(of))), |(id, ty)| Self { id, ty })(i)
+        let of = map(Term::of_appl, Some);
+        map(pair(ident, lex(of)), |(id, ty)| Self { id, ty })(i)
     }
 }
 
 impl Binder {
-    fn pre(i: &[u8]) -> Parse<Self> {
-        alt((value(Self::Lam, char('\\')), value(Self::Pi, char('!'))))(i)
+    fn lam(i: &[u8]) -> Parse<Self> {
+        value(Self::Lam, tag("=>"))(i)
     }
 
-    fn post(i: &[u8]) -> Parse<Self> {
-        alt((value(Self::Lam, tag("=>")), value(Self::Pi, tag("->"))))(i)
+    fn pi(i: &[u8]) -> Parse<Self> {
+        value(Self::Pi, tag("->"))(i)
     }
+}
 
-    fn parse_named<'a, O1, O2, F, G>(f: F, g: G) -> impl Fn(&'a [u8]) -> Parse<(Self, O1, O2)>
-    where
-        F: Fn(&'a [u8]) -> Parse<'a, O1>,
-        G: Fn(&'a [u8]) -> Parse<'a, O2>,
-    {
-        let check = |(bnd, x, arr, y)| {
-            if bnd == arr {
-                Some((bnd, x, y))
-            } else {
-                None
-            }
-        };
-        map_opt(tuple((Self::pre, lex(f), lex(Self::post), lex(g))), check)
+impl Parser for Binder {
+    fn parse(i: &[u8]) -> Parse<Self> {
+        alt((Self::lam, Self::pi))(i)
     }
 }
 
 impl Term {
     fn of(i: &[u8]) -> Parse<Box<Self>> {
         preceded(char(':'), map(lex(Self::parse), Box::new))(i)
+    }
+
+    fn of_appl(i: &[u8]) -> Parse<Box<Self>> {
+        preceded(char(':'), map(lex(Self::appl), Box::new))(i)
     }
 
     fn is(i: &[u8]) -> Parse<Box<Self>> {
@@ -231,16 +226,19 @@ impl Term {
     }
 
     fn appl_or_bind_unnamed(i: &[u8]) -> Parse<Self> {
-        let bind = pair(lex(Binder::post), lex(Self::parse));
-        map(pair(Self::appl, opt(bind)), |(app, bind)| match bind {
+        let bind = pair(Binder::pi, lex(Self::parse));
+        map(pair(Self::appl, opt(lex(bind))), |(app, bind)| match bind {
             None => app,
             Some((binder, bound)) => Self::Bind(binder, Arg::from(app), Box::new(bound)),
         })(i)
     }
 
     fn bind_named(i: &[u8]) -> Parse<Self> {
-        let bind = |(bnd, arg, tm)| Self::Bind(bnd, arg, Box::new(tm));
-        map(Binder::parse_named(Arg::parse, Self::parse), bind)(i)
+        let of = map(Term::of_appl, Some);
+        let unnamed = map(Binder::lam, |binder| (None, binder));
+        let ty_binder = alt((unnamed, pair(of, lex(Binder::parse))));
+        let bind = |(id, (ty, binder), tm)| Self::Bind(binder, Arg { id, ty }, Box::new(tm));
+        map(tuple((ident, lex(ty_binder), lex(Self::parse))), bind)(i)
     }
 }
 
@@ -253,9 +251,10 @@ impl Parser for Term {
     /// assert!(pt(b"x -> x.").is_ok());
     /// assert!(pt(b"N -> N -> N.").is_ok());
     /// assert!(pt(b"vec n -> vec (succ n).").is_ok());
-    /// assert!(pt(b"! x -> x.").is_ok());
-    /// assert!(pt(br"\ x => x.").is_ok());
-    /// assert!(pt(b"! A : eta {|prop|type|} -> eps ({|Pure.eq|const|} {|prop|type|} ({|Pure.prop|const|} A) A).").is_ok());
+    /// assert!(pt(b"x -> x.").is_ok());
+    /// assert!(pt(br"x => x.").is_ok());
+    /// assert!(pt(b"A : eta T -> A.").is_ok());
+    /// assert!(pt(b"A : eta {|prop|type|} -> eps ({|Pure.eq|const|} {|prop|type|} ({|Pure.prop|const|} A) A).").is_ok());
     /// ~~~
     fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::bind_named, Self::appl_or_bind_unnamed))(i)
@@ -326,7 +325,7 @@ impl Parser for Command {
     /// assert!(pc(b"imp : prop -> prop -> prop.").is_ok());
     /// assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.").is_ok());
     /// assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).".as_bytes()).is_ok());
-    /// assert!(pc(br"def x := \ x : Type Type => {|x|}.").is_ok());
+    /// assert!(pc(br"def x := x : Type Type => {|x|}.").is_ok());
     /// ~~~
     fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::intro, map(Rule::parse, Self::Rule)))(i)
