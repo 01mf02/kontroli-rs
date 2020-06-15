@@ -1,5 +1,5 @@
 use super::RTerm;
-use crate::pre::intro::GIntroType;
+use crate::pre::intro::GIntro;
 
 /// The way we introduce a new name.
-pub type IntroType<'s> = GIntroType<RTerm<'s>, RTerm<'s>>;
+pub type Intro<'s> = GIntro<RTerm<'s>, RTerm<'s>>;

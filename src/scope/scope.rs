@@ -2,11 +2,11 @@
 
 use super::pattern::{Pattern, TopPattern};
 use super::rterm::{Arg, RTerm};
-use super::{Command, IntroType, Rule, Symbol, Symbols, Term};
+use super::{Command, Intro, Rule, Symbol, Symbols, Term};
 use crate::error::ScopeError as Error;
 use crate::pre;
 use crate::pre::term::{Arg as Prearg, Binder};
-use crate::pre::IntroType as PreIntroType;
+use crate::pre::Intro as PreIntro;
 use crate::stack::Stack;
 use alloc::{string::String, string::ToString};
 use core::convert::TryFrom;
@@ -109,8 +109,8 @@ impl pre::Rule {
     }
 }
 
-impl PreIntroType {
-    pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<IntroType<'s>, Error> {
+impl PreIntro {
+    pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Intro<'s>, Error> {
         let mut bnd = Stack::new();
         self.map_type_err(|tm| tm.scoper(syms, &mut bnd))?
             .map_term_err(|tm| tm.scoper(syms, &mut bnd))

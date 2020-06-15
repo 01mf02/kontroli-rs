@@ -1,7 +1,7 @@
 //! Type checking and type inference for terms.
 
 use super::rterm::{Arg, RTerm};
-use super::{IntroType, Signature, Term};
+use super::{Intro, Signature, Term};
 use crate::error::TypingError as Error;
 use core::fmt;
 
@@ -85,15 +85,15 @@ impl<'s> Typing<'s> {
         Ok(self)
     }
 
-    pub fn new(it: IntroType<'s>, sig: &Signature<'s>) -> Result<Self, Error> {
+    pub fn new(it: Intro<'s>, sig: &Signature<'s>) -> Result<Self, Error> {
         match it {
-            IntroType::Declaration(ty) => Self::declare(ty, false, &sig),
-            IntroType::Definition(oty, otm) => match (oty, otm) {
+            Intro::Declaration(ty) => Self::declare(ty, false, &sig),
+            Intro::Definition(oty, otm) => match (oty, otm) {
                 (Some(ty), None) => Self::declare(ty, true, &sig),
                 (oty, Some(tm)) => Self::define(oty, tm, true, &sig),
                 (None, None) => Err(Error::TypeAndTermEmpty),
             },
-            IntroType::Theorem(ty, tm) => Self::define(Some(ty), tm, false, &sig),
+            Intro::Theorem(ty, tm) => Self::define(Some(ty), tm, false, &sig),
         }
     }
 }

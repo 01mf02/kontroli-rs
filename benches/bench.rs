@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use kontroli::pre::parse::{opt_lex, phrase, Parser};
-use kontroli::rc::{IntroType, Rule, Signature, Typing};
+use kontroli::rc::{Intro, Rule, Signature, Typing};
 use kontroli::scope::{Command, Symbols};
 use kontroli::{pre, Error};
 use std::io::Read;
@@ -22,7 +22,7 @@ fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
                 let sym = syms.insert(id)?;
 
                 // typecheck and insert into signature
-                let typing: Typing = Typing::new(IntroType::from(it), &sig)?.check(&sig)?;
+                let typing: Typing = Typing::new(Intro::from(it), &sig)?.check(&sig)?;
                 sig.insert(&sym, typing)?
             }
             // addition of a rewrite rule

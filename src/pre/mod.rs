@@ -8,7 +8,7 @@ pub mod rule;
 pub mod term;
 
 pub use command::Command;
-pub use intro::IntroType;
+pub use intro::Intro;
 pub use pattern::Pattern;
 pub use rule::Rule;
 pub use term::Term;

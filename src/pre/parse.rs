@@ -31,7 +31,7 @@ use nom::{
 };
 
 use super::term::{Arg, Binder, Term};
-use super::{Command, IntroType, Rule};
+use super::{Command, Intro, Rule};
 use alloc::{boxed::Box, string::String, vec::Vec};
 
 /// Result of a parser.
@@ -290,7 +290,7 @@ impl Command {
             tag("def"),
             map(
                 tuple((lex(ident_args), opt(lex(Term::of)), opt(lex(Term::is)))),
-                |((id, args), ty, tm)| Self::Intro(id, args, IntroType::Definition(ty, tm)),
+                |((id, args), ty, tm)| Self::Intro(id, args, Intro::Definition(ty, tm)),
             ),
         )(i)
     }
@@ -300,14 +300,14 @@ impl Command {
             tag("thm"),
             map(
                 tuple((lex(ident_args), lex(Term::of), lex(Term::is))),
-                |((id, args), ty, tm)| Self::Intro(id, args, IntroType::Theorem(ty, tm)),
+                |((id, args), ty, tm)| Self::Intro(id, args, Intro::Theorem(ty, tm)),
             ),
         )(i)
     }
 
     fn declaration(i: &[u8]) -> Parse<Self> {
         map(tuple((ident_args, lex(Term::of))), |((id, args), ty)| {
-            Self::Intro(id, args, IntroType::Declaration(ty))
+            Self::Intro(id, args, Intro::Declaration(ty))
         })(i)
     }
 

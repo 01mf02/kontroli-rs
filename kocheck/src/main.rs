@@ -134,7 +134,7 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
 
 fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error> {
     use colosseum::unsync::Arena;
-    use kontroli::rc::{IntroType, Rule, Signature, Typing};
+    use kontroli::rc::{Intro, Rule, Signature, Typing};
 
     let arena = Arena::new();
     let mut syms: Symbols = Symbols::new();
@@ -159,7 +159,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
 
         match cmd? {
             Command::Intro(sym, it) => {
-                let typing = Typing::new(IntroType::from(it), &sig)?.check(&sig)?;
+                let typing = Typing::new(Intro::from(it), &sig)?.check(&sig)?;
                 Ok(sig.insert(&sym, typing)?)
             }
             Command::Rule(rule) => Ok(sig.add_rule(Rule::from(rule))?),
@@ -172,7 +172,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
 
 fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), Error> {
     use colosseum::sync::Arena;
-    use kontroli::arc::{IntroType, Rule, Signature, Typing};
+    use kontroli::arc::{Intro, Rule, Signature, Typing};
     use rayon::iter::{ParallelBridge, ParallelIterator};
 
     // this is required to constrain the lifetimes to be equal
@@ -202,7 +202,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
         match cmd? {
             Command::Intro(sym, it) => {
                 // defer checking to later
-                let typing = Typing::new(IntroType::from(it), &sig)?;
+                let typing = Typing::new(Intro::from(it), &sig)?;
                 sig.insert(&sym, typing.clone())?;
                 Ok(Some((typing, sig.clone())))
             }

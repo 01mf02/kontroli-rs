@@ -1,7 +1,7 @@
 //! Unscoped signature-changing commands.
 
 use super::term::Arg;
-use super::{IntroType, Rule};
+use super::{Intro, Rule};
 use alloc::{string::String, vec::Vec};
 
 /// Unscoped signature-changing command.
@@ -18,7 +18,7 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub enum Command {
     /// Introduce a new name
-    Intro(String, Vec<Arg>, IntroType),
+    Intro(String, Vec<Arg>, Intro),
     /// Add a rewrite rule
     Rule(Rule),
 }

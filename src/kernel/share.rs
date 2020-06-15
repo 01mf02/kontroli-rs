@@ -2,10 +2,10 @@
 
 use super::pattern::{Pattern, TopPattern};
 use super::rterm::{Arg, RTerm};
-use super::{IntroType, Rc, Rule, Term};
+use super::{Intro, Rc, Rule, Term};
 use crate::scope::pattern::{Pattern as SPattern, TopPattern as STopPattern};
 use crate::scope::rterm::{Arg as SArg, RTerm as SRTerm};
-use crate::scope::{IntroType as SIntroType, Rule as SRule, Term as STerm};
+use crate::scope::{Intro as SIntro, Rule as SRule, Term as STerm};
 
 impl<'s> From<STerm<'s>> for Term<'s> {
     fn from(tm: STerm<'s>) -> Self {
@@ -67,8 +67,8 @@ impl<'s> From<SRule<'s>> for Rule<'s> {
     }
 }
 
-impl<'s> From<SIntroType<'s>> for IntroType<'s> {
-    fn from(cmd: SIntroType<'s>) -> Self {
+impl<'s> From<SIntro<'s>> for Intro<'s> {
+    fn from(cmd: SIntro<'s>) -> Self {
         cmd.map_type(RTerm::from).map_term(RTerm::from)
     }
 }

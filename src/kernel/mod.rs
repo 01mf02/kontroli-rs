@@ -18,7 +18,7 @@ pub mod typing;
 
 use super::Rc;
 
-pub use intro::IntroType;
+pub use intro::Intro;
 pub use pattern::Pattern;
 pub use rterm::RTerm;
 pub use rule::Rule;

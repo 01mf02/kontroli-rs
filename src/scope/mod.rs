@@ -9,7 +9,7 @@ mod symbols;
 pub mod term;
 
 pub use command::Command;
-pub use intro::IntroType;
+pub use intro::Intro;
 pub use pattern::Pattern;
 pub use rterm::RTerm;
 pub use rule::Rule;
