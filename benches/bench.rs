@@ -40,20 +40,10 @@ fn read(file: PathBuf) -> Vec<u8> {
     buffer
 }
 
-fn parse(mut buffer: &[u8]) -> Vec<pre::Command> {
-    let mut cmds = Vec::new();
-    loop {
-        match opt_lex(phrase(pre::Command::parse))(buffer) {
-            Ok((i, x)) => {
-                buffer = i;
-                if let Some(cmd) = x {
-                    cmds.push(cmd)
-                }
-            }
-            Err(nom::Err::Incomplete(_)) if buffer.is_empty() => break cmds,
-            _ => panic!("parsing failed"),
-        }
-    }
+fn parse(buffer: &[u8]) -> Vec<pre::Command> {
+    use nom::combinator::iterator;
+    let parse = opt_lex(phrase(pre::Command::parse));
+    iterator(buffer, parse).filter_map(|c| c).collect()
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
