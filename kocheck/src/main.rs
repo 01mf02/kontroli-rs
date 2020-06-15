@@ -10,7 +10,7 @@ use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
 use kontroli::error::Error as KoError;
 use kontroli::pre;
-use kontroli::scope::Symbols;
+use kontroli::scope::{Command, Symbols};
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::{self, Read};
@@ -134,7 +134,7 @@ fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
 
 fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Error> {
     use colosseum::unsync::Arena;
-    use kontroli::rc::{Command, Signature, Typing};
+    use kontroli::rc::{IntroType, Rule, Signature, Typing};
 
     let arena = Arena::new();
     let mut syms: Symbols = Symbols::new();
@@ -147,20 +147,22 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
             return Ok(());
         }
 
-        match Command::from(cmd.scope(&syms)?) {
-            Command::Intro(id, it) => {
-                println!("{}", id);
-                let id: &str = arena.alloc(id);
-                let sym = syms.insert(id)?;
+        let cmd: Result<_, KoError> = cmd.scope(&syms)?.map_id_err(|id| {
+            println!("{}", id);
+            let id: &str = arena.alloc(id);
+            Ok(syms.insert(id)?)
+        });
 
-                if opt.no_check {
-                    return Ok(());
-                }
+        if opt.no_check {
+            return Ok(());
+        }
 
-                let typing = Typing::new(it, &sig)?.check(&sig)?;
+        match cmd? {
+            Command::Intro(sym, it) => {
+                let typing = Typing::new(IntroType::from(it), &sig)?.check(&sig)?;
                 Ok(sig.insert(&sym, typing)?)
             }
-            Command::Rule(rule) => Ok(sig.add_rule(rule)?),
+            Command::Rule(rule) => Ok(sig.add_rule(Rule::from(rule))?),
         }
     };
 
@@ -170,7 +172,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
 
 fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(), Error> {
     use colosseum::sync::Arena;
-    use kontroli::arc::{Command, Signature, Typing};
+    use kontroli::arc::{IntroType, Rule, Signature, Typing};
     use rayon::iter::{ParallelBridge, ParallelIterator};
 
     // this is required to constrain the lifetimes to be equal
@@ -187,23 +189,25 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
             return Ok(None);
         }
 
-        match Command::from(cmd.scope(&syms)?) {
-            Command::Intro(id, it) => {
-                println!("{}", id);
-                let id: &str = arena.alloc(id);
-                let sym = syms.insert(id)?;
+        let cmd: Result<_, KoError> = cmd.scope(&syms)?.map_id_err(|id| {
+            println!("{}", id);
+            let id: &str = arena.alloc(id);
+            Ok(syms.insert(id)?)
+        });
 
-                if opt.no_check {
-                    return Ok(None);
-                }
+        if opt.no_check {
+            return Ok(None);
+        }
 
+        match cmd? {
+            Command::Intro(sym, it) => {
                 // defer checking to later
-                let typing = Typing::new(it, &sig)?;
+                let typing = Typing::new(IntroType::from(it), &sig)?;
                 sig.insert(&sym, typing.clone())?;
                 Ok(Some((typing, sig.clone())))
             }
             Command::Rule(rule) => {
-                sig.add_rule(rule)?;
+                sig.add_rule(Rule::from(rule))?;
                 Ok(None)
             }
         }

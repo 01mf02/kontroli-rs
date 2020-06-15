@@ -16,3 +16,13 @@ pub use rule::Rule;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
 pub use term::Term;
+
+use crate::error::Error;
+use crate::pre::{self, parse::parse};
+
+impl<'s> Command<'s, alloc::string::String> {
+    /// Parse a command and scope it. Used for testing.
+    pub fn parse(i: &str, syms: &Symbols<'s>) -> Result<Self, Error> {
+        Ok(parse::<pre::Command>(i)?.scope(&syms)?)
+    }
+}

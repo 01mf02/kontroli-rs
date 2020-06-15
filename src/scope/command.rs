@@ -1,7 +1,6 @@
 //! Signature-changing commands.
 
-use super::{IntroType, RTerm, Rule};
-use alloc::string::String;
+use super::{IntroType, Rule};
 
 /// Signature-changing command.
 pub enum Command<'s, Id> {

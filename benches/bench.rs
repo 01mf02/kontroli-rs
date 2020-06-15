@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use kontroli::pre::parse::{opt_lex, phrase, Parser};
-use kontroli::rc::{Command, Signature, Typing};
-use kontroli::scope::Symbols;
+use kontroli::rc::{IntroType, Rule, Signature, Typing};
+use kontroli::scope::{Command, Symbols};
 use kontroli::{pre, Error};
 use std::io::Read;
 use std::path::PathBuf;
@@ -14,8 +14,7 @@ fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
     let mut sig = Signature::new();
 
     for c in cmds.into_iter() {
-        let cmd: Command<String> = Command::from(c.scope(&syms)?);
-        match cmd {
+        match c.scope(&syms)? {
             // introduction of a new name
             Command::Intro(id, it) => {
                 let id: &str = arena.alloc(id);
@@ -23,11 +22,11 @@ fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
                 let sym = syms.insert(id)?;
 
                 // typecheck and insert into signature
-                let typing: Typing = Typing::new(it, &sig)?.check(&sig)?;
+                let typing: Typing = Typing::new(IntroType::from(it), &sig)?.check(&sig)?;
                 sig.insert(&sym, typing)?
             }
             // addition of a rewrite rule
-            Command::Rule(rule) => sig.add_rule(rule)?,
+            Command::Rule(rule) => sig.add_rule(Rule::from(rule))?,
         }
     }
 

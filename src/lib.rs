@@ -43,8 +43,8 @@
 //!
 //! ~~~
 //! # use kontroli::Error;
-//! # use kontroli::scope::Symbols;
-//! # use kontroli::rc::{Command, Signature, Typing};
+//! # use kontroli::scope::{Command, Symbols};
+//! # use kontroli::rc::{IntroType, Rule, Signature, Typing};
 //! # use colosseum::unsync::Arena;
 //! let cmds = [
 //!     // declarations
@@ -74,11 +74,11 @@
 //!             let sym = syms.insert(id)?;
 //!
 //!             // typecheck and insert into signature
-//!             let typing: Typing = Typing::new(it, &sig)?.check(&sig)?;
+//!             let typing: Typing = Typing::new(IntroType::from(it), &sig)?.check(&sig)?;
 //!             sig.insert(&sym, typing)?
 //!         }
 //!         // addition of a rewrite rule
-//!         Command::Rule(rule) => sig.add_rule(rule)?,
+//!         Command::Rule(rule) => sig.add_rule(Rule::from(rule))?,
 //!     }
 //! }
 //! # Ok::<_, Error>(())
