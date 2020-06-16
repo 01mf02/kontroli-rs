@@ -7,7 +7,7 @@ use alloc::{string::String, vec::Vec};
 /// Unscoped signature-changing command.
 ///
 /// In contrast to its scoped `Command` counterpart,
-/// `pre::Command`s hold (pre-)arguments for definitions/declarations.
+/// `parse::Command`s hold (pre-)arguments for definitions/declarations.
 /// For example, in the definition
 /// `f (x : A) : B := t`
 /// the argument for `f` is `(x : A)`, and

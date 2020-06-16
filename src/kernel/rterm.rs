@@ -1,7 +1,7 @@
 //! Pointers to shared terms.
 
 use super::{Rc, Term};
-use crate::pre::term::GArg;
+use crate::parse::term::GArg;
 use alloc::{string::String, vec::Vec};
 use core::fmt;
 

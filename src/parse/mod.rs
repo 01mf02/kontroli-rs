@@ -18,6 +18,18 @@
 //!   the alternative of lexed parsers `alt(lex(p1), ..., lex(pn))`.
 //!   This avoids redoing the lexing for all alternatives.
 
+pub mod command;
+pub mod intro;
+mod pattern;
+pub mod rule;
+pub mod term;
+
+pub use command::Command;
+pub use intro::Intro;
+pub use pattern::Pattern;
+pub use rule::Rule;
+pub use term::Term;
+
 use nom::{
     branch::alt,
     bytes::streaming::{is_not, tag, take_until, take_while1},
@@ -30,9 +42,8 @@ use nom::{
     IResult,
 };
 
-use super::term::{Arg, Binder, Term};
-use super::{Command, Intro, Rule};
 use alloc::{boxed::Box, string::String, vec::Vec};
+use term::{Arg, Binder};
 
 /// Result of a parser.
 pub type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
@@ -46,8 +57,7 @@ pub trait Parser: Sized {
 ///
 /// ~~~
 /// # use kontroli::Error;
-/// # use kontroli::pre::Term;
-/// # use kontroli::pre::parse::parse;
+/// # use kontroli::parse::{Term, parse};
 /// # use Term::{Symb, Appl};
 /// let preterm = parse::<Term>("fst x y. Nothing to see here, move along.")?;
 /// let head = Symb("fst".to_string());
@@ -62,7 +72,7 @@ pub fn parse<'a, P: Parser>(i: &'a str) -> Result<P, nom::Err<VerboseError<&'a [
 /// Parse arbitrary nesting of strings delimited by non-empty start and end tags.
 ///
 /// ~~~
-/// # use kontroli::pre::parse::nested;
+/// # use kontroli::parse::nested;
 /// let c_style = nested(b"/*", b"*/");
 /// assert!(c_style(b"/* here /* more */ */").is_ok());
 ///
@@ -75,7 +85,7 @@ pub fn parse<'a, P: Parser>(i: &'a str) -> Result<P, nom::Err<VerboseError<&'a [
 ///
 /// ~~~
 /// # use nom::combinator::map;
-/// # use kontroli::pre::parse::nested;
+/// # use kontroli::parse::nested;
 /// let bid = nested(b"{|", b"|}");
 /// assert!(bid(b"{|n|}").is_ok());
 /// assert!(bid(b"{|quoting {|n|} is fun|}").is_ok());
@@ -108,7 +118,7 @@ fn nested_post<'a>(start: &'a [u8], end: &'a [u8]) -> impl Fn(&'a [u8]) -> Parse
 /// Parse a (potentially nested) comment.
 ///
 /// ~~~
-/// # use kontroli::pre::parse::comment;
+/// # use kontroli::parse::comment;
 /// assert!(comment(b"(; ;)").is_ok());
 /// assert!(comment(b"(; ; ;; ) ); ;)").is_ok());
 /// assert!(comment(b"(; a normal comment ;)").is_ok());
@@ -243,8 +253,7 @@ impl Term {
 
 impl Parser for Term {
     /// ~~~
-    /// # use kontroli::pre::parse::{Parser, phrase};
-    /// # use kontroli::pre::Term;
+    /// # use kontroli::parse::{Parser, Term, phrase};
     /// let pt = phrase(Term::parse);
     /// assert!(pt(b"x.").is_ok());
     /// assert!(pt(b"x -> x.").is_ok());
@@ -318,8 +327,7 @@ impl Command {
 
 impl Parser for Command {
     /// ~~~
-    /// # use kontroli::pre::parse::{Parser, phrase};
-    /// # use kontroli::pre::Command;
+    /// # use kontroli::parse::{Command, Parser, phrase};
     /// let pc = phrase(Command::parse);
     /// assert!(pc(b"imp : prop -> prop -> prop.").is_ok());
     /// assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.").is_ok());

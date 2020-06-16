@@ -9,8 +9,8 @@ mod parseerror;
 use byte_unit::{Byte, ByteError};
 use crossbeam_channel::{bounded, unbounded};
 use kontroli::error::Error as KoError;
-use kontroli::pre;
-use kontroli::scope::{Command, Symbols};
+use kontroli::parse::Command;
+use kontroli::scope::{self, Symbols};
 use nom::error::VerboseError;
 use std::convert::TryInto;
 use std::io::{self, Read};
@@ -116,11 +116,11 @@ struct Opt {
     files: Vec<PathBuf>,
 }
 
-type Item = Result<pre::Command, Error>;
+type Item = Result<Command, Error>;
 
 fn produce<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Item> {
-    use kontroli::pre::parse::{opt_lex, phrase, Parse, Parser};
-    let parse: fn(&[u8]) -> Parse<_> = |i| opt_lex(phrase(pre::Command::parse))(i);
+    use kontroli::parse::{opt_lex, phrase, Parse, Parser};
+    let parse: fn(&[u8]) -> Parse<_> = |i| opt_lex(phrase(Command::parse))(i);
     parsebuffer::ParseBuffer {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
@@ -142,7 +142,7 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
 
     sig.eta = opt.eta;
 
-    let mut handle = |cmd: pre::Command| -> Result<(), KoError> {
+    let mut handle = |cmd: Command| -> Result<(), KoError> {
         if opt.no_scope {
             return Ok(());
         }
@@ -158,11 +158,11 @@ fn consume_seq(opt: &Opt, mut iter: impl Iterator<Item = Item>) -> Result<(), Er
         }
 
         match cmd? {
-            Command::Intro(sym, it) => {
+            scope::Command::Intro(sym, it) => {
                 let typing = Typing::new(Intro::from(it), &sig)?.check(&sig)?;
                 Ok(sig.insert(&sym, typing)?)
             }
-            Command::Rule(rule) => Ok(sig.add_rule(Rule::from(rule))?),
+            scope::Command::Rule(rule) => Ok(sig.add_rule(Rule::from(rule))?),
         }
     };
 
@@ -184,7 +184,7 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
 
     sig.eta = opt.eta;
 
-    let mut handle = |cmd: pre::Command| -> Result<Option<Check>, KoError> {
+    let mut handle = |cmd: Command| -> Result<Option<Check>, KoError> {
         if opt.no_scope {
             return Ok(None);
         }
@@ -200,13 +200,13 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = Item> + Send) -> Result<(),
         }
 
         match cmd? {
-            Command::Intro(sym, it) => {
+            scope::Command::Intro(sym, it) => {
                 // defer checking to later
                 let typing = Typing::new(Intro::from(it), &sig)?;
                 sig.insert(&sym, typing.clone())?;
                 Ok(Some((typing, sig.clone())))
             }
-            Command::Rule(rule) => {
+            scope::Command::Rule(rule) => {
                 sig.add_rule(Rule::from(rule))?;
                 Ok(None)
             }

@@ -140,7 +140,7 @@ extern crate nom;
 #[macro_use]
 extern crate log;
 
-pub mod pre;
+pub mod parse;
 pub mod scope;
 
 /// Multi-threading kernel.

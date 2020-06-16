@@ -1,12 +1,12 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kontroli::pre::parse::{opt_lex, phrase, Parser};
+use kontroli::parse::{Command, opt_lex, phrase, Parser};
 use kontroli::rc::{Intro, Rule, Signature, Typing};
-use kontroli::scope::{Command, Symbols};
-use kontroli::{pre, Error};
+use kontroli::scope::{self, Symbols};
+use kontroli::Error;
 use std::io::Read;
 use std::path::PathBuf;
 
-fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
+fn check(cmds: Vec<Command>) -> Result<(), Error> {
     use colosseum::unsync::Arena;
 
     let arena = Arena::new();
@@ -16,7 +16,7 @@ fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
     for c in cmds.into_iter() {
         match c.scope(&syms)? {
             // introduction of a new name
-            Command::Intro(id, it) => {
+            scope::Command::Intro(id, it) => {
                 let id: &str = arena.alloc(id);
                 // add symbol to symbol table and fail if it is not new
                 let sym = syms.insert(id)?;
@@ -26,7 +26,7 @@ fn check(cmds: Vec<pre::Command>) -> Result<(), Error> {
                 sig.insert(&sym, typing)?
             }
             // addition of a rewrite rule
-            Command::Rule(rule) => sig.add_rule(Rule::from(rule))?,
+            scope::Command::Rule(rule) => sig.add_rule(Rule::from(rule))?,
         }
     }
 
@@ -40,9 +40,9 @@ fn read(file: PathBuf) -> Vec<u8> {
     buffer
 }
 
-fn parse(buffer: &[u8]) -> Vec<pre::Command> {
+fn parse(buffer: &[u8]) -> Vec<Command> {
     use nom::combinator::iterator;
-    let parse = opt_lex(phrase(pre::Command::parse));
+    let parse = opt_lex(phrase(Command::parse));
     iterator(buffer, parse).filter_map(|c| c).collect()
 }
 

@@ -1,7 +1,7 @@
 //! Pointers to terms.
 
 use super::Term;
-use crate::pre::term::GArg;
+use crate::parse::term::GArg;
 use alloc::{boxed::Box, string::String};
 
 /// Pointer to a term.
