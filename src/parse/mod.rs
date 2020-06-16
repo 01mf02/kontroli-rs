@@ -1,4 +1,4 @@
-//! Parsers for prestructures.
+//! Parsing to unshared, reference-free data structures.
 //!
 //! All basic parsers operate on byte slices (`&[u8]`) instead of strings (`&str`).
 //! This enables efficient parsing using a circular buffer.

@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kontroli::parse::{Command, opt_lex, phrase, Parser};
+use kontroli::parse::{opt_lex, phrase, Command, Parser};
 use kontroli::rc::{Intro, Rule, Signature, Typing};
 use kontroli::scope::{self, Symbols};
 use kontroli::Error;

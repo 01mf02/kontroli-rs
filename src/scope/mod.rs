@@ -1,4 +1,4 @@
-//! Conversion from preterms to terms, from prepatterns to patterns etc.
+//! Scoping of parse structures to data structures with references.
 
 pub mod command;
 pub mod intro;
@@ -18,8 +18,8 @@ pub use symbol::Symbol;
 pub use symbols::Symbols;
 pub use term::Term;
 
-use crate::error::ScopeError as Error;
-use crate::parse::term::{Arg as Prearg, Binder};
+use crate::error::{Error as KoError, ScopeError as Error};
+use crate::parse::{self, parse};
 use crate::stack::Stack;
 use alloc::{string::String, string::ToString};
 use core::convert::TryFrom;
@@ -58,8 +58,8 @@ impl parse::Term {
                 bnd.with_pushed(arg.id.to_string(), |bnd| {
                     let tm = tm.scoper(syms, bnd)?;
                     match binder {
-                        Binder::Lam => Ok(Term::Abst(arg, tm)),
-                        Binder::Pi => Ok(Term::Prod(arg, tm)),
+                        parse::term::Binder::Lam => Ok(Term::Abst(arg, tm)),
+                        parse::term::Binder::Pi => Ok(Term::Prod(arg, tm)),
                     }
                 })
             }
@@ -82,7 +82,7 @@ impl parse::Term {
     }
 }
 
-impl Prearg {
+impl parse::term::Arg {
     fn scopen<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Arg<'s>, Error> {
         let ty = self.ty.map(|ty| ty.scoper(syms, bnd)).transpose()?;
         Ok(Arg { id: self.id, ty })
@@ -140,9 +140,6 @@ impl parse::Command {
         }
     }
 }
-
-use crate::error::Error as KoError;
-use crate::parse::{self, parse};
 
 impl<'s> Command<'s, alloc::string::String> {
     /// Parse a command and scope it. Used for testing.
