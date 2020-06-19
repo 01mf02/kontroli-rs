@@ -73,7 +73,7 @@ impl parse::Term {
     /// # use kontroli::parse::{self, parse};
     /// # use kontroli::scope::{Symbols, Term};
     /// let syms: Symbols = vec!["A"].into_iter().collect();
-    /// let tm = parse::<parse::Term>(r"_ : A => _.")?.scope(&syms);
+    /// let tm = parse::<parse::Term>(r"_ : A => _.\n")?.scope(&syms);
     /// assert_eq!(tm, Err(ScopeError::Underscore));
     /// # Ok::<_, Error>(())
     /// ~~~

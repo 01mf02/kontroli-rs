@@ -189,6 +189,11 @@ fn ident(i: &[u8]) -> Parse<String> {
     map_res(ident_u8, |i| alloc::str::from_utf8(i).map(String::from))(i)
 }
 
+fn mident(i: &[u8]) -> Parse<Vec<String>> {
+    use nom::multi::separated_nonempty_list;
+    separated_nonempty_list(char('.'), ident)(i)
+}
+
 impl Parser for Arg {
     fn parse(i: &[u8]) -> Parse<Self> {
         let of = map(Term::of_appl, Some);
@@ -225,8 +230,12 @@ impl Term {
         preceded(tag(":="), map(lex(Self::parse), Box::new))(i)
     }
 
+    fn symb(i: &[u8]) -> Parse<Self> {
+        map(mident, |ids| Self::Symb(ids.into_iter().last().unwrap()))(i)
+    }
+
     fn sterm(i: &[u8]) -> Parse<Self> {
-        alt((parens(Self::parse), map(ident, Self::Symb)))(i)
+        alt((parens(Self::parse), Self::symb))(i)
     }
 
     fn appl(i: &[u8]) -> Parse<Self> {
@@ -255,14 +264,14 @@ impl Parser for Term {
     /// ~~~
     /// # use kontroli::parse::{Parser, Term, phrase};
     /// let pt = phrase(Term::parse);
-    /// assert!(pt(b"x.").is_ok());
-    /// assert!(pt(b"x -> x.").is_ok());
-    /// assert!(pt(b"N -> N -> N.").is_ok());
-    /// assert!(pt(b"vec n -> vec (succ n).").is_ok());
-    /// assert!(pt(b"x -> x.").is_ok());
-    /// assert!(pt(br"x => x.").is_ok());
-    /// assert!(pt(b"A : eta T -> A.").is_ok());
-    /// assert!(pt(b"A : eta {|prop|type|} -> eps ({|Pure.eq|const|} {|prop|type|} ({|Pure.prop|const|} A) A).").is_ok());
+    /// assert!(pt(b"x.\n").is_ok());
+    /// assert!(pt(b"x -> x.\n").is_ok());
+    /// assert!(pt(b"N -> N -> N.\n").is_ok());
+    /// assert!(pt(b"vec n -> vec (succ n).\n").is_ok());
+    /// assert!(pt(b"x -> x.\n").is_ok());
+    /// assert!(pt(br"x => x.\n").is_ok());
+    /// assert!(pt(b"A : eta T -> A.\n").is_ok());
+    /// assert!(pt(b"A : eta {|prop|type|} -> eps ({|Pure.eq|const|} {|prop|type|} ({|Pure.prop|const|} A) A).\n").is_ok());
     /// ~~~
     fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::bind_named, Self::appl_or_bind_unnamed))(i)
@@ -329,10 +338,10 @@ impl Parser for Command {
     /// ~~~
     /// # use kontroli::parse::{Command, Parser, phrase};
     /// let pc = phrase(Command::parse);
-    /// assert!(pc(b"imp : prop -> prop -> prop.").is_ok());
-    /// assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.").is_ok());
-    /// assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).".as_bytes()).is_ok());
-    /// assert!(pc(br"def x := x : Type Type => {|x|}.").is_ok());
+    /// assert!(pc(b"imp : prop -> prop -> prop.\n").is_ok());
+    /// assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.\n").is_ok());
+    /// assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).\n".as_bytes()).is_ok());
+    /// assert!(pc(br"def x := x : Type Type => {|x|}.\n").is_ok());
     /// ~~~
     fn parse(i: &[u8]) -> Parse<Self> {
         alt((Self::intro, map(Rule::parse, Self::Rule)))(i)

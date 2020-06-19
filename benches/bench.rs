@@ -56,10 +56,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let sudoku_easy = parse(&read(PathBuf::from("examples/sudoku/solve_easy.ko")));
     let or_n = parse(&read(PathBuf::from("examples/bench/or_n.ko")));
 
-    let cmd = b"def eq : Dep (fib (mul 2 4)) := dep (fib (mul 4 2)).";
+    let cmd = b"def eq : Dep (fib (mul 2 4)) := dep (fib (mul 4 2)).\n";
     let fib8 = [nat.clone(), parse(cmd)].concat();
 
-    let cmd = b"def eq : Bool_Dep (or_n (mul 2 4)) := bool_dep F.";
+    let cmd = b"def eq : Bool_Dep (or_n (mul 2 4)) := bool_dep F.\n";
     let or8 = [boole.clone(), nat, or_n, parse(cmd)].concat();
 
     let sudo = [boole, sudoku, sudoku_easy].concat();

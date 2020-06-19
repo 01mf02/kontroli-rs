@@ -48,15 +48,15 @@
 //! # use colosseum::unsync::Arena;
 //! let cmds = [
 //!     // declarations
-//!     "prop : Type.",
-//!     "imp : prop -> prop -> prop.",
+//!     "prop : Type.\n",
+//!     "imp : prop -> prop -> prop.\n",
 //!
 //!     // definition with a rewrite rule
-//!     "def proof : prop -> Type.",
-//!     "[x, y] proof (imp x y) --> proof x -> proof y.",
+//!     "def proof : prop -> Type.\n",
+//!     "[x, y] proof (imp x y) --> proof x -> proof y.\n",
 //!
 //!     // theorem
-//!     r"thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p.",
+//!     r"thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p.\n",
 //! ];
 //!
 //! let arena = Arena::new();

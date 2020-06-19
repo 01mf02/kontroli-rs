@@ -174,14 +174,14 @@ impl<'s> Rule<'s> {
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
     /// let sig = Signature::new();
     ///
-    /// let rule = Rule::from(SRule::parse("[A] id A --> A.", &syms)?);
-    /// let term = Term::from(STerm::parse("id f a.", &syms)?);
+    /// let rule = Rule::from(SRule::parse("[A] id A --> A.\n", &syms)?);
+    /// let term = Term::from(STerm::parse("id f a.\n", &syms)?);
     ///
     /// let stack = State::new(RTerm::new(term)).whnf(&sig).stack;
     /// let subst = rule.match_flatten(&stack, &sig).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
     ///
-    /// let expected = Term::from(STerm::parse("f.", &syms)?);
+    /// let expected = Term::from(STerm::parse("f.\n", &syms)?);
     /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~
