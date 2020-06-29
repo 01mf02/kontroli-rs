@@ -22,12 +22,14 @@ pub mod command;
 pub mod intro;
 mod pattern;
 pub mod rule;
+mod symbol;
 pub mod term;
 
 pub use command::Command;
 pub use intro::Intro;
 pub use pattern::Pattern;
 pub use rule::Rule;
+pub use symbol::Symbol;
 pub use term::Term;
 
 use nom::{
@@ -35,9 +37,9 @@ use nom::{
     bytes::streaming::{is_not, tag, take_until, take_while1},
     character::is_alphanumeric,
     character::streaming::{char, multispace0, one_of},
-    combinator::{map, map_res, opt, recognize, value},
+    combinator::{map, map_opt, map_res, opt, recognize, value},
     error::VerboseError,
-    multi::{many0, separated_list},
+    multi::{many0, separated_list, separated_nonempty_list},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
@@ -57,11 +59,11 @@ pub trait Parser: Sized {
 ///
 /// ~~~
 /// # use kontroli::Error;
-/// # use kontroli::parse::{Term, parse};
+/// # use kontroli::parse::{Symbol, Term, parse};
 /// # use Term::{Symb, Appl};
 /// let preterm = parse::<Term>("fst x y. Nothing to see here, move along.")?;
-/// let head = Symb("fst".to_string());
-/// let args = vec![Symb("x".to_string()), Symb("y".to_string())];
+/// let head = Symb(Symbol::from("fst"));
+/// let args = vec![Symb(Symbol::from("x")), Symb(Symbol::from("y"))];
 /// assert_eq!(preterm, Appl(Box::new(head), args));
 /// # Ok::<(), Error>(())
 /// ~~~
@@ -189,9 +191,14 @@ fn ident(i: &[u8]) -> Parse<String> {
     map_res(ident_u8, |i| alloc::str::from_utf8(i).map(String::from))(i)
 }
 
-fn mident(i: &[u8]) -> Parse<Vec<String>> {
-    use nom::multi::separated_nonempty_list;
-    separated_nonempty_list(char('.'), ident)(i)
+impl Parser for Symbol {
+    fn parse(i: &[u8]) -> Parse<Self> {
+        map_opt(separated_nonempty_list(char('.'), ident), |mut path| {
+            // this should always succeed, because the parsed list must be non-empty
+            let name = path.pop()?;
+            Some(Self { path, name })
+        })(i)
+    }
 }
 
 impl Parser for Arg {
@@ -230,12 +237,8 @@ impl Term {
         preceded(tag(":="), map(lex(Self::parse), Box::new))(i)
     }
 
-    fn symb(i: &[u8]) -> Parse<Self> {
-        map(mident, |ids| Self::Symb(ids.into_iter().last().unwrap()))(i)
-    }
-
     fn sterm(i: &[u8]) -> Parse<Self> {
-        alt((parens(Self::parse), Self::symb))(i)
+        alt((parens(Self::parse), map(Symbol::parse, Self::Symb)))(i)
     }
 
     fn appl(i: &[u8]) -> Parse<Self> {

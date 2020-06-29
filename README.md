@@ -48,13 +48,10 @@ Kontroli tries to be the following:
 
 There are a few differences with respect to Dedukti:
 
+* Kontroli has a module system allowing for nested modules.
 * Kontroli does not support higher-order rewrite rules,
   as they would make the whole program considerably more complex,
   thus contradicting the idea of a small type checker.
-* Kontroli does not have a module system.
-  However, when checking a sequence of files,
-  any file can reference symbols from all files checked before,
-  without prefixing the symbols with the file name.
 * Kontroli does not try to assure the type-safety of rewrite rules.
   As a consequence, neither
   bracket patterns nor

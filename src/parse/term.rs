@@ -1,5 +1,6 @@
 //! Unshared terms, not distinguishing bound and unbound symbols.
 
+use super::Symbol;
 use alloc::{boxed::Box, string::String, string::ToString, vec::Vec};
 use core::fmt;
 
@@ -31,7 +32,7 @@ impl From<Term> for Arg {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Term {
-    Symb(String),
+    Symb(Symbol),
     Appl(BTerm, Vec<Term>),
     Bind(Binder, Arg, BTerm),
 }

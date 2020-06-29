@@ -1,11 +1,11 @@
 //! Rewrite patterns not distinguishing bound and unbound symbols.
 
-use super::Term;
-use alloc::{string::String, vec::Vec};
+use super::{Symbol, Term};
+use alloc::vec::Vec;
 use core::convert::TryFrom;
 
 #[derive(Clone)]
-pub struct Pattern(pub String, pub Vec<Pattern>);
+pub struct Pattern(Symbol, Vec<Pattern>);
 
 impl TryFrom<Term> for Pattern {
     type Error = ();

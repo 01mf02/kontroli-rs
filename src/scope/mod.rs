@@ -21,12 +21,19 @@ pub use term::Term;
 use crate::error::{Error as KoError, ScopeError as Error};
 use crate::parse::{self, parse};
 use crate::stack::Stack;
-use alloc::{string::String, string::ToString};
+use alloc::{string::String, string::ToString, vec::Vec};
 use core::convert::TryFrom;
 use pattern::TopPattern;
 use rterm::Arg;
 
 type Bound = Stack<String>;
+
+impl parse::Symbol {
+    fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Symbol<'s>, Error> {
+        syms.get(self.path, &self.name)
+            .ok_or(Error::UndeclaredSymbol(self.name))
+    }
+}
 
 impl parse::Term {
     fn scoper<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<RTerm<'s>, Error> {
@@ -36,19 +43,17 @@ impl parse::Term {
     /// Scope an open preterm using supplied bound variables.
     fn scopen<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Term<'s>, Error> {
         match self {
-            Self::Symb(s) => {
-                if s == "_" {
-                    Err(Error::Underscore)
-                } else if s == "Type" {
+            Self::Symb(sym) if sym.name == "_" => Err(Error::Underscore),
+            Self::Symb(sym) if sym.path.is_empty() => {
+                if sym.name == "Type" {
                     Ok(Term::Type)
-                } else if let Some(idx) = bnd.iter().position(|id| *id == *s) {
+                } else if let Some(idx) = bnd.iter().position(|id| *id == *sym.name) {
                     Ok(Term::BVar(idx))
                 } else {
-                    let entry = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
-                    let sym = Symbol::clone(&entry);
-                    Ok(Term::Symb(sym))
+                    Ok(Term::Symb(sym.scope(syms)?))
                 }
             }
+            Self::Symb(sym) => Ok(Term::Symb(sym.scope(syms)?)),
             Self::Appl(head, tail) => {
                 let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scoper(syms, bnd)).collect();
                 Ok(Term::Appl(head.scoper(syms, bnd)?, tail?))
@@ -94,20 +99,28 @@ impl parse::Pattern {
     fn scopen<'s>(self, syms: &Symbols<'s>, mvar: &Bound) -> Result<Pattern<'s>, Error> {
         let Self(s, args) = self;
 
-        if s == "_" {
-            if !args.is_empty() {
-                return Err(Error::PatternArguments);
+        let scope = |args: Vec<Self>| -> Result<_, _> {
+            args.into_iter().map(|a| a.scopen(syms, mvar)).collect()
+        };
+
+        if s.path.is_empty() {
+            if s.name == "_" {
+                if !args.is_empty() {
+                    return Err(Error::PatternArguments);
+                }
+                Ok(Pattern::Joker)
+            } else if let Some(idx) = mvar.iter().position(|id| *id == *s.name) {
+                if !args.is_empty() {
+                    return Err(Error::PatternArguments);
+                }
+                Ok(Pattern::MVar(idx))
+            } else {
+                Ok(Pattern::Symb(s.scope(syms)?, scope(args)?))
             }
-            Ok(Pattern::Joker)
-        } else if let Some(idx) = mvar.iter().position(|id| *id == *s) {
-            if !args.is_empty() {
-                return Err(Error::PatternArguments);
-            }
-            Ok(Pattern::MVar(idx))
+        } else if s.name == "_" {
+            Err(Error::Underscore)
         } else {
-            let sym = syms.get(&s).ok_or(Error::UndeclaredSymbol(s))?;
-            let args: Result<_, _> = args.into_iter().map(|a| a.scopen(syms, mvar)).collect();
-            Ok(Pattern::Symb(sym, args?))
+            Ok(Pattern::Symb(s.scope(syms)?, scope(args)?))
         }
     }
 }
