@@ -203,7 +203,7 @@ impl Parser for Symbol {
 
 impl Parser for Arg {
     fn parse(i: &[u8]) -> Parse<Self> {
-        let of = map(Term::of_appl, Some);
+        let of = map(Term::of, Some);
         map(pair(ident, lex(of)), |(id, ty)| Self { id, ty })(i)
     }
 }
