@@ -22,7 +22,7 @@ For other systems, instructions are available at <https://rustup.rs/>.
 
 To run Kontroli on output generated from Isabelle/Pure:
 
-    cargo run -p kocheck --release examples/pure.ko
+    cargo run -p kocheck --release examples/pure.dk
 
 To install Kontroli:
 
@@ -67,8 +67,8 @@ There are a few differences with respect to Dedukti:
 
 Kontroli implements a subset of Dedukti's syntax.
 Examples of the syntax can be seen in
-[examples/nat.ko](examples/nat.ko) or
-[examples/pure.ko](examples/pure.ko).
+[examples/nat.dk](examples/nat.dk) or
+[examples/pure.dk](examples/pure.dk).
 
 # Performance
 

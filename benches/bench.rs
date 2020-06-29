@@ -47,14 +47,14 @@ fn parse(buffer: &[u8]) -> Vec<Command> {
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    let fpure = read(PathBuf::from("examples/pure.ko"));
+    let fpure = read(PathBuf::from("examples/pure.dk"));
     let ppure = parse(&fpure);
 
-    let boole = parse(&read(PathBuf::from("examples/bool.ko")));
-    let nat = parse(&read(PathBuf::from("examples/nat.ko")));
-    let sudoku = parse(&read(PathBuf::from("examples/sudoku/sudoku.ko")));
-    let sudoku_easy = parse(&read(PathBuf::from("examples/sudoku/solve_easy.ko")));
-    let or_n = parse(&read(PathBuf::from("examples/bench/or_n.ko")));
+    let boole = parse(&read(PathBuf::from("examples/bool.dk")));
+    let nat = parse(&read(PathBuf::from("examples/nat.dk")));
+    let sudoku = parse(&read(PathBuf::from("examples/sudoku/sudoku.dk")));
+    let sudoku_easy = parse(&read(PathBuf::from("examples/sudoku/solve_easy.dk")));
+    let or_n = parse(&read(PathBuf::from("examples/bench/or_n.dk")));
 
     let cmd = b"def eq : Dep (fib (mul 2 4)) := dep (fib (mul 4 2)).\n";
     let fib8 = [nat.clone(), parse(cmd)].concat();

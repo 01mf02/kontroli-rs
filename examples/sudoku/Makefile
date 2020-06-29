@@ -2,6 +2,8 @@ include ../kontroli.mk
 
 all: solve_easy.koo
 
-solve_easy.deps: sudoku.deps solve_easy.ko
+solve_easy.dko: solve_easy.dk sudoku.dko
 
-sudoku.deps: ../bool.ko sudoku.ko
+../bool.dko: ../bool.dk
+
+sudoku.dko: sudoku.dk ../bool.dko

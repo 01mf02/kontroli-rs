@@ -2,8 +2,8 @@ include kontroli.mk
 
 all: bool.koo nat.koo pure.koo
 
-pure.deps: pure.ko
+pure.dko: pure.dk
 
-bool.deps: bool.ko
+bool.dko: bool.dk
 
-nat.deps: nat.ko
+nat.dko: nat.dk
