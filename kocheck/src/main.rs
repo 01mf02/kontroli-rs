@@ -112,7 +112,7 @@ struct Opt {
 
     /// Files to process (cumulative)
     ///
-    /// Checking multiple files is equivalent to checking their concatenation.
+    /// Every file is wrapped in a module corresponding to the file path.
     #[structopt(name = "FILE")]
     files: Vec<PathBuf>,
 }
