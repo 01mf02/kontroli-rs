@@ -54,18 +54,18 @@ impl<'s> Signature<'s> {
     }
 
     /// Introduce a new symbol with given typing.
-    pub fn insert(&mut self, sym: &Symbol<'s>, typing: Typing<'s>) -> Result<(), Error> {
-        self.intro_type(sym.clone(), typing.typ)?;
+    pub fn insert(&mut self, sym: Symbol<'s>, typing: Typing<'s>) -> Result<(), Error> {
+        self.intro_type(sym, typing.typ)?;
         if typing.rewritable {
             let rules = match typing.term {
                 None => Vec::new(),
                 Some((tm, _check)) => vec![Rule {
                     ctx: Vec::new(),
-                    lhs: TopPattern::from(Symbol::clone(sym)),
+                    lhs: TopPattern::from(sym),
                     rhs: tm,
                 }],
             };
-            self.intro_rules(sym.clone(), rules)?;
+            self.intro_rules(sym, rules)?;
         }
         Ok(())
     }
