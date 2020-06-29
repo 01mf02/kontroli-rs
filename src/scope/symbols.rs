@@ -1,8 +1,8 @@
 //! Maps from strings to (shared) symbols.
 
 use super::Symbol;
-use alloc::{vec::Vec, string::String};
 use crate::error::SymbolsError as Error;
+use alloc::{string::String, vec::Vec};
 use core::iter::FromIterator;
 use fnv::FnvHashSet;
 use modular::{Context, Module};
