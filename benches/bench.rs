@@ -23,7 +23,7 @@ fn check(cmds: Vec<Command>) -> Result<(), Error> {
 
                 // typecheck and insert into signature
                 let typing: Typing = Typing::new(Intro::from(it), &sig)?.check(&sig)?;
-                sig.insert(&sym, typing)?
+                sig.insert(sym, typing)?
             }
             // addition of a rewrite rule
             scope::Command::Rule(rule) => sig.add_rule(Rule::from(rule))?,
