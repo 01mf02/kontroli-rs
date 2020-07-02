@@ -7,7 +7,6 @@ mod parsebuffer;
 mod parseerror;
 
 use byte_unit::{Byte, ByteError};
-use crossbeam_channel::{bounded, unbounded};
 use kontroli::error::Error as KoError;
 use kontroli::parse::Command;
 use kontroli::scope::{self, Symbols};
@@ -335,16 +334,16 @@ fn main() -> Result<(), Error> {
     match channel {
         Some(capacity) => {
             let (sender, receiver) = match capacity {
-                Some(capacity) => bounded(capacity),
-                None => unbounded(),
+                Some(capacity) => flume::bounded(capacity),
+                None => flume::unbounded(),
             };
 
             let optr = opt.clone();
             let consumer = std::thread::spawn(move || {
                 if parallel {
-                    consume_par(&optr, receiver.iter())
+                    consume_par(&optr, receiver.into_iter())
                 } else {
-                    consume_seq(&optr, receiver.iter())
+                    consume_seq(&optr, receiver.into_iter())
                 }
             });
 
