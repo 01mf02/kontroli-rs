@@ -1,4 +1,5 @@
 #![no_std]
+#![forbid(unsafe_code)]
 
 //! Type checking for the lambda-Pi calculus modulo rewriting.
 //!
