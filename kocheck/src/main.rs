@@ -3,10 +3,12 @@
 extern crate circular;
 extern crate pretty_env_logger;
 
+mod error;
 mod opt;
 mod parsebuffer;
 mod parseerror;
 
+use error::Error;
 use kontroli::error::Error as KoError;
 use kontroli::parse::Command;
 use kontroli::scope::{self, Symbols};
@@ -16,25 +18,6 @@ use std::convert::TryInto;
 use std::io::{self, Read};
 use std::path::{self, Path, PathBuf};
 use structopt::StructOpt;
-
-#[derive(Debug)]
-pub enum Error {
-    Module,
-    Io(io::Error),
-    Ko(KoError),
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Self::Io(err)
-    }
-}
-
-impl From<KoError> for Error {
-    fn from(err: KoError) -> Self {
-        Self::Ko(err)
-    }
-}
 
 enum Event {
     Command(Command),
