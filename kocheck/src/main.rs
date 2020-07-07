@@ -3,6 +3,7 @@
 extern crate circular;
 extern crate pretty_env_logger;
 
+mod opt;
 mod parsebuffer;
 mod parseerror;
 
@@ -11,6 +12,7 @@ use kontroli::error::Error as KoError;
 use kontroli::parse::Command;
 use kontroli::scope::{self, Symbols};
 use nom::error::VerboseError;
+use opt::Opt;
 use std::convert::TryInto;
 use std::io::{self, Read};
 use std::path::{self, Path, PathBuf};
@@ -33,87 +35,6 @@ impl From<KoError> for Error {
     fn from(err: KoError) -> Self {
         Self::Ko(err)
     }
-}
-
-#[derive(Debug)]
-struct MyByteError(ByteError);
-
-impl ToString for MyByteError {
-    fn to_string(&self) -> String {
-        match &self.0 {
-            ByteError::ValueIncorrect(s) => "Incorrect byte value: ".to_owned() + &s.clone(),
-            ByteError::UnitIncorrect(s) => "Incorrect byte unit: ".to_owned() + &s.clone(),
-        }
-    }
-}
-
-fn parse_byte<S: AsRef<str>>(s: S) -> Result<Byte, MyByteError> {
-    Byte::from_str(s).map_err(MyByteError)
-}
-
-#[derive(Clone, Debug, StructOpt)]
-/// A typechecker for the lambda-Pi calculus modulo rewriting
-struct Opt {
-    /// Reduce terms modulo eta
-    ///
-    /// When this flag is enabled, checking whether
-    /// `\ x => t` and `u` are convertible will succeed if
-    /// `\ x => t` and `\ y => u y` are convertible.
-    #[structopt(long)]
-    eta: bool,
-
-    /// Only parse, neither scope nor typecheck
-    #[structopt(long)]
-    no_scope: bool,
-
-    /// Only parse and scope, do not typecheck
-    #[structopt(long)]
-    no_check: bool,
-
-    /// Size of the parse buffer
-    ///
-    /// The parser repeatedly reads data into a buffer and parses a command.
-    /// If a command does not fit into the buffer,
-    /// the buffer size is doubled and parsing is retried,
-    /// until either parsing succeeds or the whole file is read.
-    ///
-    /// Therefore, the buffer size should be chosen to be
-    /// larger than the size of the largest expected command,
-    /// to avoid unnecessary retries.
-    #[structopt(long, default_value = "64MB", parse(try_from_str = parse_byte))]
-    buffer: Byte,
-
-    /// Parse given number of commands in advance (∞ if argument omitted)
-    ///
-    /// If this option is used, commands are parsed and checked simultaneously.
-    /// If this option is given with a number n, then
-    /// maximally n commands are parsed in advance.
-    /// If this option is given without an extra argument, then
-    /// the number of commands parsed in advance is unbounded.
-    ///
-    /// Note that unbounded parsing can lead to high memory usage!
-    #[structopt(long, short = "c")]
-    channel_capacity: Option<Option<usize>>,
-
-    /// Typecheck concurrently
-    ///
-    /// If this option is used, type checking tasks are executed in parallel.
-    /// If this option is given with a number n, then
-    /// maximally n type checking tasks are concurrently executed.
-    /// If this option is given without an extra argument, then
-    /// the number of concurrently executed tasks is
-    /// determined automatically from the number of CPUs.
-    ///
-    /// This option enables the parsing of commands in advance ("-c"),
-    /// by default with an unbounded capacity.
-    #[structopt(long, short = "j")]
-    jobs: Option<Option<usize>>,
-
-    /// Files to process (cumulative)
-    ///
-    /// Every file is wrapped in a module corresponding to the file path.
-    #[structopt(name = "FILE")]
-    files: Vec<PathBuf>,
 }
 
 enum Event {
