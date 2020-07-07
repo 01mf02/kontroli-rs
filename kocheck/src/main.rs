@@ -4,25 +4,23 @@ extern crate circular;
 extern crate pretty_env_logger;
 
 mod error;
+mod event;
 mod opt;
 mod parsebuffer;
 mod parseerror;
+mod path_read;
 
 use error::Error;
+use event::Event;
 use kontroli::error::Error as KoError;
 use kontroli::parse::Command;
 use kontroli::scope::{self, Symbols};
 use nom::error::VerboseError;
 use opt::Opt;
+use path_read::{path_reads, PathRead};
 use std::convert::TryInto;
-use std::io::{self, Read};
-use std::path::{self, Path, PathBuf};
+use std::io::Read;
 use structopt::StructOpt;
-
-enum Event {
-    Command(Command),
-    Module(Vec<String>),
-}
 
 type RCommand = Result<Command, Error>;
 type REvent = Result<Event, Error>;
@@ -148,44 +146,8 @@ fn consume_par(opt: &Opt, iter: impl Iterator<Item = REvent> + Send) -> Result<(
         .try_for_each(|ts| check(ts?).map_err(Error::Ko))
 }
 
-type ModuleRead = (Vec<String>, Box<dyn Read>);
-
-/// Return stdin if no files given, else lazily open and return the files.
-fn reads<'a>(files: &'a [PathBuf]) -> Box<dyn Iterator<Item = Result<ModuleRead, Error>> + 'a> {
-    if files.is_empty() {
-        let read: Box<dyn Read> = Box::new(io::stdin());
-        Box::new(std::iter::once(Ok((Vec::new(), read))))
-    } else {
-        Box::new(files.iter().map(|file| {
-            let module = module_path(file).ok_or(Error::Module)?;
-            let read: Box<dyn Read> = Box::new(std::fs::File::open(file)?);
-            Ok((module, read))
-        }))
-    }
-}
-
-/// Return the module path corresponding to a file path.
-fn module_path(path: &Path) -> Option<Vec<String>> {
-    let components: Vec<_> = path
-        .parent()
-        .map(|p| p.components().collect())
-        .unwrap_or_default();
-    let mpath: Option<Vec<_>> = components
-        .into_iter()
-        .map(|component| match component {
-            path::Component::Normal(name) => Some(name),
-            _ => None,
-        })
-        .collect();
-    let mut mpath = mpath?;
-    mpath.push(path.file_stem()?);
-    mpath
-        .iter()
-        .map(|s| Some(String::from(s.to_str()?)))
-        .collect()
-}
-
-fn produce_events((path, read): ModuleRead, opt: &Opt) -> impl Iterator<Item = REvent> {
+// TODO: move this to path_read
+fn produce_events((path, read): PathRead, opt: &Opt) -> impl Iterator<Item = REvent> {
     let path = std::iter::once(Ok(Event::Module(path)));
     let cmds = produce(read, &opt).map(|cmd| cmd.map(Event::Command));
     path.chain(cmds)
@@ -222,7 +184,7 @@ fn main() -> Result<(), Error> {
     }
 
     // lazily produce precommands from all specified files
-    let items = reads(&opt.files).map(|mr| Ok(produce_events(mr?, &opt)));
+    let items = path_reads(&opt.files).map(|pr| Ok(produce_events(pr?, &opt)));
     let mut items = flatten_nested_results(items);
 
     let parallel = opt.jobs.is_some();
