@@ -1,5 +1,5 @@
 use byte_unit::{Byte, ByteError};
-use std::path::{self, Path, PathBuf};
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(Clone, Debug, StructOpt)]

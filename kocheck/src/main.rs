@@ -7,7 +7,6 @@ mod opt;
 mod parsebuffer;
 mod parseerror;
 
-use byte_unit::{Byte, ByteError};
 use kontroli::error::Error as KoError;
 use kontroli::parse::Command;
 use kontroli::scope::{self, Symbols};
