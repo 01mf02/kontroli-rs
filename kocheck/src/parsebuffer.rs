@@ -1,6 +1,7 @@
 use nom::{Err, IResult, Offset};
 use std::io::{self, Read};
 
+/// Buffered parsing of a sequence of items.
 pub struct ParseBuffer<R, P, F> {
     pub buf: circular::Buffer,
     pub read: R,

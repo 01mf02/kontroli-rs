@@ -1,21 +1,35 @@
-use crate::error::Error;
+use crate::Error;
 use std::io::{self, Read};
 use std::path::{self, Path, PathBuf};
 
-pub type PathRead = (Vec<String>, Box<dyn Read>);
-pub type PathReads<'a> = Box<dyn Iterator<Item = Result<PathRead, Error>> + 'a>;
+/// Combination of a module path and a corresponding reader.
+pub struct PathRead {
+    pub path: Vec<String>,
+    pub read: Box<dyn Read>,
+}
 
-/// Return stdin if no files given, else lazily open and return the files.
-pub fn path_reads<'a>(files: &'a [PathBuf]) -> PathReads<'a> {
-    if files.is_empty() {
+type PathReads<'a> = Box<dyn Iterator<Item = Result<PathRead, Error>> + 'a>;
+
+impl PathRead {
+    fn from_stdin() -> Self {
+        let path = Vec::new();
         let read: Box<dyn Read> = Box::new(io::stdin());
-        Box::new(std::iter::once(Ok((Vec::new(), read))))
-    } else {
-        Box::new(files.iter().map(|file| {
-            let module = module_path(file).ok_or(Error::Module)?;
-            let read: Box<dyn Read> = Box::new(std::fs::File::open(file)?);
-            Ok((module, read))
-        }))
+        Self { path, read }
+    }
+
+    fn from_pathbuf(file: &PathBuf) -> Result<Self, Error> {
+        let path = module_path(file).ok_or(Error::Module)?;
+        let read: Box<dyn Read> = Box::new(std::fs::File::open(file)?);
+        Ok(Self { path, read })
+    }
+
+    /// Return stdin if no files given, else lazily open and return the files.
+    pub fn from_pathbufs(files: &[PathBuf]) -> PathReads {
+        if files.is_empty() {
+            Box::new(std::iter::once(Ok(Self::from_stdin())))
+        } else {
+            Box::new(files.iter().map(Self::from_pathbuf))
+        }
     }
 }
 

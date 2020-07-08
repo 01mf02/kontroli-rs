@@ -1,6 +1,7 @@
 use kontroli::error::Error as KoError;
 use std::io;
 
+/// Central error type.
 #[derive(Debug)]
 pub enum Error {
     Module,
