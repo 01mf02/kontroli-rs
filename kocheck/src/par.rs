@@ -17,12 +17,7 @@ impl<'s> Command<'s> {
         cmd: parse::Command,
         syms: &mut Symbols<'s>,
         arena: &'s Arena<String>,
-        opt: &Opt,
-    ) -> Result<Option<Self>, KoError> {
-        if opt.no_scope {
-            return Ok(None);
-        }
-
+    ) -> Result<Self, KoError> {
         match cmd.scope(&syms)? {
             scope::Command::Intro(id, it) => {
                 println!("{}", id);
@@ -31,27 +26,20 @@ impl<'s> Command<'s> {
             scope::Command::Rule(rule) => Ok(scope::Command::Rule(rule)),
         }
         .map(Self)
-        .map(Some)
     }
 
     fn from_event(
         event: Event,
         syms: &mut Symbols<'s>,
         arena: &'s Arena<String>,
-        opt: &Opt,
     ) -> Result<Option<Command<'s>>, KoError> {
         event
             .handle(syms)
-            .map(|precmd| Self::from_precommand(precmd, syms, arena, opt))
+            .map(|precmd| Self::from_precommand(precmd, syms, arena))
             .transpose()
-            .map(|oo| oo.flatten())
     }
 
-    fn infer(self, sig: &mut Signature<'s>, opt: &Opt) -> Result<Option<Check<'s>>, KoError> {
-        if opt.no_check {
-            return Ok(None);
-        }
-
+    fn infer(self, sig: &mut Signature<'s>) -> Result<Option<Check<'s>>, KoError> {
         match self.0 {
             scope::Command::Intro(sym, it) => {
                 // defer checking to later
@@ -82,11 +70,13 @@ where
 
     sig.eta = opt.eta;
 
-    // run as long as we receive items, and abort if there was a parse error
-    iter.map(|event| Command::from_event(event?, &mut syms, &arena, opt).map_err(Error::Ko))
+    // run as long as we receive events, and abort on error
+    iter.filter(|event| !opt.no_scope || event.is_err())
+        .map(|event| Command::from_event(event?, &mut syms, &arena).map_err(Error::Ko))
         .map(|ro| ro.transpose())
         .flatten()
-        .map(|cmd| cmd?.infer(&mut sig, opt).map_err(Error::Ko))
+        .filter(|cmd| !opt.no_check || cmd.is_err())
+        .map(|cmd| cmd?.infer(&mut sig).map_err(Error::Ko))
         .map(|ro| ro.transpose())
         .flatten()
         .par_bridge()
