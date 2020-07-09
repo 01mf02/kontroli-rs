@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2018"
 license = "GPL-3.0-only"
+readme = "README.md"
+keywords = ["logic", "dependent-types", "typechecker", "dedukti"]
+categories = ["concurrency", "no-std", "parser-implementations", "science"]
 
 [workspace]
 members = [
@@ -13,9 +16,9 @@ members = [
 [dependencies]
 fnv = "1.0.3"
 im = "14.3"
-lazy-st = { git = "https://github.com/01mf02/lazy-st", rev = "cb357e1" }
+lazy-st = "0.2"
 log = "0.4.8"
-modular = { git = "https://github.com/01mf02/modular-rs", rev = "d0eef64" }
+nested-modules = "0.1"
 nom = "5.0"
 
 [profile.release]
