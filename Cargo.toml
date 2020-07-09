@@ -3,9 +3,11 @@ name = "kontroli"
 version = "0.1.0"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2018"
-license = "GPL-3.0-only"
+description = "Type checking for the lambda-Pi calculus modulo rewriting"
 readme = "README.md"
-keywords = ["logic", "dependent-types", "typechecker", "dedukti"]
+repository = "https://github.com/01mf02/kontroli-rs"
+license = "GPL-3.0-only"
+keywords = ["verification", "dependent-types", "type-checking", "rewriting", "dedukti"]
 categories = ["concurrency", "no-std", "parser-implementations", "science"]
 
 [workspace]
