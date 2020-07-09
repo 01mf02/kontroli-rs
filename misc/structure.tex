@@ -1,0 +1,40 @@
+\documentclass[tikz]{standalone}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows,calc,chains}
+
+\begin{document}
+
+\tikzset{
+  block/.style = {draw, thick, rectangle},
+}
+\begin{tikzpicture}[node distance=1cm and 0.5cm, >=triangle 45]
+  \draw
+    node (precmd) {Precommand}
+    node [block, above right=1cm and -0.5cm of precmd] (syms) {Symbols}
+    node [right=1cm of precmd] (cmd) {Command}
+    node [above right=0.2cm and 1cm of cmd] (intro) {Intro}
+    node [below right=0.2cm and 1cm of cmd] (rule) {Rule}
+    node [right=1cm of intro] (typing) {Typing}
+    node [block, right=4cm of cmd] (sig) {Signature}
+    ;
+   \coordinate (introsyms) at ($(intro.east)+(0.1cm, 0cm)$);
+   \draw[->](precmd) to (cmd);
+   \draw(syms) to [out=-90, in=180, looseness=1.2] ($(cmd.west)-(0.2cm, 0cm)$);
+   \draw[->]($(cmd.east)+(0, 0.1cm)$) to (intro.west);
+   \draw[->]($(cmd.east)-(0, 0.1cm)$) to (rule.west);
+   \draw[->](intro) to (typing);
+   \draw[->](rule.east)
+      to ($(rule.east)+(2cm, 0cm)$)
+      to [out=0, in=-130] (sig.south);
+   \draw[->](typing.east) to [bend left] (sig.north);
+   \draw(sig.west)
+      to ($(sig.west)-(1.2cm, 0cm)$)
+      to [out=180, in=180, looseness=2] ($(typing.west)-(0.2cm, 0cm)$);
+   \draw[->] (intro.east)
+      to [out=0, in=180] (introsyms)
+      to [out=0, in=0, looseness=2] (introsyms|-syms.east)
+      to (syms.east);
+\end{tikzpicture}
+
+\end{document}
