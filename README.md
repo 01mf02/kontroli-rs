@@ -70,17 +70,6 @@ Examples of the syntax can be seen in
 [examples/nat.dk](examples/nat.dk) or
 [examples/pure.dk](examples/pure.dk).
 
-# Performance
-
-On files generated from Isabelle (HOL.Inductive),
-Dedukti takes 10.1 seconds to parse a 74MB DK file and
-Kontroli takes 7.8 seconds to parse a 75MB KO file.
-
-Dataset       | Size DK | Size KO | Parse DK | Parse KO
-------------- | ------: | ------: | -------: | -------:
-HOL.Inductive |    74MB |    75MB |    10.1s |     7.8s
-HOL.List      |  2481MB |  2489MB |   386.4s |   192.2s
-
 # Development
 
 A few useful commands for developing Kontroli:
