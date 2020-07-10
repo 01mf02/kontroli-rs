@@ -84,7 +84,7 @@ impl<'s> Typing<'s> {
 }
 
 /// Map from de Bruijn indices to associated types.
-type Context<'s> = crate::stack::Stack<RTerm<'s>>;
+type Context<'s> = crate::Stack<RTerm<'s>>;
 
 impl<'s> Context<'s> {
     fn get_type(&self, n: usize) -> Option<RTerm<'s>> {
