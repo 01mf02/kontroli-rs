@@ -18,8 +18,8 @@
 //!   the alternative of lexed parsers `alt(lex(p1), ..., lex(pn))`.
 //!   This avoids redoing the lexing for all alternatives.
 
-pub mod command;
-pub mod intro;
+mod command;
+mod intro;
 mod pattern;
 mod symbol;
 pub mod term;
