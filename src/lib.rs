@@ -162,7 +162,8 @@ mod typing;
 
 pub use application::Application;
 pub use error::Error;
-pub use intro::GIntro as Intro;
-pub use rule::GRule as Rule;
+pub use intro::Intro;
+pub use rule::Rule;
 pub use signature::Signature;
+pub use stack::Stack;
 pub use typing::Typing;

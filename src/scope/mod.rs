@@ -17,7 +17,7 @@ pub use term::Term;
 /// Rewrite rules with strings as bound variable identifiers,
 /// a top pattern (symbol application) as left-hand side, and
 /// a shared term as right-hand side.
-pub type Rule<'s> = crate::rule::GRule<String, pattern::TopPattern<'s>, RTerm<'s>>;
+pub type Rule<'s> = crate::Rule<String, pattern::TopPattern<'s>, RTerm<'s>>;
 
 /// The way we introduce a new name.
 pub type Intro<'s> = crate::Intro<RTerm<'s>, RTerm<'s>>;
