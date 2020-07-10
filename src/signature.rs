@@ -1,7 +1,6 @@
 //! Maps from symbols to their associated types and rewrite rules.
 
-use super::Application;
-use super::Typing;
+use super::{Application, Typing};
 use crate::error::SignatureError as Error;
 use alloc::{string::String, vec, vec::Vec};
 use core::hash::Hash;
@@ -9,7 +8,7 @@ use core::hash::Hash;
 /// Immutable HashMap for fast signature cloning.
 type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 
-type Rule<Sym, Pat, Tm> = crate::Rule<String, Application<Sym, Pat>, Tm>;
+type Rule<Sym, Pat, Tm> = super::Rule<String, Application<Sym, Pat>, Tm>;
 
 /// Map from symbols to their associated types and rewrite rules.
 ///
