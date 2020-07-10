@@ -1,6 +1,6 @@
 //! Scoping of parse structures to data structures with references.
 
-pub mod command;
+mod command;
 pub mod pattern;
 pub mod rterm;
 mod symbol;
