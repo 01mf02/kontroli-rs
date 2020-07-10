@@ -13,7 +13,6 @@ tokei -f * -o json | \
     -e "s/share.rs/Sharing/" \
     -e "s/rterm.rs/Terms/" \
     -e "s/convertible.rs/Convertibility/" \
-    -e "s/signature.rs/Signature/" \
     -e "s/mod.rs/API/" | \
   jq 'group_by(.name) | map({name: .[0].name, code: map(.code) | add})' | \
   jq 'sort_by(.code) | reverse' | \
