@@ -114,13 +114,13 @@
 //!
 //! [Kontroli]: https://github.com/01mf02/kontroli-rs
 //!
-//! [parse command]: parse/command/enum.Command.html
-//! [scope command]: scope/command/enum.Command.html
+//! [parse command]: parse/enum.Command.html
+//! [scope command]: scope/enum.Command.html
 //!
 //! [Symbols]:   scope/struct.Symbols.html
-//! [Signature]: rc/struct.Signature.html
+//! [Signature]: struct.Signature.html
 //! [Command]:   rc/command/enum.Command.html
-//! [Typing]:    rc/typing/struct.Typing.html
+//! [Typing]:    struct.Typing.html
 //!
 //! [parse]: parse/index.html
 //! [scope]: scope/index.html
@@ -153,6 +153,7 @@ pub mod rc {
 }
 
 mod application;
+mod arg;
 pub mod error;
 mod intro;
 mod rule;
@@ -161,6 +162,7 @@ mod stack;
 mod typing;
 
 pub use application::Application;
+pub use arg::Arg;
 pub use error::Error;
 pub use intro::Intro;
 pub use rule::Rule;

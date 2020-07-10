@@ -1,7 +1,6 @@
 //! Pointers to shared terms.
 
 use super::{Rc, Term};
-use crate::parse::term::GArg;
 use alloc::{string::String, vec::Vec};
 use core::fmt;
 
@@ -10,7 +9,7 @@ use core::fmt;
 pub struct RTerm<'s>(Rc<Term<'s>>);
 
 /// Argument of a binder.
-pub type Arg<'s> = GArg<Rc<String>, Option<RTerm<'s>>>;
+pub type Arg<'s> = crate::Arg<Rc<String>, Option<RTerm<'s>>>;
 
 impl<'s> fmt::Display for RTerm<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

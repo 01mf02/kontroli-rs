@@ -2,7 +2,6 @@
 
 use super::Symbol;
 use alloc::{boxed::Box, string::String, string::ToString, vec::Vec};
-use core::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Binder {
@@ -10,17 +9,9 @@ pub enum Binder {
     Pi,
 }
 
-/// Argument of a binder.
-/// For example, the `x` and `A` in the term `\ x : A => t`.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GArg<Id, Ty> {
-    pub id: Id,
-    pub ty: Ty,
-}
-
 pub type BTerm = Box<Term>;
 
-pub type Arg = GArg<String, Option<BTerm>>;
+pub type Arg = crate::Arg<String, Option<BTerm>>;
 
 impl From<Term> for Arg {
     fn from(ty: Term) -> Self {
@@ -63,15 +54,5 @@ impl Term {
                 _ => Self::Appl(Box::new(self), args),
             }
         }
-    }
-}
-
-impl<Id: fmt::Display, Ty: fmt::Display> fmt::Display for GArg<Id, Option<Ty>> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.id)?;
-        if let Some(ty) = self.ty.as_ref() {
-            write!(f, " : {}", ty)?;
-        }
-        Ok(())
     }
 }
