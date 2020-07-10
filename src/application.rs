@@ -1,4 +1,3 @@
-use crate::fmt::application as fmt_appl;
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
 
@@ -18,6 +17,21 @@ impl<S, A> From<S> for Application<S, A> {
 
 impl<S: Display, A: Display> Display for Application<S, A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt_appl(&self.symbol, &self.args, f)
+        format(&self.symbol, &self.args, f)
     }
+}
+
+pub fn format<H: Display, T: Display>(head: &H, tail: &[T], f: &mut fmt::Formatter) -> fmt::Result {
+    let parens = !tail.is_empty();
+    if parens {
+        write!(f, "(")?;
+    };
+    write!(f, "{}", head)?;
+    for t in tail {
+        write!(f, " {}", t)?;
+    }
+    if parens {
+        write!(f, ")")?;
+    };
+    Ok(())
 }

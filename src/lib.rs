@@ -154,7 +154,6 @@ pub mod rc {
 
 mod application;
 pub mod error;
-mod fmt;
 mod intro;
 mod rule;
 mod signature;

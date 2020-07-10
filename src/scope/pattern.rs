@@ -1,7 +1,7 @@
 //! Rewrite patterns.
 
 use super::{Symbol, Term};
-use crate::fmt::application as fmt_appl;
+use crate::application::format as fmt_appl;
 use alloc::vec::Vec;
 use core::{convert::TryFrom, fmt};
 

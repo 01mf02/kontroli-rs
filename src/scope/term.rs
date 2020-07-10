@@ -2,7 +2,7 @@
 
 use super::rterm::{Arg, RTerm};
 use super::Symbol;
-use crate::fmt::application as fmt_appl;
+use crate::application::format as fmt_appl;
 use alloc::vec::Vec;
 use core::fmt;
 
