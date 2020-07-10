@@ -1,24 +1,37 @@
-//! Maps from symbols to their types and associated rewrite rules.
+//! Maps from symbols to their associated types and rewrite rules.
 
-use super::pattern::TopPattern;
-use super::{RTerm, Rule, Symbol, Typing};
+use super::Application;
+use super::Typing;
 use crate::error::SignatureError as Error;
-use alloc::{vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
+use core::hash::Hash;
 
 /// Immutable HashMap for fast signature cloning.
 type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 
-/// Map from symbols to their types and associated rewrite rules.
+type Rule<Sym, Pat, Tm> = crate::Rule<String, Application<Sym, Pat>, Tm>;
+
+/// Map from symbols to their associated types and rewrite rules.
 ///
 /// Furthermore, set whether convertibility should be checked modulo eta.
-#[derive(Clone, Default)]
-pub struct Signature<'s> {
-    pub types: FnvHashMap<Symbol<'s>, RTerm<'s>>,
-    pub rules: FnvHashMap<Symbol<'s>, Vec<Rule<'s>>>,
+#[derive(Clone)]
+pub struct Signature<Sym, Pat, Tm> {
+    pub types: FnvHashMap<Sym, Tm>,
+    pub rules: FnvHashMap<Sym, Vec<Rule<Sym, Pat, Tm>>>,
     pub eta: bool,
 }
 
-impl<'s> Signature<'s> {
+impl<Sym, Pat, Tm> Default for Signature<Sym, Pat, Tm> {
+    fn default() -> Self {
+        Self {
+            types: Default::default(),
+            rules: Default::default(),
+            eta: false,
+        }
+    }
+}
+
+impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> Signature<Sym, Pat, Tm> {
     /// Construct an empty signature without eta modularity.
     ///
     /// ~~~
@@ -27,17 +40,21 @@ impl<'s> Signature<'s> {
     /// assert!(sig.eta == false);
     /// ~~~
     pub fn new() -> Self {
-        Default::default()
+        Self {
+            types: Default::default(),
+            rules: Default::default(),
+            eta: false,
+        }
     }
 
-    fn intro_type(&mut self, sym: Symbol<'s>, typ: RTerm<'s>) -> Result<(), Error> {
+    fn intro_type(&mut self, sym: Sym, typ: Tm) -> Result<(), Error> {
         if self.types.insert(sym, typ).is_some() {
             return Err(Error::Reintroduction);
         }
         Ok(())
     }
 
-    fn intro_rules(&mut self, sym: Symbol<'s>, rules: Vec<Rule<'s>>) -> Result<(), Error> {
+    fn intro_rules(&mut self, sym: Sym, rules: Vec<Rule<Sym, Pat, Tm>>) -> Result<(), Error> {
         if self.rules.insert(sym, rules).is_some() {
             return Err(Error::Reintroduction);
         }
@@ -45,7 +62,7 @@ impl<'s> Signature<'s> {
     }
 
     /// Add a rewrite rule to an existing symbol.
-    pub fn add_rule(&mut self, rule: Rule<'s>) -> Result<(), Error> {
+    pub fn add_rule(&mut self, rule: Rule<Sym, Pat, Tm>) -> Result<(), Error> {
         self.rules
             .get_mut(&rule.lhs.symbol)
             .ok_or(Error::NonRewritable)?
@@ -54,14 +71,14 @@ impl<'s> Signature<'s> {
     }
 
     /// Introduce a new symbol with given typing.
-    pub fn insert(&mut self, sym: Symbol<'s>, typing: Typing<'s>) -> Result<(), Error> {
-        self.intro_type(sym, typing.typ)?;
+    pub fn insert(&mut self, sym: Sym, typing: Typing<Tm>) -> Result<(), Error> {
+        self.intro_type(sym.clone(), typing.typ)?;
         if typing.rewritable {
             let rules = match typing.term {
                 None => Vec::new(),
                 Some((tm, _check)) => vec![Rule {
                     ctx: Vec::new(),
-                    lhs: TopPattern::from(sym),
+                    lhs: Application::from(sym.clone()),
                     rhs: tm,
                 }],
             };

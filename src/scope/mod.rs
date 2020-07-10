@@ -1,22 +1,26 @@
 //! Scoping of parse structures to data structures with references.
 
 pub mod command;
-pub mod intro;
 pub mod pattern;
 pub mod rterm;
-mod rule;
 mod symbol;
 mod symbols;
 pub mod term;
 
 pub use command::Command;
-pub use intro::Intro;
 pub use pattern::Pattern;
 pub use rterm::RTerm;
-pub use rule::Rule;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
 pub use term::Term;
+
+/// Rewrite rules with strings as bound variable identifiers,
+/// a top pattern (symbol application) as left-hand side, and
+/// a shared term as right-hand side.
+pub type Rule<'s> = crate::rule::GRule<String, pattern::TopPattern<'s>, RTerm<'s>>;
+
+/// The way we introduce a new name.
+pub type Intro<'s> = crate::Intro<RTerm<'s>, RTerm<'s>>;
 
 use crate::error::{Error as KoError, ScopeError as Error};
 use crate::parse::{self, parse};

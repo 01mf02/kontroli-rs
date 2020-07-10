@@ -21,16 +21,22 @@
 pub mod command;
 pub mod intro;
 mod pattern;
-pub mod rule;
 mod symbol;
 pub mod term;
 
 pub use command::Command;
 pub use intro::Intro;
 pub use pattern::Pattern;
-pub use rule::Rule;
 pub use symbol::Symbol;
 pub use term::Term;
+
+/// Rewrite rules with strings as bound variable identifiers,
+/// and preterms as left- and right-hand sides.
+///
+/// This is a vast overapproximation of rules, because
+/// not every preterm is a valid rule left-hand side.
+/// Scoping takes care to separate the wheat from the chaff.
+pub type Rule = crate::Rule<String, Term, Term>;
 
 use nom::{
     branch::alt,

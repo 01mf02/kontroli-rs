@@ -42,18 +42,7 @@ pub enum Pattern<'s> {
 ///
 /// The top pattern of a rule must be an application of patterns to a symbol.
 /// This is to exclude rules matching any term, such as `[X] X --> f`.
-#[derive(Clone)]
-pub struct TopPattern<'s> {
-    pub symbol: Symbol<'s>,
-    pub args: Vec<Pattern<'s>>,
-}
-
-impl<'s> From<Symbol<'s>> for TopPattern<'s> {
-    fn from(symbol: Symbol<'s>) -> Self {
-        let args = Vec::new();
-        Self { symbol, args }
-    }
-}
+pub type TopPattern<'s> = crate::Application<Symbol<'s>, Pattern<'s>>;
 
 impl<'s> From<TopPattern<'s>> for Pattern<'s> {
     fn from(tp: TopPattern<'s>) -> Self {

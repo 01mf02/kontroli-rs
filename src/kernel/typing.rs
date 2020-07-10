@@ -3,38 +3,10 @@
 use super::rterm::{Arg, RTerm};
 use super::{Intro, Signature, Term};
 use crate::error::TypingError as Error;
+use crate::typing::Check;
 use core::fmt;
 
-/// Normalised, verified form of introduction commands.
-///
-/// An introduction command can have many shapes:
-/// `x: A`, `x := t`, `x: A := t`, ...
-/// A typing provides a uniform presentation of introduction commands
-/// with respect to type checking.
-///
-/// When constructing a typing from an introduction command,
-/// the type `A` of the newly introduced symbol is
-/// (a) inferred from its defining term `t` if not given and
-/// (b) verified to be of a proper sort.
-/// In case a defining term `t` is given, `t` is registered,
-/// along with the information whether the type `A` was inferred from it.
-///
-/// Constructing a typing from a command of the shape `x: A := t`
-/// does *not* check whether `t: A`. For this, the `check` function can be used.
-/// This allows us to postpone and parallelise type checking.
-#[derive(Clone)]
-pub struct Typing<'s> {
-    pub typ: RTerm<'s>,
-    pub term: Option<(RTerm<'s>, Check)>,
-    pub rewritable: bool,
-}
-
-/// Have we assured that a given term matches a given type?
-#[derive(Clone)]
-pub enum Check {
-    Checked,
-    Unchecked,
-}
+pub type Typing<'s> = crate::Typing<RTerm<'s>>;
 
 impl<'s> Typing<'s> {
     pub fn declare(typ: RTerm<'s>, rewritable: bool, sig: &Signature<'s>) -> Result<Self, Error> {
@@ -85,6 +57,19 @@ impl<'s> Typing<'s> {
         Ok(self)
     }
 
+    /// Construct a typing from an introduction command.
+    ///
+    /// An introduction command can have many shapes, such as
+    /// `x: A`, `x := t`, `x: A := t`, ...
+    /// The type `A` of the newly introduced symbol is
+    /// (a) inferred from its defining term `t` if not given and
+    /// (b) verified to be of a proper sort.
+    /// In case a defining term `t` is given, `t` is registered,
+    /// along with the information whether the type `A` was inferred from it.
+    ///
+    /// Constructing a typing from a command of the shape `x: A := t`
+    /// does *not* check whether `t: A`. For this, the `check` function can be used.
+    /// This allows us to postpone and parallelise type checking.
     pub fn new(it: Intro<'s>, sig: &Signature<'s>) -> Result<Self, Error> {
         match it {
             Intro::Declaration(ty) => Self::declare(ty, false, &sig),
