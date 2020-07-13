@@ -154,6 +154,7 @@ pub mod rc {
 
 mod application;
 mod arg;
+mod command;
 pub mod error;
 mod intro;
 mod rule;
@@ -163,6 +164,7 @@ mod typing;
 
 pub use application::Application;
 pub use arg::Arg;
+pub use command::Command;
 pub use error::Error;
 pub use intro::Intro;
 pub use rule::Rule;
