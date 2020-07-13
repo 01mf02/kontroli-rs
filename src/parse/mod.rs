@@ -18,13 +18,11 @@
 //!   the alternative of lexed parsers `alt(lex(p1), ..., lex(pn))`.
 //!   This avoids redoing the lexing for all alternatives.
 
-mod command;
 mod intro;
 mod pattern;
 mod symbol;
 pub mod term;
 
-pub use command::Command;
 pub use intro::Intro;
 pub use pattern::Pattern;
 pub use symbol::Symbol;
@@ -37,6 +35,9 @@ pub use term::Term;
 /// not every preterm is a valid rule left-hand side.
 /// Scoping takes care to separate the wheat from the chaff.
 pub type Rule = crate::Rule<String, Term, Term>;
+
+/// Signature-changing command.
+pub type Command = crate::Command<String, Intro, Rule>;
 
 use nom::{
     branch::alt,
@@ -317,7 +318,7 @@ impl Command {
             tag("def"),
             map(
                 tuple((lex(ident_args), opt(lex(Term::of)), opt(lex(Term::is)))),
-                |((id, args), ty, tm)| Self::Intro(id, args, Intro::Definition(ty, tm)),
+                |((id, args), ty, tm)| Self::Intro(id, Intro::Definition(ty, tm).parametrise(args)),
             ),
         )(i)
     }
@@ -327,14 +328,14 @@ impl Command {
             tag("thm"),
             map(
                 tuple((lex(ident_args), lex(Term::of), lex(Term::is))),
-                |((id, args), ty, tm)| Self::Intro(id, args, Intro::Theorem(ty, tm)),
+                |((id, args), ty, tm)| Self::Intro(id, Intro::Theorem(ty, tm).parametrise(args)),
             ),
         )(i)
     }
 
     fn declaration(i: &[u8]) -> Parse<Self> {
         map(tuple((ident_args, lex(Term::of))), |((id, args), ty)| {
-            Self::Intro(id, args, Intro::Declaration(ty))
+            Self::Intro(id, Intro::Declaration(ty).parametrise(args))
         })(i)
     }
 

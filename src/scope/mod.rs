@@ -1,13 +1,11 @@
 //! Scoping of parse structures to data structures with references.
 
-mod command;
 pub mod pattern;
 pub mod rterm;
 mod symbol;
 mod symbols;
 pub mod term;
 
-pub use command::Command;
 pub use pattern::Pattern;
 pub use rterm::RTerm;
 pub use symbol::Symbol;
@@ -21,6 +19,9 @@ pub type Rule<'s> = crate::Rule<String, pattern::TopPattern<'s>, RTerm<'s>>;
 
 /// The way we introduce a new name.
 pub type Intro<'s> = crate::Intro<RTerm<'s>, RTerm<'s>>;
+
+/// Signature-changing command.
+pub type Command<'s, Id> = crate::Command<Id, Intro<'s>, Rule<'s>>;
 
 use crate::error::{Error as KoError, ScopeError as Error};
 use crate::parse::{self, parse};
@@ -152,7 +153,7 @@ impl parse::Intro {
 impl parse::Command {
     pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Command<'s, String>, Error> {
         match self {
-            Self::Intro(id, args, it) => Ok(Command::Intro(id, it.parametrise(args).scope(syms)?)),
+            Self::Intro(id, it) => Ok(Command::Intro(id, it.scope(syms)?)),
             Self::Rule(prerule) => Ok(Command::Rule(prerule.scope(syms)?)),
         }
     }
