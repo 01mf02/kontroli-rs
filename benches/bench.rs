@@ -3,8 +3,7 @@ use kontroli::parse::{opt_lex, phrase, Command, Parser};
 use kontroli::rc::{Intro, Rule, Signature, Typing};
 use kontroli::scope::{self, Symbols};
 use kontroli::Error;
-use std::io::Read;
-use std::path::PathBuf;
+use std::include_bytes;
 
 fn check(cmds: Vec<Command>) -> Result<(), Error> {
     use colosseum::unsync::Arena;
@@ -33,13 +32,6 @@ fn check(cmds: Vec<Command>) -> Result<(), Error> {
     Ok(())
 }
 
-fn read(file: PathBuf) -> Vec<u8> {
-    let mut file = std::fs::File::open(file).unwrap();
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).unwrap();
-    buffer
-}
-
 fn parse(buffer: &[u8]) -> Vec<Command> {
     use nom::combinator::iterator;
     let parse = opt_lex(phrase(Command::parse));
@@ -47,14 +39,14 @@ fn parse(buffer: &[u8]) -> Vec<Command> {
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    let fpure = read(PathBuf::from("examples/pure.dk"));
-    let ppure = parse(&fpure);
+    let fpure = include_bytes!("../examples/pure.dk");
+    let ppure = parse(fpure);
 
-    let boole = parse(&read(PathBuf::from("examples/bool.dk")));
-    let nat = parse(&read(PathBuf::from("examples/nat.dk")));
-    let sudoku = parse(&read(PathBuf::from("examples/sudoku/sudoku.dk")));
-    let sudoku_easy = parse(&read(PathBuf::from("examples/sudoku/solve_easy.dk")));
-    let or_n = parse(&read(PathBuf::from("examples/bench/or_n.dk")));
+    let boole = parse(include_bytes!("../examples/bool.dk"));
+    let nat = parse(include_bytes!("../examples/nat.dk"));
+    let sudoku = parse(include_bytes!("../examples/sudoku/sudoku.dk"));
+    let sudoku_easy = parse(include_bytes!("../examples/sudoku/solve_easy.dk"));
+    let or_n = parse(include_bytes!("../examples/bench/or_n.dk"));
 
     let cmd = b"def eq : Dep (fib (mul 2 4)) := dep (fib (mul 4 2)).\n";
     let fib8 = [nat.clone(), parse(cmd)].concat();
@@ -64,7 +56,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     let sudo = [boole, sudoku, sudoku_easy].concat();
 
-    c.bench_function("parse", |b| b.iter(|| parse(&fpure)));
+    c.bench_function("parse", |b| b.iter(|| parse(fpure)));
     c.bench_function("fib8", |b| b.iter(|| check(fib8.clone()).unwrap()));
     c.bench_function("or8", |b| b.iter(|| check(or8.clone()).unwrap()));
     c.bench_function("pure", |b| b.iter(|| check(ppure.clone()).unwrap()));
