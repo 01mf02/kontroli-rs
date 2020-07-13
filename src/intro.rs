@@ -1,3 +1,5 @@
+use core::fmt::{self, Display};
+
 /// The way we introduce a new name.
 #[derive(Debug, Clone)]
 pub enum Intro<Ty, Tm> {
@@ -47,6 +49,18 @@ impl<Ty, Tm> Intro<Ty, Tm> {
             Self::Definition(ty, tm) => Ok(Intro::Definition(ty, tm.map(f).transpose()?)),
             Self::Theorem(ty, tm) => Ok(Intro::Theorem(ty, f(tm)?)),
             Self::Declaration(ty) => Ok(Intro::Declaration(ty)),
+        }
+    }
+}
+
+impl<Ty: Display, Tm: Display> Display for Intro<Ty, Tm> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Definition(Some(ty), Some(tm)) | Self::Theorem(ty, tm) => {
+                write!(f, ": {} := {}", ty, tm)
+            }
+            Self::Definition(Some(ty), None) | Self::Declaration(ty) => write!(f, ": {}", ty),
+            Self::Definition(None, tm) => tm.iter().try_for_each(|tm| write!(f, ":= {}", tm)),
         }
     }
 }
