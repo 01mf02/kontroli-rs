@@ -18,7 +18,7 @@ fn step<'s>((cn1, cn2): Constraint<'s>, cns: &mut Vec<Constraint<'s>>, eta: bool
             cns.push((t1.clone(), t2.clone()));
             true
         }
-        (Prod(Arg { ty: Some(ty1), .. }, tm1), Prod(Arg { ty: Some(ty2), .. }, tm2)) => {
+        (Prod(Arg { ty: ty1, .. }, tm1), Prod(Arg { ty: ty2, .. }, tm2)) => {
             cns.push((ty1.clone(), ty2.clone()));
             cns.push((tm1.clone(), tm2.clone()));
             true

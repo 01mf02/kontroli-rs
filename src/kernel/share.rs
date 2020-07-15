@@ -1,10 +1,10 @@
 //! Convert from scoped to shared structures.
 
 use super::pattern::{Pattern, TopPattern};
-use super::rterm::{Arg, RTerm};
+use super::rterm::{Arg, OptArg, RTerm};
 use super::{Intro, Rc, Rule, Term};
 use crate::scope::pattern::{Pattern as SPattern, TopPattern as STopPattern};
-use crate::scope::rterm::{Arg as SArg, RTerm as SRTerm};
+use crate::scope::rterm::{Arg as SArg, OptArg as SOptArg, RTerm as SRTerm};
 use crate::scope::{Intro as SIntro, Rule as SRule, Term as STerm};
 
 impl<'s> From<STerm<'s>> for Term<'s> {
@@ -17,7 +17,7 @@ impl<'s> From<STerm<'s>> for Term<'s> {
             STerm::Appl(tm, args) => {
                 Self::Appl(RTerm::from(tm), args.into_iter().map(RTerm::from).collect())
             }
-            STerm::Abst(arg, tm) => Self::Abst(Arg::from(arg), RTerm::from(tm)),
+            STerm::Abst(arg, tm) => Self::Abst(OptArg::from(arg), RTerm::from(tm)),
             STerm::Prod(arg, tm) => Self::Prod(Arg::from(arg), RTerm::from(tm)),
         }
     }
@@ -25,6 +25,15 @@ impl<'s> From<STerm<'s>> for Term<'s> {
 
 impl<'s> From<SArg<'s>> for Arg<'s> {
     fn from(arg: SArg<'s>) -> Self {
+        Self {
+            id: Rc::new(arg.id),
+            ty: RTerm::from(arg.ty),
+        }
+    }
+}
+
+impl<'s> From<SOptArg<'s>> for OptArg<'s> {
+    fn from(arg: SOptArg<'s>) -> Self {
         Self {
             id: Rc::new(arg.id),
             ty: arg.ty.map(RTerm::from),

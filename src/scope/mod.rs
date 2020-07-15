@@ -29,7 +29,7 @@ use crate::stack::Stack;
 use alloc::{string::String, string::ToString, vec::Vec};
 use core::convert::TryFrom;
 use pattern::TopPattern;
-use rterm::Arg;
+use rterm::{Arg, OptArg};
 
 type Bound = Stack<String>;
 
@@ -63,14 +63,16 @@ impl parse::Term {
                 let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scoper(syms, bnd)).collect();
                 Ok(Term::Appl(head.scoper(syms, bnd)?, tail?))
             }
-            Self::Bind(binder, arg, tm) => {
+            Self::Abst(arg, tm) => {
                 let arg = arg.scopen(syms, bnd)?;
                 bnd.with_pushed(arg.id.to_string(), |bnd| {
-                    let tm = tm.scoper(syms, bnd)?;
-                    match binder {
-                        parse::term::Binder::Lam => Ok(Term::Abst(arg, tm)),
-                        parse::term::Binder::Pi => Ok(Term::Prod(arg, tm)),
-                    }
+                    Ok(Term::Abst(arg, tm.scoper(syms, bnd)?))
+                })
+            }
+            Self::Prod(arg, tm) => {
+                let arg = arg.scopen(syms, bnd)?;
+                bnd.with_pushed(arg.id.to_string(), |bnd| {
+                    Ok(Term::Prod(arg, tm.scoper(syms, bnd)?))
                 })
             }
         }
@@ -94,8 +96,15 @@ impl parse::Term {
 
 impl parse::term::Arg {
     fn scopen<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Arg<'s>, Error> {
-        let ty = self.ty.map(|ty| ty.scoper(syms, bnd)).transpose()?;
+        let ty = self.ty.scoper(syms, bnd)?;
         Ok(Arg { id: self.id, ty })
+    }
+}
+
+impl parse::term::OptArg {
+    fn scopen<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<OptArg<'s>, Error> {
+        let ty = self.ty.map(|ty| ty.scoper(syms, bnd)).transpose()?;
+        Ok(OptArg { id: self.id, ty })
     }
 }
 
@@ -132,8 +141,8 @@ impl parse::Pattern {
 
 impl parse::Rule {
     pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Rule<'s>, Error> {
-        let mut ctxs = Stack::from(self.ctx.clone());
-        let ctx = self.ctx;
+        let ctx: Vec<_> = self.ctx.into_iter().map(|arg| arg.id).collect();
+        let mut ctxs = Stack::from(ctx.clone());
         let pre = parse::Pattern::try_from(self.lhs).map_err(|_| Error::NoPrepattern)?;
         let pat = pre.scopen(syms, &ctxs)?;
         let lhs = TopPattern::try_from(pat).map_err(|_| Error::NoTopPattern)?;

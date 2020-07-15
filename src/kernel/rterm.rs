@@ -9,7 +9,9 @@ use core::fmt;
 pub struct RTerm<'s>(Rc<Term<'s>>);
 
 /// Argument of a binder.
-pub type Arg<'s> = crate::Arg<Rc<String>, Option<RTerm<'s>>>;
+pub type Arg<'s> = crate::Arg<Rc<String>, RTerm<'s>>;
+
+pub type OptArg<'s> = crate::Arg<Rc<String>, Option<RTerm<'s>>>;
 
 impl<'s> fmt::Display for RTerm<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -45,17 +47,12 @@ impl<'s> RTerm<'s> {
     }
 }
 
-impl<'s> Arg<'s> {
-    pub fn new(id: String, ty: Option<RTerm<'s>>) -> Self {
-        let id = Rc::new(id);
-        Self { id, ty }
-    }
-
-    /// Compare the memory addresses of the argument components.
-    pub fn ptr_eq(&self, other: &Self) -> bool {
+impl<'s> OptArg<'s> {
+    /// Compare the memory addresses of the argument types.
+    pub fn type_ptr_eq(&self, other: &Self) -> bool {
         match (self.ty.as_ref(), other.ty.as_ref()) {
-            (None, None) => self.id == other.id,
-            (Some(ty1), Some(ty2)) => RTerm::ptr_eq(&ty1, &ty2) && self.id == other.id,
+            (None, None) => true,
+            (Some(ty1), Some(ty2)) => RTerm::ptr_eq(&ty1, &ty2),
             _ => false,
         }
     }

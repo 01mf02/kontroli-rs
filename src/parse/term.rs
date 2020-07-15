@@ -11,12 +11,13 @@ pub enum Binder {
 
 pub type BTerm = Box<Term>;
 
-pub type Arg = crate::Arg<String, Option<BTerm>>;
+pub type Arg = crate::Arg<String, BTerm>;
+pub type OptArg = crate::Arg<String, Option<BTerm>>;
 
 impl From<Term> for Arg {
     fn from(ty: Term) -> Self {
         let id = "$".to_string();
-        let ty = Some(Box::new(ty));
+        let ty = Box::new(ty);
         Self { id, ty }
     }
 }
@@ -25,21 +26,17 @@ impl From<Term> for Arg {
 pub enum Term {
     Symb(Symbol),
     Appl(BTerm, Vec<Term>),
-    Bind(Binder, Arg, BTerm),
+    Abst(OptArg, BTerm),
+    Prod(Arg, BTerm),
 }
 
 impl Term {
-    fn bind_many(self, binders: Vec<(Binder, Arg)>) -> Self {
-        binders.into_iter().rev().fold(self, |acc, (binder, arg)| {
-            Self::Bind(binder, arg, Box::new(acc))
-        })
+    pub fn absts(self, args: impl Iterator<Item = Arg>) -> Self {
+        args.fold(self, |acc, arg| Self::Abst(arg.map(Some), Box::new(acc)))
     }
 
-    pub fn absts(self, args: Vec<Arg>) -> Self {
-        self.bind_many(args.into_iter().map(|arg| (Binder::Lam, arg)).collect())
-    }
-    pub fn prods(self, args: Vec<Arg>) -> Self {
-        self.bind_many(args.into_iter().map(|arg| (Binder::Pi, arg)).collect())
+    pub fn prods(self, args: impl Iterator<Item = Arg>) -> Self {
+        args.fold(self, |acc, arg| Self::Prod(arg, Box::new(acc)))
     }
 
     pub fn apply(mut self, mut args: Vec<Self>) -> Self {

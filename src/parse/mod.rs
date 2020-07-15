@@ -28,13 +28,13 @@ pub use pattern::Pattern;
 pub use symbol::Symbol;
 pub use term::Term;
 
-/// Rewrite rules with strings as bound variable identifiers,
+/// Rewrite rules with arguments as bound variables,
 /// and preterms as left- and right-hand sides.
 ///
 /// This is a vast overapproximation of rules, because
 /// not every preterm is a valid rule left-hand side.
 /// Scoping takes care to separate the wheat from the chaff.
-pub type Rule = crate::Rule<String, Term, Term>;
+pub type Rule = crate::Rule<OptArg, Term, Term>;
 
 /// Signature-changing command.
 pub type Command = crate::Command<String, Intro, Rule>;
@@ -52,7 +52,7 @@ use nom::{
 };
 
 use alloc::{boxed::Box, string::String, vec::Vec};
-use term::{Arg, Binder};
+use term::{Arg, Binder, OptArg};
 
 /// Result of a parser.
 pub type Parse<'a, A> = IResult<&'a [u8], A, VerboseError<&'a [u8]>>;
@@ -210,8 +210,13 @@ impl Parser for Symbol {
 
 impl Parser for Arg {
     fn parse(i: &[u8]) -> Parse<Self> {
-        let of = map(Term::of, Some);
-        map(pair(ident, lex(of)), |(id, ty)| Self { id, ty })(i)
+        map(pair(ident, lex(Term::of)), |(id, ty)| Self { id, ty })(i)
+    }
+}
+
+impl Parser for OptArg {
+    fn parse(i: &[u8]) -> Parse<Self> {
+        map(pair(ident, lex(opt(Term::of))), |(id, ty)| Self { id, ty })(i)
     }
 }
 
@@ -254,19 +259,23 @@ impl Term {
     }
 
     fn appl_or_bind_unnamed(i: &[u8]) -> Parse<Self> {
-        let bind = pair(Binder::pi, lex(Self::parse));
+        let bind = preceded(Binder::pi, lex(Self::parse));
         map(pair(Self::appl, opt(lex(bind))), |(app, bind)| match bind {
             None => app,
-            Some((binder, bound)) => Self::Bind(binder, Arg::from(app), Box::new(bound)),
+            Some(bound) => Self::Prod(Arg::from(app), Box::new(bound)),
         })(i)
     }
 
     fn bind_named(i: &[u8]) -> Parse<Self> {
-        let of = map(Term::of_appl, Some);
-        let unnamed = map(Binder::lam, |binder| (None, binder));
-        let ty_binder = alt((unnamed, pair(of, lex(Binder::parse))));
-        let bind = |(id, (ty, binder), tm)| Self::Bind(binder, Arg { id, ty }, Box::new(tm));
-        map(tuple((ident, lex(ty_binder), lex(Self::parse))), bind)(i)
+        let untyped = value(None, Binder::lam);
+        let typed = map(pair(Term::of_appl, lex(Binder::parse)), Some);
+        let binder = alt((untyped, typed));
+        let bind = |(id, binder, tm)| match binder {
+            None => Self::Abst(OptArg { id, ty: None }, Box::new(tm)),
+            Some((ty, Binder::Lam)) => Self::Abst(OptArg { id, ty: Some(ty) }, Box::new(tm)),
+            Some((ty, Binder::Pi)) => Self::Prod(Arg { id, ty }, Box::new(tm)),
+        };
+        map(tuple((ident, lex(binder), lex(Self::parse))), bind)(i)
     }
 }
 
@@ -288,20 +297,18 @@ impl Parser for Term {
     }
 }
 
-/// Parse a (potentially empty) list of comma-separated identifiers.
-fn idents(i: &[u8]) -> Parse<Vec<String>> {
-    separated_list(lex(char(',')), lex(ident))(i)
-}
-
 impl Parser for Rule {
+    /// ~~~
+    /// # use kontroli::parse::{Parser, Rule, phrase};
+    /// let pr = phrase(Rule::parse);
+    /// assert!(pr(b"[x] id x --> x.\n").is_ok());
+    /// assert!(pr(b"[x : A, y : B] fst x y --> x.\n").is_ok());
+    /// ~~~
     fn parse(i: &[u8]) -> Parse<Self> {
+        let args = separated_list(lex(char(',')), lex(OptArg::parse));
+        let ctxt = delimited(char('['), args, lex(char(']')));
         map(
-            tuple((
-                delimited(char('['), idents, lex(char(']'))),
-                lex(Term::parse),
-                lex(tag("-->")),
-                lex(Term::parse),
-            )),
+            tuple((ctxt, lex(Term::parse), lex(tag("-->")), lex(Term::parse))),
             |(ctx, lhs, _, rhs)| Rule { ctx, lhs, rhs },
         )(i)
     }

@@ -7,4 +7,6 @@ use alloc::{boxed::Box, string::String};
 pub type RTerm<'s> = Box<Term<'s>>;
 
 /// Argument of a binder.
-pub type Arg<'s> = crate::Arg<String, Option<RTerm<'s>>>;
+pub type Arg<'s> = crate::Arg<String, RTerm<'s>>;
+
+pub type OptArg<'s> = crate::Arg<String, Option<RTerm<'s>>>;

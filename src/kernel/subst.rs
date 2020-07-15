@@ -1,27 +1,7 @@
 //! Substitution and shifting for terms.
 
-use super::rterm::{Arg, RTerm};
-use super::Term;
+use super::{RTerm, Term};
 use alloc::vec::Vec;
-
-impl<'s> Arg<'s> {
-    /// Return the substitution of an argument.
-    fn subst<S>(self, subst: &S, k: usize) -> Self
-    where
-        S: Fn(usize, usize) -> RTerm<'s>,
-    {
-        let ty = self.ty.map(|ty| ty.apply_subst(subst, k));
-        Self { id: self.id, ty }
-    }
-
-    /// Return the substitution of an argument and a term.
-    fn subst_bound<S>(self, tm: RTerm<'s>, subst: &S, k: usize) -> (Self, RTerm<'s>)
-    where
-        S: Fn(usize, usize) -> RTerm<'s>,
-    {
-        (self.subst(subst, k), tm.apply_subst(subst, k + 1))
-    }
-}
 
 impl<'s> RTerm<'s> {
     pub fn apply_subst<S>(self, subst: &S, k: usize) -> Self
@@ -43,16 +23,18 @@ impl<'s> RTerm<'s> {
                 }
             }
             Term::Abst(arg, f) => {
-                let (arg2, f2) = arg.clone().subst_bound(f.clone(), subst, k);
-                if arg.ptr_eq(&arg2) && f.ptr_eq(&f2) {
+                let arg2 = arg.clone().map(|ty| ty.map(|ty| ty.apply_subst(subst, k)));
+                let f2 = f.clone().apply_subst(subst, k + 1);
+                if arg.type_ptr_eq(&arg2) && f.ptr_eq(&f2) {
                     self
                 } else {
                     Self::new(Term::Abst(arg2, f2))
                 }
             }
             Term::Prod(arg, f) => {
-                let (arg2, f2) = arg.clone().subst_bound(f.clone(), subst, k);
-                if arg.ptr_eq(&arg2) && f.ptr_eq(&f2) {
+                let arg2 = arg.clone().map(|ty| ty.apply_subst(subst, k));
+                let f2 = f.clone().apply_subst(subst, k + 1);
+                if arg.ty.ptr_eq(&arg2.ty) && f.ptr_eq(&f2) {
                     self
                 } else {
                     Self::new(Term::Prod(arg2, f2))
