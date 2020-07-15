@@ -1,9 +1,7 @@
 //! Convert from scoped to shared structures.
 
-use super::pattern::{Pattern};
 use super::rterm::{Arg, OptArg, RTerm};
 use super::{Intro, Rc, Rule, Term};
-use crate::scope::pattern::{Pattern as SPattern};
 use crate::scope::rterm::{Arg as SArg, OptArg as SOptArg, RTerm as SRTerm};
 use crate::scope::{Intro as SIntro, Rule as SRule, Term as STerm};
 
@@ -47,21 +45,11 @@ impl<'s> From<SRTerm<'s>> for RTerm<'s> {
     }
 }
 
-impl<'s> From<SPattern<'s>> for Pattern<'s> {
-    fn from(rule: SPattern<'s>) -> Self {
-        match rule {
-            SPattern::Symb(s, pats) => Self::Symb(s, pats.into_iter().map(Self::from).collect()),
-            SPattern::MVar(m) => Self::MVar(m),
-            SPattern::Joker => Self::Joker,
-        }
-    }
-}
-
 impl<'s> From<SRule<'s>> for Rule<'s> {
     fn from(rule: SRule<'s>) -> Self {
         Self {
             ctx: rule.ctx,
-            lhs: rule.lhs.map(Pattern::from),
+            lhs: rule.lhs,
             rhs: RTerm::from(rule.rhs),
         }
     }

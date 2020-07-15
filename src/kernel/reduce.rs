@@ -107,7 +107,7 @@ impl<'s> State<'s> {
                     Some(rules) => {
                         match rules
                             .iter()
-                            .filter_map(|r| Some((r.match_flatten(&stack, sig)?, r)))
+                            .filter_map(|r| Some((stack.match_flatten(&r, sig)?, r)))
                             .next()
                         {
                             None => break,
@@ -161,7 +161,7 @@ fn all_convertible<'s>(
     Some(tm)
 }
 
-impl<'s> Rule<'s> {
+impl<'s> Stack<'s> {
     /// Determine whether the stack of an abstract machine matches the rule's LHS.
     ///
     /// Return a new machine context containing variable assignments in case of a match.
@@ -178,15 +178,15 @@ impl<'s> Rule<'s> {
     /// let term = Term::from(STerm::parse("id f a.\n", &syms)?);
     ///
     /// let stack = State::new(RTerm::new(term)).whnf(&sig).stack;
-    /// let subst = rule.match_flatten(&stack, &sig).unwrap();
+    /// let subst = stack.match_flatten(&rule, &sig).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
     ///
     /// let expected = Term::from(STerm::parse("f.\n", &syms)?);
     /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn match_flatten(&self, stack: &Stack<'s>, sig: &Signature<'s>) -> Option<Context<'s>> {
-        self.matches(stack, sig)?
+    pub fn match_flatten(&self, rule: &Rule<'s>, sig: &Signature<'s>) -> Option<Context<'s>> {
+        self.match_rule(rule, sig)?
             .into_iter()
             .map(|s| all_convertible(s.into_iter(), sig))
             .rev()
