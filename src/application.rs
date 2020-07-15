@@ -8,6 +8,18 @@ pub struct Application<S, A> {
     pub args: Vec<A>,
 }
 
+impl<S, A> Application<S, A> {
+    pub fn map<F, B>(self, f: F) -> Application<S, B>
+    where
+        F: Fn(A) -> B,
+    {
+        Application {
+            symbol: self.symbol,
+            args: self.args.into_iter().map(f).collect(),
+        }
+    }
+}
+
 impl<S, A> From<S> for Application<S, A> {
     fn from(symbol: S) -> Self {
         let args = Vec::new();
