@@ -162,7 +162,7 @@ fn lex<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
 {
-    preceded(opt(space), inner)
+    preceded(space, inner)
 }
 
 fn parens<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
