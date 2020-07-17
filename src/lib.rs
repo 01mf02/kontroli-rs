@@ -80,10 +80,7 @@
 //!             sig.insert(sym, typing)?
 //!         }
 //!         // addition of rewrite rules
-//!         Command::Rules(rules) => {
-//!             let mut rules = rules.into_iter().map(Rule::from);
-//!             rules.try_for_each(|r| sig.add_rule(r))?
-//!         }
+//!         Command::Rules(rules) => sig.add_rules(rules.into_iter().map(Rule::from))?
 //!     }
 //! }
 //! # Ok::<_, Error>(())

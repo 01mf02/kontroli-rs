@@ -69,6 +69,14 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> Signature<Sym, Pat, Tm> {
         Ok(())
     }
 
+    /// Add several rewrite rules.
+    pub fn add_rules<I>(&mut self, mut rules: I) -> Result<(), Error>
+    where
+        I: Iterator<Item = Rule<Sym, Pat, Tm>>,
+    {
+        rules.try_for_each(|r| self.add_rule(r))
+    }
+
     /// Introduce a new symbol with given typing.
     pub fn insert(&mut self, sym: Sym, typing: Typing<Tm>) -> Result<(), Error> {
         self.intro_type(sym.clone(), typing.typ)?;

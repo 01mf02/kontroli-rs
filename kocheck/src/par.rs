@@ -48,8 +48,7 @@ impl<'s> Command<'s> {
                 Ok(Some((typing, sig.clone())))
             }
             scope::Command::Rules(rules) => {
-                let mut rules = rules.into_iter().map(Rule::from);
-                rules.try_for_each(|r| sig.add_rule(r))?;
+                sig.add_rules(rules.into_iter().map(Rule::from))?;
                 Ok(None)
             }
         }

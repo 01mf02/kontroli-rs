@@ -42,10 +42,7 @@ impl<'s> Command<'s> {
                 let typing = Typing::new(Intro::from(it), &sig)?.check(&sig)?;
                 Ok(sig.insert(sym, typing)?)
             }
-            scope::Command::Rules(rules) => {
-                let mut rules = rules.into_iter().map(Rule::from);
-                Ok(rules.try_for_each(|r| sig.add_rule(r))?)
-            }
+            scope::Command::Rules(rules) => Ok(sig.add_rules(rules.into_iter().map(Rule::from))?),
         }
     }
 }
