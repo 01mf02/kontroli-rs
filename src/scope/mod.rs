@@ -35,8 +35,8 @@ type Bound = Stack<String>;
 
 impl parse::Symbol {
     fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Symbol<'s>, Error> {
-        syms.get(self.path, &self.name)
-            .ok_or(Error::UndeclaredSymbol(self.name))
+        syms.get(&self.path, &self.name)
+            .ok_or(Error::UndeclaredSymbol(self.to_string()))
     }
 }
 

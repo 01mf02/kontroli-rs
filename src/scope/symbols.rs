@@ -16,9 +16,9 @@ impl<'s> Symbols<'s> {
         Default::default()
     }
 
-    pub fn get(&self, path: Vec<String>, name: &str) -> Option<Symbol<'s>> {
+    pub fn get(&self, path: &[String], name: &str) -> Option<Symbol<'s>> {
         self.0
-            .find(&path)
+            .find(path)
             .filter_map(|module| module.data.get(name))
             .next()
             .copied()
