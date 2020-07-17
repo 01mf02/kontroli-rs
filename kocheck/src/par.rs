@@ -23,7 +23,7 @@ impl<'s> Command<'s> {
                 println!("{}", id);
                 Ok(scope::Command::Intro(syms.insert(arena.alloc(id))?, it))
             }
-            scope::Command::Rule(rule) => Ok(scope::Command::Rule(rule)),
+            scope::Command::Rules(rules) => Ok(scope::Command::Rules(rules)),
         }
         .map(Self)
     }
@@ -47,8 +47,9 @@ impl<'s> Command<'s> {
                 sig.insert(sym, typing.clone())?;
                 Ok(Some((typing, sig.clone())))
             }
-            scope::Command::Rule(rule) => {
-                sig.add_rule(Rule::from(rule))?;
+            scope::Command::Rules(rules) => {
+                let mut rules = rules.into_iter().map(Rule::from);
+                rules.try_for_each(|r| sig.add_rule(r))?;
                 Ok(None)
             }
         }

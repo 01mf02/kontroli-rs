@@ -46,7 +46,7 @@ use nom::{
     character::streaming::{char, multispace0, one_of},
     combinator::{map, map_opt, map_res, opt, recognize, value},
     error::VerboseError,
-    multi::{many0, separated_list, separated_nonempty_list},
+    multi::{many0, many1, separated_list, separated_nonempty_list},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
@@ -359,8 +359,10 @@ impl Parser for Command {
     /// assert!(pc(b"thm {|Pure.prop_def|thm|} : A := A.\n").is_ok());
     /// assert!(pc(r"def x : (;test;)(Type {|y|} {|💖!\|}).\n".as_bytes()).is_ok());
     /// assert!(pc(br"def x := x : Type Type => {|x|}.\n").is_ok());
+    /// assert!(pc(br"[X] id X --> X.\n").is_ok());
+    /// assert!(pc(br"[X] pred S(X) --> X [] pred 0 --> 0.\n").is_ok());
     /// ~~~
     fn parse(i: &[u8]) -> Parse<Self> {
-        alt((Self::intro, map(Rule::parse, Self::Rule)))(i)
+        alt((Self::intro, map(many1(lex(Rule::parse)), Self::Rules)))(i)
     }
 }

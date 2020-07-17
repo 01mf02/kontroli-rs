@@ -24,8 +24,11 @@ fn check(cmds: Vec<Command>) -> Result<(), Error> {
                 let typing: Typing = Typing::new(Intro::from(it), &sig)?.check(&sig)?;
                 sig.insert(sym, typing)?
             }
-            // addition of a rewrite rule
-            scope::Command::Rule(rule) => sig.add_rule(Rule::from(rule))?,
+            // addition of rewrite rules
+            scope::Command::Rules(rules) => {
+                let mut rules = rules.into_iter().map(Rule::from);
+                rules.try_for_each(|r| sig.add_rule(r))?
+            }
         }
     }
 

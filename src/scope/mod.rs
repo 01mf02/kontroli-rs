@@ -163,7 +163,10 @@ impl parse::Command {
     pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Command<'s, String>, Error> {
         match self {
             Self::Intro(id, it) => Ok(Command::Intro(id, it.scope(syms)?)),
-            Self::Rule(prerule) => Ok(Command::Rule(prerule.scope(syms)?)),
+            Self::Rules(rules) => {
+                let rules: Result<_, _> = rules.into_iter().map(|r| r.scope(syms)).collect();
+                Ok(Command::Rules(rules?))
+            }
         }
     }
 }
