@@ -43,7 +43,7 @@ use nom::{
     branch::alt,
     bytes::streaming::{is_not, tag, take_until, take_while1},
     character::is_alphanumeric,
-    character::streaming::{char, multispace0, one_of},
+    character::streaming::{char, one_of},
     combinator::{map, map_opt, map_res, opt, recognize, value},
     error::VerboseError,
     multi::{many0, many1, separated_list, separated_nonempty_list},
@@ -141,8 +141,14 @@ pub fn comment(i: &[u8]) -> Parse<&[u8]> {
     nested(b"(;", b";)")(i)
 }
 
-fn space(i: &[u8]) -> Parse<Vec<&[u8]>> {
+fn space0(i: &[u8]) -> Parse<Vec<&[u8]>> {
+    use nom::character::streaming::multispace0;
     preceded(multispace0, many0(terminated(comment, multispace0)))(i)
+}
+
+fn space1(i: &[u8]) -> Parse<Vec<&[u8]>> {
+    use nom::character::streaming::multispace1;
+    many1(alt((multispace1, comment)))(i)
 }
 
 /// Parse whitespace/comments to `None` and given function to `Some`.
@@ -150,19 +156,17 @@ pub fn opt_lex<'a, O1: Clone, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<Option<
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
 {
-    alt((
-        value(None, nom::character::complete::multispace1),
-        value(None, comment),
-        map(inner, Some),
-    ))
+    // attention: we are using the complete version of multispace1 here!
+    use nom::character::complete::multispace1;
+    alt((value(None, alt((multispace1, comment))), map(inner, Some)))
 }
 
-/// Strip away space before parsing with the given function.
+/// Strip away optional space before parsing with the given function.
 fn lex<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
 where
     F: Fn(&'a [u8]) -> Parse<'a, O1>,
 {
-    preceded(space, inner)
+    preceded(space0, inner)
 }
 
 fn parens<'a, O1, F>(inner: F) -> impl Fn(&'a [u8]) -> Parse<O1>
@@ -322,9 +326,9 @@ fn ident_args(i: &[u8]) -> Parse<(String, Vec<Arg>)> {
 impl Command {
     fn definition(i: &[u8]) -> Parse<Self> {
         preceded(
-            tag("def"),
+            terminated(tag("def"), space1),
             map(
-                tuple((lex(ident_args), opt(lex(Term::of)), opt(lex(Term::is)))),
+                tuple((ident_args, opt(lex(Term::of)), opt(lex(Term::is)))),
                 |((id, args), ty, tm)| Self::Intro(id, Intro::Definition(ty, tm).parametrise(args)),
             ),
         )(i)
@@ -332,9 +336,9 @@ impl Command {
 
     fn theorem(i: &[u8]) -> Parse<Self> {
         preceded(
-            tag("thm"),
+            terminated(tag("thm"), space1),
             map(
-                tuple((lex(ident_args), lex(Term::of), lex(Term::is))),
+                tuple((ident_args, lex(Term::of), lex(Term::is))),
                 |((id, args), ty, tm)| Self::Intro(id, Intro::Theorem(ty, tm).parametrise(args)),
             ),
         )(i)
