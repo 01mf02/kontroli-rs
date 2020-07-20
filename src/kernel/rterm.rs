@@ -4,14 +4,13 @@ use super::{Rc, Term};
 use alloc::{string::String, vec::Vec};
 use core::fmt;
 
+pub use crate::Arg;
+
 /// Pointer to a shared term.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RTerm<'s>(Rc<Term<'s>>);
 
-/// Argument of a binder.
-pub type Arg<'s> = crate::Arg<Rc<String>, RTerm<'s>>;
-
-pub type OptArg<'s> = crate::Arg<Rc<String>, Option<RTerm<'s>>>;
+pub type OptArg<'s> = Arg<Rc<String>, Option<RTerm<'s>>>;
 
 impl<'s> fmt::Display for RTerm<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
