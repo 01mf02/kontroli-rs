@@ -1,16 +1,13 @@
 //! Pointers to shared terms.
 
 use super::{Rc, Term};
-use alloc::{string::String, vec::Vec};
+use crate::Arg;
+use alloc::vec::Vec;
 use core::fmt;
-
-pub use crate::Arg;
 
 /// Pointer to a shared term.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RTerm<'s>(Rc<Term<'s>>);
-
-pub type OptArg<'s> = Arg<Rc<String>, Option<RTerm<'s>>>;
 
 impl<'s> fmt::Display for RTerm<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -46,10 +43,10 @@ impl<'s> RTerm<'s> {
     }
 }
 
-impl<'s> OptArg<'s> {
+impl<'s, Id> Arg<Id, Option<RTerm<'s>>> {
     /// Compare the memory addresses of the argument types.
     pub fn type_ptr_eq(&self, other: &Self) -> bool {
-        match (self.ty.as_ref(), other.ty.as_ref()) {
+        match (&self.ty, &other.ty) {
             (None, None) => true,
             (Some(ty1), Some(ty2)) => RTerm::ptr_eq(&ty1, &ty2),
             _ => false,

@@ -1,9 +1,9 @@
 //! Type checking and type inference for terms.
 
-use super::rterm::{Arg, OptArg, RTerm};
-use super::{Intro, Signature, Term};
+use super::{Intro, RTerm, Signature, Term};
 use crate::error::TypingError as Error;
 use crate::typing::Check;
+use crate::Arg;
 use core::fmt;
 
 pub type Typing<'s> = crate::Typing<RTerm<'s>>;
@@ -119,25 +119,6 @@ impl<'s> fmt::Display for Context<'s> {
     }
 }
 
-impl<'s> OptArg<'s> {
-    /// Check whether the bound variable's type (if present)
-    /// has a proper type and is convertible with the given type.
-    fn checkn(
-        &self,
-        sig: &Signature<'s>,
-        ctx: &mut Context<'s>,
-        ty_exp: &RTerm<'s>,
-    ) -> Result<bool, Error> {
-        match self.ty.clone() {
-            None => Ok(true),
-            Some(ty) => {
-                let _ = ty.infern(sig, ctx)?;
-                Ok(RTerm::convertible(ty, ty_exp.clone(), sig))
-            }
-        }
-    }
-}
-
 impl<'s> Term<'s> {
     /// Infer the type of a closed term.
     pub fn infer(&self, sig: &Signature<'s>) -> Result<RTerm<'s>, Error> {
@@ -171,7 +152,7 @@ impl<'s> Term<'s> {
                         _ => Err(Error::ProductExpected),
                     })
             }
-            Abst(OptArg { id, ty: Some(ty) }, tm) => {
+            Abst(Arg { id, ty: Some(ty) }, tm) => {
                 let tm_ty = ctx.bind_of_type(sig, ty.clone(), |ctx| tm.infern(sig, ctx))?;
                 match &*tm_ty {
                     Kind => Err(Error::UnexpectedKind),
@@ -189,7 +170,7 @@ impl<'s> Term<'s> {
                     _ => Err(Error::SortExpected),
                 }
             }
-            Abst(OptArg { ty: None, .. }, _) => Err(Error::DomainFreeAbstraction),
+            Abst(Arg { ty: None, .. }, _) => Err(Error::DomainFreeAbstraction),
         }
     }
 
@@ -205,8 +186,16 @@ impl<'s> Term<'s> {
         use crate::Term::*;
         match self {
             Abst(arg, tm) => match &*ty_exp.whnf(sig) {
-                Prod(Arg { ty: ty_a, .. }, ty_b) => Ok(arg.checkn(sig, ctx, ty_a)?
-                    && ctx.bind(ty_a.clone(), |ctx| tm.checkn(sig, ctx, ty_b.clone()))?),
+                Prod(Arg { ty: ty_a, .. }, ty_b) => {
+                    let a_ok = match &arg.ty {
+                        None => true,
+                        Some(ty) => {
+                            let _ = ty.infern(sig, ctx)?;
+                            RTerm::convertible(ty.clone(), ty_a.clone(), sig)
+                        }
+                    };
+                    Ok(a_ok && ctx.bind(ty_a.clone(), |ctx| tm.checkn(sig, ctx, ty_b.clone()))?)
+                }
                 _ => Err(Error::ProductExpected),
             },
             _ => {
