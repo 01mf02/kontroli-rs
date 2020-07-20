@@ -32,7 +32,7 @@ pub enum Term {
 
 impl Term {
     pub fn absts(self, args: impl Iterator<Item = Arg>) -> Self {
-        args.fold(self, |acc, arg| Self::Abst(arg.map(Some), Box::new(acc)))
+        args.fold(self, |acc, arg| Self::Abst(arg.map_ty(Some), Box::new(acc)))
     }
 
     pub fn prods(self, args: impl Iterator<Item = Arg>) -> Self {

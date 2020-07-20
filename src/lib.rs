@@ -161,6 +161,7 @@ mod pattern;
 mod rule;
 mod signature;
 mod stack;
+mod term;
 mod typing;
 
 pub use application::Application;
@@ -172,4 +173,5 @@ pub use pattern::Pattern;
 pub use rule::Rule;
 pub use signature::Signature;
 pub use stack::Stack;
+pub use term::Term;
 pub use typing::Typing;

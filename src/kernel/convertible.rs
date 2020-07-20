@@ -1,7 +1,7 @@
 //! Convertibility checking.
 
-use super::rterm::{Arg, RTerm};
-use super::{Signature, Term};
+use super::{RTerm, Signature};
+use crate::Arg;
 use alloc::{vec, vec::Vec};
 
 type Constraint<'s> = (RTerm<'s>, RTerm<'s>);
@@ -9,7 +9,7 @@ type Constraint<'s> = (RTerm<'s>, RTerm<'s>);
 /// Return true if the given two terms are potentially convertible, and if so,
 /// add convertibility constraints that have to be fulfilled.
 fn step<'s>((cn1, cn2): Constraint<'s>, cns: &mut Vec<Constraint<'s>>, eta: bool) -> bool {
-    use Term::*;
+    use crate::Term::*;
     match (&*cn1, &*cn2) {
         (Kind, Kind) | (Type, Type) => true,
         (Symb(s1), Symb(s2)) => s1 == s2,

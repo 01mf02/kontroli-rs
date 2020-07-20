@@ -152,7 +152,7 @@ impl<'s> Term<'s> {
     /// Infer the type of an open term using supplied types of bound variables.
     fn infern(&self, sig: &Signature<'s>, ctx: &mut Context<'s>) -> Result<RTerm<'s>, Error> {
         debug!("infer type of {}", self);
-        use Term::*;
+        use crate::Term::*;
         match self {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(RTerm::new(Kind)),
@@ -202,7 +202,7 @@ impl<'s> Term<'s> {
         ty_exp: RTerm<'s>,
     ) -> Result<bool, Error> {
         debug!("check {} is of type {} when {}", self, ty_exp, ctx);
-        use Term::*;
+        use crate::Term::*;
         match self {
             Abst(arg, tm) => match &*ty_exp.whnf(sig) {
                 Prod(Arg { ty: ty_a, .. }, ty_b) => Ok(arg.checkn(sig, ctx, ty_a)?

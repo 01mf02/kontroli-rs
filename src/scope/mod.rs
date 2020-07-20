@@ -4,13 +4,11 @@ pub mod pattern;
 pub mod rterm;
 mod symbol;
 mod symbols;
-pub mod term;
 
 pub use pattern::Pattern;
 pub use rterm::RTerm;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
-pub use term::Term;
 
 /// Rewrite rules with strings as bound variable identifiers,
 /// a top pattern (symbol application) as left-hand side, and
@@ -23,13 +21,14 @@ pub type Intro<'s> = crate::Intro<RTerm<'s>, RTerm<'s>>;
 /// Signature-changing command.
 pub type Command<'s, Id> = crate::Command<Id, Intro<'s>, Rule<'s>>;
 
+pub type Term<'s> = crate::Term<Symbol<'s>, String, RTerm<'s>>;
+
 use crate::error::{Error as KoError, ScopeError as Error};
 use crate::parse::{self, parse};
 use crate::stack::Stack;
 use alloc::{string::String, string::ToString, vec::Vec};
 use core::convert::TryFrom;
 use pattern::TopPattern;
-use rterm::{Arg, OptArg};
 
 type Bound = Stack<String>;
 
@@ -63,16 +62,16 @@ impl parse::Term {
                 let tail: Result<_, _> = tail.into_iter().map(|tm| tm.scoper(syms, bnd)).collect();
                 Ok(Term::Appl(head.scoper(syms, bnd)?, tail?))
             }
-            Self::Abst(arg, tm) => {
-                let arg = arg.scopen(syms, bnd)?;
-                bnd.with_pushed(arg.id.to_string(), |bnd| {
-                    Ok(Term::Abst(arg, tm.scoper(syms, bnd)?))
-                })
-            }
             Self::Prod(arg, tm) => {
-                let arg = arg.scopen(syms, bnd)?;
+                let arg = arg.map_ty_res(|ty| ty.scoper(syms, bnd))?;
                 bnd.with_pushed(arg.id.to_string(), |bnd| {
                     Ok(Term::Prod(arg, tm.scoper(syms, bnd)?))
+                })
+            }
+            Self::Abst(arg, tm) => {
+                let arg = arg.map_ty_res(|o| o.map(|ty| ty.scoper(syms, bnd)).transpose())?;
+                bnd.with_pushed(arg.id.to_string(), |bnd| {
+                    Ok(Term::Abst(arg, tm.scoper(syms, bnd)?))
                 })
             }
         }
@@ -91,20 +90,6 @@ impl parse::Term {
     /// ~~~
     pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Term<'s>, Error> {
         self.scopen(syms, &mut Stack::new())
-    }
-}
-
-impl parse::term::Arg {
-    fn scopen<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<Arg<'s>, Error> {
-        let ty = self.ty.scoper(syms, bnd)?;
-        Ok(Arg { id: self.id, ty })
-    }
-}
-
-impl parse::term::OptArg {
-    fn scopen<'s>(self, syms: &Symbols<'s>, bnd: &mut Bound) -> Result<OptArg<'s>, Error> {
-        let ty = self.ty.map(|ty| ty.scoper(syms, bnd)).transpose()?;
-        Ok(OptArg { id: self.id, ty })
     }
 }
 

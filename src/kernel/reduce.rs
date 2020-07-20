@@ -1,7 +1,7 @@
 //! Reduction to weak head normal form (WHNF), including rewriting.
 
 use super::state::{Context, RState, RTTerm, Stack, State};
-use super::{RTerm, Rule, Signature, Term};
+use super::{RTerm, Rule, Signature};
 use core::cell::Ref;
 
 /// A version of `State` that tracks whether it was reduced to WHNF yet.
@@ -61,7 +61,7 @@ impl<'s> State<'s> {
     /// # Ok::<(), Error>(())
     /// ~~~
     pub fn whnf(self, sig: &Signature<'s>) -> Self {
-        use Term::*;
+        use crate::Term::*;
         let Self {
             mut ctx,
             mut term,

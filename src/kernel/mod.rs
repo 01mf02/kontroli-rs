@@ -5,8 +5,6 @@ pub mod rterm;
 mod share;
 pub mod state;
 mod subst;
-#[path = "../scope/term.rs"]
-pub mod term;
 mod typing;
 
 // We have a hole here which can be instantiated with any
@@ -15,7 +13,6 @@ mod typing;
 use super::Rc;
 
 pub use rterm::RTerm;
-pub use term::Term;
 pub use typing::Typing;
 
 use crate::scope::pattern::{Pattern, TopPattern};
@@ -31,3 +28,5 @@ pub type Rule<'s> = crate::Rule<String, TopPattern<'s>, RTerm<'s>>;
 pub type Intro<'s> = crate::Intro<RTerm<'s>, RTerm<'s>>;
 
 pub type Signature<'s> = crate::Signature<Symbol<'s>, Pattern<'s>, RTerm<'s>>;
+
+pub type Term<'s> = crate::Term<Symbol<'s>, Rc<String>, RTerm<'s>>;

@@ -23,7 +23,7 @@ impl<'s> RTerm<'s> {
                 }
             }
             Term::Abst(arg, f) => {
-                let arg2 = arg.clone().map(|ty| ty.map(|ty| ty.apply_subst(subst, k)));
+                let arg2 = arg.clone().map_ty(|o| o.map(|ty| ty.apply_subst(subst, k)));
                 let f2 = f.clone().apply_subst(subst, k + 1);
                 if arg.type_ptr_eq(&arg2) && f.ptr_eq(&f2) {
                     self
@@ -32,7 +32,7 @@ impl<'s> RTerm<'s> {
                 }
             }
             Term::Prod(arg, f) => {
-                let arg2 = arg.clone().map(|ty| ty.apply_subst(subst, k));
+                let arg2 = arg.clone().map_ty(|ty| ty.apply_subst(subst, k));
                 let f2 = f.clone().apply_subst(subst, k + 1);
                 if arg.ty.ptr_eq(&arg2.ty) && f.ptr_eq(&f2) {
                     self
