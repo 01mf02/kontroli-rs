@@ -20,7 +20,6 @@ impl<'s> Command<'s> {
     ) -> Result<Self, KoError> {
         match cmd.scope(&syms)? {
             scope::Command::Intro(id, it) => {
-                println!("{}", id);
                 Ok(scope::Command::Intro(syms.insert(arena.alloc(id))?, it))
             }
             scope::Command::Rules(rules) => Ok(scope::Command::Rules(rules)),

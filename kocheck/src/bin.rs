@@ -40,8 +40,11 @@ fn main() -> Result<(), Error> {
     }
 
     // lazily produce events from all specified files
-    let items = PathRead::from_pathbufs(&opt.files).map(|pr| Ok(produce(pr?, &opt)));
-    let mut items = flatten_nested_results(items);
+    let iter = PathRead::from_pathbufs(&opt.files).map(|pr| Ok(produce(pr?, &opt)));
+    let iter = flatten_nested_results(iter)
+        .inspect(|event| event.iter().filter(|_| opt.echo).for_each(|e| e.echo()));
+    // box the iterator to control type size growth
+    let mut iter = Box::new(iter);
 
     let parallel = opt.jobs.is_some();
 
@@ -70,7 +73,7 @@ fn main() -> Result<(), Error> {
 
             // sending fails prematurely if consumption fails
             // in that case, get the error below
-            let _ = items.try_for_each(|cmd| sender.send(cmd));
+            let _ = iter.try_for_each(|cmd| sender.send(cmd));
 
             // signalise that we are done sending precommands
             // (otherwise the consumer will eventually wait forever)
@@ -79,7 +82,7 @@ fn main() -> Result<(), Error> {
             // wait for all commands to be consumed
             consumer.join().unwrap()?;
         }
-        None => seq::consume(items, &opt)?,
+        None => seq::consume(iter, &opt)?,
     }
     Ok(())
 }

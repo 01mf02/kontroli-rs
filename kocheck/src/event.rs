@@ -19,4 +19,10 @@ impl Event {
             Self::Command(cmd) => Some(cmd),
         }
     }
+
+    pub fn echo(&self) {
+        if let Self::Command(Command::Intro(id, _)) = self {
+            println!("{}", id)
+        }
+    }
 }
