@@ -8,28 +8,25 @@ pub struct PathRead {
     pub read: Box<dyn Read>,
 }
 
-type PathReads<'a> = Box<dyn Iterator<Item = Result<PathRead, Error>> + 'a>;
-
-impl PathRead {
-    fn from_stdin() -> Self {
-        let path = Vec::new();
-        let read: Box<dyn Read> = Box::new(io::stdin());
-        Self { path, read }
+fn is_dash(file: &PathBuf) -> bool {
+    let parts: Vec<_> = file.iter().collect();
+    match parts[..] {
+        [name] => name == "-",
+        _ => false,
     }
+}
 
-    fn from_pathbuf(file: &PathBuf) -> Result<Self, Error> {
+impl core::convert::TryFrom<&PathBuf> for PathRead {
+    type Error = Error;
+
+    fn try_from(file: &PathBuf) -> Result<Self, Error> {
         let path = module_path(file).ok_or(Error::Module)?;
-        let read: Box<dyn Read> = Box::new(std::fs::File::open(file)?);
-        Ok(Self { path, read })
-    }
-
-    /// Return stdin if no files given, else lazily open and return the files.
-    pub fn from_pathbufs(files: &[PathBuf]) -> PathReads {
-        if files.is_empty() {
-            Box::new(std::iter::once(Ok(Self::from_stdin())))
+        let read: Box<dyn Read> = if is_dash(file) {
+            Box::new(io::stdin())
         } else {
-            Box::new(files.iter().map(Self::from_pathbuf))
-        }
+            Box::new(std::fs::File::open(file)?)
+        };
+        Ok(Self { path, read })
     }
 }
 

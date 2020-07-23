@@ -67,7 +67,8 @@ pub struct Opt {
     /// Files to process (cumulative)
     ///
     /// Every file is wrapped in a module corresponding to the file path.
-    #[structopt(name = "FILE")]
+    /// To read from standard input, use "-" as file name.
+    #[structopt(name = "FILE", required = true)]
     pub files: Vec<PathBuf>,
 }
 

@@ -1,5 +1,6 @@
 //! A typechecker for the lambda-Pi calculus modulo rewriting.
 
+use core::convert::TryFrom;
 use kocheck::{par, parse, seq, Error, Event, Opt, PathRead};
 use structopt::StructOpt;
 
@@ -40,7 +41,11 @@ fn main() -> Result<(), Error> {
     }
 
     // lazily produce events from all specified files
-    let iter = PathRead::from_pathbufs(&opt.files).map(|pr| Ok(produce(pr?, &opt)));
+    let iter = opt
+        .files
+        .iter()
+        .map(PathRead::try_from)
+        .map(|pr| Ok(produce(pr?, &opt)));
     let iter = flatten_nested_results(iter)
         .inspect(|event| event.iter().filter(|_| opt.echo).for_each(|e| e.echo()));
     // box the iterator to control type size growth
