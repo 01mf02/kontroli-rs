@@ -19,7 +19,7 @@ members = [
 fnv = "1.0.3"
 im = "14.3"
 lazy-st = "0.2"
-log = "0.4.8"
+log = "0.4"
 nested-modules = "0.1"
 nom = "5.0"
 
