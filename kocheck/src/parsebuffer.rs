@@ -50,10 +50,9 @@ where
                     // ensure that we have some space available in the buffer
                     if self.buf.available_space() == 0 {
                         if self.buf.position() == 0 {
-                            //println!("growing buffer capacity");
-
                             // double buffer capacity
                             self.buf.grow(self.buf.capacity() * 2);
+                            log::debug!("Grown buffer size to {}", self.buf.capacity());
                         } else {
                             self.buf.shift();
                         }
@@ -67,6 +66,8 @@ where
                     } else if read_bytes == 0 {
                         break (0, Some(Err((self.fail)(Err::Incomplete(n)))));
                     }
+
+                    log::warn!("Incomplete parse; consider increasing buffer size.")
                 }
 
                 Err(e) => break (0, Some(Err((self.fail)(e)))),
@@ -77,7 +78,18 @@ where
             }
         };
 
-        self.buf.consume(consumed);
+        self.buf.consume_noshift(consumed);
+        // shift and refill buffer if it is filled more than half of its capacity
+        if self.buf.position() > self.buf.capacity() / 2 {
+            log::debug!(
+                "Shift and refill at {} / {}",
+                self.buf.position(),
+                self.buf.capacity()
+            );
+            self.buf.shift();
+            self.fill().unwrap();
+        }
+
         result
     }
 }
