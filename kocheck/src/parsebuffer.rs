@@ -79,7 +79,7 @@ where
         };
 
         self.buf.consume_noshift(consumed);
-        // shift and refill buffer if it is filled more than half of its capacity
+        // shift and refill buffer if we consumed more than half of its capacity
         if self.buf.position() > self.buf.capacity() / 2 {
             log::debug!(
                 "Shift and refill at {} / {}",
