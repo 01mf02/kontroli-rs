@@ -21,10 +21,6 @@ pub struct Opt {
     #[structopt(long)]
     pub no_check: bool,
 
-    /// Print names of newly introduced symbols
-    #[structopt(long)]
-    pub echo: bool,
-
     /// Size of the parse buffer
     ///
     /// The parser repeatedly reads data into a buffer and parses a command.

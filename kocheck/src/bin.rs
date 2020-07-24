@@ -51,7 +51,7 @@ fn main() -> Result<(), Error> {
         .map(PathRead::try_from)
         .map(|pr| Ok(produce(pr?, &opt)));
     let iter = flatten_nested_results(iter)
-        .inspect(|event| event.iter().filter(|_| opt.echo).for_each(|e| e.echo()));
+        .inspect(|r| r.iter().for_each(|event| log::info!("{}", event)));
     // box the iterator to control type size growth
     let mut iter = Box::new(iter);
 

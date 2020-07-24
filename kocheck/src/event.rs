@@ -1,3 +1,4 @@
+use core::fmt::{self, Display};
 use kontroli::parse::Command;
 use kontroli::scope::Symbols;
 
@@ -19,10 +20,17 @@ impl Event {
             Self::Command(cmd) => Some(cmd),
         }
     }
+}
 
-    pub fn echo(&self) {
-        if let Self::Command(Command::Intro(id, _)) = self {
-            println!("{}", id)
+impl Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Module(path) => {
+                let path = path.iter().fold(String::new(), |acc, arg| acc + "/" + arg);
+                write!(f, "Open module {}", path)
+            }
+            Self::Command(Command::Intro(id, _)) => write!(f, "Introduce symbol {}", id),
+            Self::Command(Command::Rules(rules)) => write!(f, "Add {} rules", rules.len()),
         }
     }
 }
