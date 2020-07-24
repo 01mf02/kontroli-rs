@@ -5,26 +5,26 @@ T : Bool.
 F : Bool.
 
 def and : Bool -> Bool -> Bool.
-[] and F _ --> F.
-[] and _ F --> F.
+[] and F _ --> F
+[] and _ F --> F
 [] and T T --> T.
 
 def or : Bool -> Bool -> Bool.
-[] or T _ --> T.
-[] or _ T --> T.
+[] or T _ --> T
+[] or _ T --> T
 [] or F F --> F.
 
 def not : Bool -> Bool.
-[] not T --> F.
+[] not T --> F
 [] not F --> T.
 
 def iff : Bool -> Bool -> Bool.
-[] iff T T --> T.
-[] iff T F --> F.
-[] iff F T --> F.
+[] iff T T --> T
+[] iff T F --> F
+[] iff F T --> F
 [] iff F F --> T.
 
 def imp : Bool -> Bool -> Bool.
-[] imp F _ --> T.
-[] imp T T --> T.
+[] imp F _ --> T
+[] imp T T --> T
 [] imp T F --> F.

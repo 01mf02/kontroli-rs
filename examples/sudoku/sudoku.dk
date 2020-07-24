@@ -13,30 +13,30 @@ Ind : Type.
 X : Ind.
 
 def S : Ind -> Ind.
-[] S 1 --> 2.
-[] S 2 --> 3.
-[] S 3 --> 4.
-[] S 4 --> 5.
-[] S 5 --> 6.
-[] S 6 --> 7.
-[] S 7 --> 8.
-[] S 8 --> 9.
+[] S 1 --> 2
+[] S 2 --> 3
+[] S 3 --> 4
+[] S 4 --> 5
+[] S 5 --> 6
+[] S 6 --> 7
+[] S 7 --> 8
+[] S 8 --> 9
 [] S 9 --> X.
 
 def trunc3 : Ind -> Ind.
-[]  trunc3 1 --> 1.
-[]  trunc3 2 --> 1.
-[]  trunc3 3 --> 1.
-[]  trunc3 4 --> 4.
-[]  trunc3 5 --> 4.
-[]  trunc3 6 --> 4.
-[]  trunc3 7 --> 7.
-[]  trunc3 8 --> 7.
+[]  trunc3 1 --> 1
+[]  trunc3 2 --> 1
+[]  trunc3 3 --> 1
+[]  trunc3 4 --> 4
+[]  trunc3 5 --> 4
+[]  trunc3 6 --> 4
+[]  trunc3 7 --> 7
+[]  trunc3 8 --> 7
 []  trunc3 9 --> 7.
 
 
 def eq : Ind -> Ind -> Bool.
-[x]   eq x x --> T.
+[x]   eq x x --> T
 [x,y] eq x y --> F.
 
 
@@ -49,50 +49,50 @@ def Sudo : Type.
 def c : Line -> Line -> Line -> Line -> Line -> Line -> Line -> Line -> Line -> Sudo.
 
 def getl : Ind -> Line -> Ind.
-[x] getl 1 (l x _ _ _ _ _ _ _ _) --> x.
-[x] getl 2 (l _ x _ _ _ _ _ _ _) --> x.
-[x] getl 3 (l _ _ x _ _ _ _ _ _) --> x.
-[x] getl 4 (l _ _ _ x _ _ _ _ _) --> x.
-[x] getl 5 (l _ _ _ _ x _ _ _ _) --> x.
-[x] getl 6 (l _ _ _ _ _ x _ _ _) --> x.
-[x] getl 7 (l _ _ _ _ _ _ x _ _) --> x.
-[x] getl 8 (l _ _ _ _ _ _ _ x _) --> x.
+[x] getl 1 (l x _ _ _ _ _ _ _ _) --> x
+[x] getl 2 (l _ x _ _ _ _ _ _ _) --> x
+[x] getl 3 (l _ _ x _ _ _ _ _ _) --> x
+[x] getl 4 (l _ _ _ x _ _ _ _ _) --> x
+[x] getl 5 (l _ _ _ _ x _ _ _ _) --> x
+[x] getl 6 (l _ _ _ _ _ x _ _ _) --> x
+[x] getl 7 (l _ _ _ _ _ _ x _ _) --> x
+[x] getl 8 (l _ _ _ _ _ _ _ x _) --> x
 [x] getl 9 (l _ _ _ _ _ _ _ _ x) --> x.
 
 def getc : Ind -> Sudo -> Line.
-[x] getc 1 (c x _ _ _ _ _ _ _ _) --> x.
-[x] getc 2 (c _ x _ _ _ _ _ _ _) --> x.
-[x] getc 3 (c _ _ x _ _ _ _ _ _) --> x.
-[x] getc 4 (c _ _ _ x _ _ _ _ _) --> x.
-[x] getc 5 (c _ _ _ _ x _ _ _ _) --> x.
-[x] getc 6 (c _ _ _ _ _ x _ _ _) --> x.
-[x] getc 7 (c _ _ _ _ _ _ x _ _) --> x.
-[x] getc 8 (c _ _ _ _ _ _ _ x _) --> x.
+[x] getc 1 (c x _ _ _ _ _ _ _ _) --> x
+[x] getc 2 (c _ x _ _ _ _ _ _ _) --> x
+[x] getc 3 (c _ _ x _ _ _ _ _ _) --> x
+[x] getc 4 (c _ _ _ x _ _ _ _ _) --> x
+[x] getc 5 (c _ _ _ _ x _ _ _ _) --> x
+[x] getc 6 (c _ _ _ _ _ x _ _ _) --> x
+[x] getc 7 (c _ _ _ _ _ _ x _ _) --> x
+[x] getc 8 (c _ _ _ _ _ _ _ x _) --> x
 [x] getc 9 (c _ _ _ _ _ _ _ _ x) --> x.
 
 
 
 
 def setl : Ind -> Ind -> Line -> Line.
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 1 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l k  x2 x3 x4 x5 x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 2 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 k  x3 x4 x5 x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 3 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 k  x4 x5 x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 4 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 k  x5 x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 5 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 k  x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 6 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 k  x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 7 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 x6 k  x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 8 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 x6 x7 k  x9).
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 1 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l k  x2 x3 x4 x5 x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 2 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 k  x3 x4 x5 x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 3 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 k  x4 x5 x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 4 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 k  x5 x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 5 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 k  x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 6 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 k  x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 7 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 x6 k  x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 8 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 x6 x7 k  x9)
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setl 9 k (l x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (l x1 x2 x3 x4 x5 x6 x7 x8 k ).
 
 def setc : Ind -> (Line -> Line) -> Sudo -> Sudo.
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 1 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c (k x1) x2 x3 x4 x5 x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 2 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 (k x2) x3 x4 x5 x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 3 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 (k x3) x4 x5 x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 4 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 (k x4) x5 x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 5 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 x4 (k x5) x6 x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 6 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 x4 x5 (k x6) x7 x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 7 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 x4 x5 x6 (k x7) x8 x9).
-[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 8 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 x4 x5 x6 x7 (k x8) x9).
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 1 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c (k x1) x2 x3 x4 x5 x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 2 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 (k x2) x3 x4 x5 x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 3 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 (k x3) x4 x5 x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 4 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 (k x4) x5 x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 5 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 x4 (k x5) x6 x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 6 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 x4 x5 (k x6) x7 x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 7 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 x4 x5 x6 (k x7) x8 x9)
+[k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 8 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 x4 x5 x6 x7 (k x8) x9)
 [k,x1,x2,x3,x4,x5,x6,x7,x8,x9] setc 9 k (c x1 x2 x3 x4 x5 x6 x7 x8 x9) --> (c x1 x2 x3 x4 x5 x6 x7 x8 (k x9)).
 
 
@@ -110,7 +110,7 @@ def set : Ind -> Ind -> Ind -> Sudo -> Sudo.
 
 
 def exists' : (Ind -> Bool) -> Ind -> Bool.
-[f  ] exists' f X --> F.
+[f  ] exists' f X --> F
 [f,i] exists' f i --> or (f i) (exists' f (S i)).
 
 def exists : (Ind -> Bool) -> Bool := f => exists' f 1.
@@ -153,17 +153,17 @@ fail : Solution.
 
 
 def ite : Bool -> Solution -> Solution -> Solution.
-[x] ite T x _ --> x.
+[x] ite T x _ --> x
 [x] ite F _ x --> x.
 
 def iffail : Solution -> Solution -> Solution.
-[x] iffail (success x) _ --> success x.
+[x] iffail (success x) _ --> success x
 [d] iffail fail     d --> d.
 
 def solve : Ind -> Ind -> Ind -> Sudo -> Solution.
-[i,s]     solve i X _ s --> solve (S i) 1 1 s.
-[  s]     solve X _ _ s --> success s.
-[i,j,s]   solve i j X s --> fail.
+[i,s]     solve i X _ s --> solve (S i) 1 1 s
+[  s]     solve X _ _ s --> success s
+[i,j,s]   solve i j X s --> fail
 [i,j,k,s] solve i j k s -->
   ite
     (eq (get i j s) X)

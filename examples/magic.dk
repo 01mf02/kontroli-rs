@@ -8,7 +8,7 @@ A : Type.
 List : N -> Type.
 
 def magic : N -> N -> Type.
-[n  ] magic n 0      -->  List n.
+[n  ] magic n 0      -->  List n
 [n,i] magic n (S i)  -->  A -> magic n i.
 cons : n : N -> magic n n.
 
