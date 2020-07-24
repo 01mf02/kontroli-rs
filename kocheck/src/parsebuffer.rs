@@ -20,7 +20,7 @@ impl<R: Read, P, F> ParseBuffer<R, P, F> {
     /// the buffer is full or
     /// the reader returns no data.
     /// This particularly helps the performance when parsing from stdin.
-    fn fill(&mut self) -> io::Result<usize> {
+    pub fn fill(&mut self) -> io::Result<usize> {
         let mut total_read_bytes = 0;
 
         loop {
@@ -52,7 +52,7 @@ where
                         if self.buf.position() == 0 {
                             // double buffer capacity
                             self.buf.grow(self.buf.capacity() * 2);
-                            log::debug!("Grown buffer size to {}", self.buf.capacity());
+                            log::warn!("Grown buffer size to {}", self.buf.capacity());
                         } else {
                             self.buf.shift();
                         }
@@ -67,7 +67,7 @@ where
                         break (0, Some(Err((self.fail)(Err::Incomplete(n)))));
                     }
 
-                    log::warn!("Incomplete parse; consider increasing buffer size.")
+                    log::warn!("Retrying incomplete parse; consider increasing buffer size");
                 }
 
                 Err(e) => break (0, Some(Err((self.fail)(e)))),

@@ -9,13 +9,13 @@ use std::io::Read;
 pub fn parse<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Result<Command, Error>> {
     use kontroli::parse::{opt_lex, phrase, Parse, Parser};
     let parse: fn(&[u8]) -> Parse<_> = |i| opt_lex(phrase(Command::parse))(i);
-    ParseBuffer {
+    let mut pb = ParseBuffer {
         buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
         read,
         parse,
         fail: |_: nom::Err<VerboseError<&[u8]>>| Error::Ko(KoError::Parse),
-    }
-    // consider only the non-whitespace entries
-    .map(|entry| entry.transpose())
-    .flatten()
+    };
+    pb.fill().unwrap();
+    // consider only non-whitespace entries
+    pb.map(|entry| entry.transpose()).flatten()
 }
