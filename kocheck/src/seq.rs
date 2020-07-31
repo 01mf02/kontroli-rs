@@ -35,10 +35,11 @@ impl<'s> Command<'s> {
             .transpose()
     }
 
-    fn infer_check(self, sig: &mut Signature<'s>) -> Result<(), KoError> {
+    fn infer_check(self, check: bool, sig: &mut Signature<'s>) -> Result<(), KoError> {
         match self.0 {
             scope::Command::Intro(sym, it) => {
-                let typing = Typing::new(Intro::from(it), &sig)?.check(&sig)?;
+                let typing = Typing::new(Intro::from(it), &sig)?;
+                let typing = if check { typing.check(&sig)? } else { typing };
                 Ok(sig.insert(sym, typing)?)
             }
             scope::Command::Rules(rules) => Ok(sig.add_rules(rules.into_iter().map(Rule::from))?),
@@ -61,6 +62,6 @@ where
         .map(|event| Command::from_event(event?, &mut syms, &arena).map_err(Error::Ko))
         .map(|ro| ro.transpose())
         .flatten()
-        .filter(|cmd| !opt.no_check || cmd.is_err())
-        .try_for_each(|cmd| cmd?.infer_check(&mut sig).map_err(Error::Ko))
+        .filter(|cmd| !opt.no_infer || cmd.is_err())
+        .try_for_each(|cmd| cmd?.infer_check(!opt.no_check, &mut sig).map_err(Error::Ko))
 }

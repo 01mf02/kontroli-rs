@@ -74,10 +74,11 @@ where
         .map(|event| Command::from_event(event?, &mut syms, &arena).map_err(Error::Ko))
         .map(|ro| ro.transpose())
         .flatten()
-        .filter(|cmd| !opt.no_check || cmd.is_err())
+        .filter(|cmd| !opt.no_infer || cmd.is_err())
         .map(|cmd| cmd?.infer(&mut sig).map_err(Error::Ko))
         .map(|ro| ro.transpose())
         .flatten()
+        .filter(|cmd| !opt.no_check || cmd.is_err())
         .par_bridge()
         .try_for_each(|ts| check(ts?).map_err(Error::Ko))
 }
