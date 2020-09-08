@@ -19,7 +19,7 @@ bytecount = "0.6"
 byte-unit = "3.0"
 circular = "0.3"
 colosseum = "0.2"
-flume = { version = "0.7", default-features = false }
+flume = { version = "0.8", default-features = false }
 kontroli = { path = "../" }
 log = "0.4"
 nom = "5.0"
