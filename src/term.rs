@@ -21,11 +21,10 @@ pub enum Term<Sym, Id, Tm> {
 }
 
 impl<Sym, Id, Tm> Term<Sym, Id, Tm> {
-    pub fn map<FId, FTm, Id2, Tm2>(self, fid: FId, ftm: FTm) -> Term<Sym, Id2, Tm2>
+    pub fn map<FId, FTm, Id2, Tm2>(self, fid: FId, ftm: &FTm) -> Term<Sym, Id2, Tm2>
     where
         FId: Fn(Id) -> Id2,
-        // TODO: get rid of that pesky Copy
-        FTm: Fn(Tm) -> Tm2 + Copy,
+        FTm: Fn(Tm) -> Tm2,
     {
         match self {
             Self::Kind => Term::Kind,

@@ -5,7 +5,7 @@ use crate::scope::{Intro as SIntro, RTerm as SRTerm, Rule as SRule, Term as STer
 
 impl<'s> From<STerm<'s>> for Term<'s> {
     fn from(tm: STerm<'s>) -> Self {
-        tm.map(Rc::new, RTerm::from)
+        tm.map(Rc::new, &RTerm::from)
     }
 }
 
