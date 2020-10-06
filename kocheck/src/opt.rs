@@ -13,11 +13,15 @@ pub struct Opt {
     #[structopt(long)]
     pub eta: bool,
 
-    /// Only parse, neither scope nor typecheck
+    /// Only parse; neither scope, infer, nor check
     #[structopt(long)]
     pub no_scope: bool,
 
-    /// Only parse and scope, do not typecheck
+    /// Only parse and scope; neither infer nor check
+    #[structopt(long)]
+    pub no_infer: bool,
+
+    /// Only parse, scope, and infer; do not check
     #[structopt(long)]
     pub no_check: bool,
 
