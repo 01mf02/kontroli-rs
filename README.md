@@ -22,7 +22,7 @@ For other systems, instructions are available at <https://rustup.rs/>.
 
 To run Kontroli on output generated from Isabelle/Pure:
 
-    cargo run -p kocheck --release examples/pure.dk
+    cargo run --release examples/pure.dk
 
 To install Kontroli:
 
@@ -76,7 +76,7 @@ A few useful commands for developing Kontroli:
 
 * Generating documentation: `cargo doc --open`
 * Running tests: `cargo test`
-* Running benchmarks: `cargo bench -- --sample-size 10`
+* Running benchmarks: `cargo bench -p kontroli -- --sample-size 10`
 
 
 [Dedukti]: https://deducteam.github.io/

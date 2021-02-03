@@ -28,17 +28,6 @@
 //! verify that the given types and terms are valid, yielding a [Typing].
 //! Once we have a typing, we add it to the signature.
 //!
-//! This whole process is illustrated in the following image.
-//! The [Symbols] and [Signature] are boxed to indicate that
-//! they persist throughout the checking.
-//!
-//! ~~~
-//! # std::fs::create_dir_all("target/doc/kontroli")?;
-//! # std::fs::copy("misc/structure.svg", "target/doc/kontroli/structure.svg")?;
-//! # Ok::<_, std::io::Error>(())
-//! ~~~
-//! ![Command processing.](structure.svg)
-//!
 //! The following example parses a few commands and executes them on a signature.
 //! (By the way, this example, just as all other code examples in this library,
 //! can be executed by running `cargo test`.)

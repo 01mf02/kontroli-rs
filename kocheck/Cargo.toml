@@ -13,14 +13,13 @@ path = "src/lib.rs"
 name = "kocheck"
 path = "src/bin.rs"
 
-
 [dependencies]
 bytecount = "0.6"
 byte-unit = "3.0"
 circular = "0.3"
 colosseum = "0.2"
 flume = { version = "0.8", default-features = false }
-kontroli = { path = "../" }
+kontroli = { path = "../kontroli" }
 log = "0.4"
 nom = "5.0"
 env_logger = "0.7"

@@ -1,0 +1,30 @@
+[package]
+name = "kontroli"
+version = "0.1.0"
+authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
+edition = "2018"
+description = "Type checking for the lambda-Pi calculus modulo rewriting"
+readme = "../README.md"
+repository = "https://github.com/01mf02/kontroli-rs"
+license = "GPL-3.0-only"
+keywords = ["verification", "dependent-types", "type-checking", "rewriting", "dedukti"]
+categories = ["concurrency", "no-std", "parser-implementations", "science"]
+
+[dependencies]
+fnv = "1.0.3"
+im = "14.3"
+lazy-st = "0.2"
+log = "0.4"
+nested-modules = "0.1"
+nom = "5.0"
+
+[lib]
+bench = false
+
+[dev-dependencies]
+colosseum = "0.2"
+criterion = "0.3"
+
+[[bench]]
+name = "bench"
+harness = false

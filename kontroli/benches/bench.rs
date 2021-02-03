@@ -38,15 +38,21 @@ fn parse(buffer: &[u8]) -> Vec<Command> {
     iterator(buffer, parse).filter_map(|c| c).collect()
 }
 
+macro_rules! include_ex {
+    ($x:expr) => {
+        include_bytes!(concat!("../../examples/", $x))
+    };
+}
+
 pub fn criterion_benchmark(c: &mut Criterion) {
-    let fpure = include_bytes!("../examples/pure.dk");
+    let fpure = include_ex!("pure.dk");
     let ppure = parse(fpure);
 
-    let boole = parse(include_bytes!("../examples/bool.dk"));
-    let nat = parse(include_bytes!("../examples/nat.dk"));
-    let sudoku = parse(include_bytes!("../examples/sudoku/sudoku.dk"));
-    let sudoku_easy = parse(include_bytes!("../examples/sudoku/solve_easy.dk"));
-    let or_n = parse(include_bytes!("../examples/bench/or_n.dk"));
+    let boole = parse(include_ex!("bool.dk"));
+    let nat = parse(include_ex!("nat.dk"));
+    let sudoku = parse(include_ex!("sudoku/sudoku.dk"));
+    let sudoku_easy = parse(include_ex!("sudoku/solve_easy.dk"));
+    let or_n = parse(include_ex!("bench/or_n.dk"));
 
     let cmd = b"def eq : Dep (fib (mul 2 4)) := dep (fib (mul 4 2)).\n";
     let fib8 = [nat.clone(), parse(cmd)].concat();
