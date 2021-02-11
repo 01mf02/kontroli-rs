@@ -41,7 +41,7 @@ use core::hash::{Hash, Hasher};
 /// To consistently assign the same symbols to equivalent strings,
 /// you can use the [`Symbols`] type.
 ///
-/// [`Symbols`]: ../symbols/struct.Symbols.html
+/// [`Symbols`]: super::Symbols
 
 #[derive(Copy, Clone, Debug)]
 pub struct Symbol<'s>(&'s str);

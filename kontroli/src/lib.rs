@@ -12,20 +12,20 @@
 //! introduces of a new name (by declaration, definition, or theorem), or
 //! adds a rewrite rule.
 //! The state of a Kontroli typechecking session consists of
-//! a [Symbols] table, keeping track of all previously introduced names, and
-//! a [Signature], recording types and rewrite rules attached to symbols.
+//! a [`Symbols`] table, keeping track of all previously introduced names, and
+//! a [`Signature`], recording types and rewrite rules attached to symbols.
 //!
 //! How is a user command processed?
-//! A command is parsed from a string to yield a [parse command].
-//! The scoping operation then refines the parse command to a [scope command],
+//! A command is parsed from a string to yield a [`parse::Command`].
+//! The scoping operation then refines the parse command to a [`scope::Command`],
 //! verifying whether the names referenced in the parse command
-//! have been previously declared in the [Symbols] table.
+//! have been previously declared in the [`Symbols`] table.
 //! Once we have a scope command, we distinguish whether it
 //! introduces a name or adds a rewrite rule:
 //! In case of a rewrite rule, we add the rewrite rule to the signature.
 //! In case of a name introduction, we first
-//! update the [Symbols] table with the newly introduced name and
-//! verify that the given types and terms are valid, yielding a [Typing].
+//! update the [`Symbols`] table with the newly introduced name and
+//! verify that the given types and terms are valid, yielding a [`Typing`].
 //! Once we have a typing, we add it to the signature.
 //!
 //! The following example parses a few commands and executes them on a signature.
@@ -78,23 +78,23 @@
 //! # Organisation
 //!
 //! This library is divided into several modules:
-//! * The [parse] module contains unshared, reference-free data structures,
-//! * the [scope] module contains data structures with references, and
-//! * the [rc] and [arc] modules contain data structures with references and shared pointers.
+//! * The [`parse`] module contains unshared, reference-free data structures,
+//! * the [`scope`] module contains data structures with references, and
+//! * the [`rc`] and [`arc`] modules contain data structures with references and shared pointers.
 //!
-//! The [rc] and [arc] modules expose completely the same API,
-//! the difference being that the structures in [rc]
+//! The [`rc`] and [`arc`] modules expose completely the same API,
+//! the difference being that the structures in [`rc`]
 //! cannot be used in multi-threaded scenarios.
-//! Due to the performance overhead incurred by the data structures in [arc],
+//! Due to the performance overhead incurred by the data structures in [`arc`],
 //! it is advisable to use these only in multi-threaded scenarios,
-//! and to prefer [rc] whenever possible.
+//! and to prefer [`rc`] whenever possible.
 //!
 //! For many data structures, we have counterparts in
-//! the [parse], [scope], and [rc]/[arc] modules.
-//! We call types from the [parse] and [scope] modules
+//! the [`parse`], [`scope`], and [`rc`]/[`arc`] modules.
+//! We call types from the [`parse`] and [`scope`] modules
 //! "parse structures" and "scope structures", respectively.
 //! For example, we distinguish parse terms, scope terms, and terms
-//! (the latter being defined in the [rc]/[arc] modules).
+//! (the latter being defined in the [`rc`]/[`arc`] modules).
 //! Parse structures are constructed by the parser and
 //! refined into their corresponding scope structures by the scoper.
 //! Parse and scope structures also implement the `Send` and `Sync` traits,
@@ -103,18 +103,7 @@
 //!
 //! [Kontroli]: https://github.com/01mf02/kontroli-rs
 //!
-//! [parse command]: parse/enum.Command.html
-//! [scope command]: scope/enum.Command.html
-//!
-//! [Symbols]:   scope/struct.Symbols.html
-//! [Signature]: struct.Signature.html
-//! [Command]:   rc/command/enum.Command.html
-//! [Typing]:    struct.Typing.html
-//!
-//! [parse]: parse/index.html
-//! [scope]: scope/index.html
-//! [rc]:   rc/index.html
-//! [arc]: arc/index.html
+//! [`Symbols`]: scope::Symbols
 
 extern crate alloc;
 extern crate lazy_st;
