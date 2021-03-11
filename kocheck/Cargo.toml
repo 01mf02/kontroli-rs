@@ -3,6 +3,11 @@ name = "kocheck"
 version = "0.1.0"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2018"
+description = "Type checker for the lambda-Pi calculus modulo rewriting"
+readme = "../README.md"
+repository = "https://github.com/01mf02/kontroli-rs"
+license = "GPL-3.0-only"
+keywords = ["verification", "dependent-types", "type-checking", "rewriting", "dedukti"]
 categories = ["command-line-utilities", "science"]
 
 [lib]
