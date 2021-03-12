@@ -5,14 +5,6 @@ authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2018"
 categories = ["command-line-utilities", "science"]
 
-[lib]
-name = "kocheck"
-path = "src/lib.rs"
-
-[[bin]]
-name = "kocheck"
-path = "src/bin.rs"
-
 [dependencies]
 bytecount = "0.6"
 byte-unit = "3.0"
