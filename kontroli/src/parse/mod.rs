@@ -74,7 +74,7 @@ pub trait Parser: Sized {
 /// assert_eq!(preterm, Appl(Box::new(head), args));
 /// # Ok::<(), Error>(())
 /// ~~~
-pub fn parse<'a, P: Parser>(i: &'a str) -> Result<P, nom::Err<VerboseError<&'a [u8]>>> {
+pub fn parse<P: Parser>(i: &str) -> Result<P, nom::Err<VerboseError<&[u8]>>> {
     phrase(P::parse)(i.as_bytes()).map(|(_i, o)| o)
 }
 
