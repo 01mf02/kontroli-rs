@@ -60,6 +60,7 @@ fn psubst_single<'s, 't>(u: &'t RTerm<'s>) -> impl Fn(usize, usize) -> RTerm<'s>
 }
 
 /// Definition of `<<` for terms.
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl<'s> core::ops::Shl<usize> for RTerm<'s> {
     type Output = Self;
 
