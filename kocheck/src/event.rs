@@ -11,7 +11,7 @@ pub enum Event {
 }
 
 impl Event {
-    pub fn handle<'s>(self, syms: &mut Symbols<'s>) -> Option<Command> {
+    pub fn handle(self, syms: &mut Symbols) -> Option<Command> {
         match self {
             Self::Module(path) => {
                 syms.set_path(path);

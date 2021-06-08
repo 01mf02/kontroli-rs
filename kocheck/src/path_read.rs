@@ -8,7 +8,7 @@ pub struct PathRead {
     pub read: Box<dyn Read>,
 }
 
-fn is_dash(file: &PathBuf) -> bool {
+fn is_dash(file: &Path) -> bool {
     let parts: Vec<_> = file.iter().collect();
     match parts[..] {
         [name] => name == "-",
