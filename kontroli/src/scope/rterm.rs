@@ -2,6 +2,7 @@
 
 use super::Term;
 use alloc::boxed::Box;
+use core::fmt;
 
 /// Pointer to a term.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -21,5 +22,11 @@ impl<'s> RTerm<'s> {
     /// See <https://manishearth.github.io/blog/2017/01/10/rust-tidbits-box-is-special/>.
     pub fn get(self) -> Term<'s> {
         *self.0
+    }
+}
+
+impl<'s> fmt::Display for RTerm<'s> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
