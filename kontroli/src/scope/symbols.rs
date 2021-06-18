@@ -3,7 +3,7 @@
 use super::Symbol;
 use crate::error::SymbolsError as Error;
 use alloc::{string::String, vec::Vec};
-use core::iter::FromIterator;
+use core::{borrow::Borrow, iter::FromIterator};
 use fnv::FnvHashSet;
 use nested_modules::{Context, Module};
 
@@ -16,10 +16,10 @@ impl<'s> Symbols<'s> {
         Default::default()
     }
 
-    pub fn get(&self, path: &[String], name: &str) -> Option<Symbol<'s>> {
+    pub fn get<S: Borrow<str> + Ord>(&self, path: &[S], name: &S) -> Option<Symbol<'s>> {
         self.0
-            .find(path)
-            .filter_map(|module| module.data.get(name))
+            .find(path.iter().map(|p| p.borrow()))
+            .filter_map(|module| module.data.get(name.borrow()))
             .next()
             .copied()
             .map(Symbol::new)
