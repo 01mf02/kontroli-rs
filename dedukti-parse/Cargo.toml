@@ -1,0 +1,8 @@
+[package]
+name = "dedukti-parse"
+version = "0.1.0"
+authors = ["Michael Färber <01mf02@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+logos = "0.12"

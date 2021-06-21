@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "dedukti-parse",
     "kontroli",
     "kocheck",
 ]
