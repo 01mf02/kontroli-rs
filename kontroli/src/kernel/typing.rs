@@ -95,7 +95,7 @@ impl<'s> Context<'s> {
     where
         F: FnOnce(&mut Context<'s>) -> Result<A, Error>,
     {
-        self.with_pushed(arg, f)
+        self.try_with_pushed(arg, f)
     }
 
     fn bind_of_type<A, F>(&mut self, sig: &Signature<'s>, arg: RTerm<'s>, f: F) -> Result<A, Error>

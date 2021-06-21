@@ -60,13 +60,23 @@ impl<A> Stack<A> {
         self.iter().nth(n)
     }
 
+    pub fn with_pushed<F, Y>(&mut self, x: A, f: F) -> Y
+    where
+        F: FnOnce(&mut Stack<A>) -> Y,
+    {
+        self.0.push(x);
+        let y = f(self);
+        self.0.pop();
+        y
+    }
+
     /// Push an element on the stack, run a function on it, then pop the element.
     ///
     /// This is to simulate function calls like `f(Cons(x, l))`,
     /// which assume that `l` is not changed in this call.
     /// If `with_pushed` is used consistently, then
     /// `l` at the end will contain the same elements as at the beginning.
-    pub fn with_pushed<F, Y, E>(&mut self, x: A, f: F) -> Result<Y, E>
+    pub fn try_with_pushed<F, Y, E>(&mut self, x: A, f: F) -> Result<Y, E>
     where
         F: FnOnce(&mut Stack<A>) -> Result<Y, E>,
     {
