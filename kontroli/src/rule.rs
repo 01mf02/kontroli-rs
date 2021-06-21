@@ -3,7 +3,7 @@ use core::fmt::{self, Display};
 
 /// Rewrite rule.
 #[derive(Clone, Debug)]
-pub struct Rule<V, L, R> {
+pub struct Rule<V, L, R = L> {
     /// context (bound variables)
     pub ctx: Vec<V>,
     /// left-hand side (pattern to match with)
