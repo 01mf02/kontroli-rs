@@ -42,7 +42,7 @@ impl<'s> Stack<'s> {
             // the next line should not fail, unless
             // the pattern contains more variables than indicated in the context
             // (which scoping is designed to rule out)
-            subst.get_mut::<usize>(m.into())?.push(st1)
+            subst.get_mut(m)?.push(st1)
         }
         Some(subst)
     }
@@ -69,7 +69,8 @@ impl<'s> RState<'s> {
                     _ => Box::new(core::iter::once(None)),
                 }
             }
-            Pattern::Var(m) => Box::new(core::iter::once(Some((*m, self)))),
+            Pattern::MVar(m) => Box::new(core::iter::once(Some((*m, self)))),
+            Pattern::Joker => Box::new(core::iter::empty()),
         }
     }
 }

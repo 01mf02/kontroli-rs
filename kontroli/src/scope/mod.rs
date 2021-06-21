@@ -26,13 +26,11 @@ pub type Term<'s> = crate::Term<Symbol<'s>, String, RTerm<'s>>;
 use crate::error::{Error as KoError, ScopeError as Error};
 use crate::parse::{self, parse};
 use crate::stack::Stack;
-use alloc::{format, string::String, string::ToString, vec::Vec};
+use alloc::{string::String, string::ToString, vec::Vec};
 use core::convert::TryFrom;
-use pattern::{Miller, TopPattern};
+use pattern::TopPattern;
 
 type Bound = Stack<String>;
-
-type SPattern<'s> = crate::pattern::Pattern<Symbol<'s>, String>;
 
 impl parse::Symbol {
     fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Symbol<'s>, Error> {
@@ -97,56 +95,42 @@ impl parse::Term {
 
 impl parse::Pattern {
     /// Scope an open prepattern using supplied bound variables.
-    fn scopen<'s>(self, syms: &Symbols<'s>, mvar: &[String]) -> Result<SPattern<'s>, Error> {
+    fn scopen<'s>(self, syms: &Symbols<'s>, mvar: &Bound) -> Result<Pattern<'s>, Error> {
         let Self(s, args) = self;
 
-        if s.path.is_empty() && (s.name == "_" || mvar.iter().any(|id| *id == s.name)) {
-            if !args.is_empty() {
-                return Err(Error::PatternArguments);
+        let scope = |args: Vec<Self>| -> Result<_, _> {
+            args.into_iter().map(|a| a.scopen(syms, mvar)).collect()
+        };
+
+        if s.path.is_empty() {
+            if s.name == "_" {
+                if !args.is_empty() {
+                    return Err(Error::PatternArguments);
+                }
+                Ok(Pattern::Joker)
+            } else if let Some(idx) = mvar.iter().position(|id| *id == *s.name) {
+                if !args.is_empty() {
+                    return Err(Error::PatternArguments);
+                }
+                Ok(Pattern::MVar(idx))
+            } else {
+                Ok(Pattern::Symb(s.scope(syms)?, scope(args)?))
             }
-            Ok(SPattern::Var(s.name))
-        } else if !s.path.is_empty() && s.name == "_" {
+        } else if s.name == "_" {
             Err(Error::Underscore)
         } else {
-            let args: Result<_, _> = args.into_iter().map(|a| a.scopen(syms, mvar)).collect();
-            Ok(SPattern::Symb(s.scope(syms)?, args?))
+            Ok(Pattern::Symb(s.scope(syms)?, scope(args)?))
         }
-    }
-}
-
-impl Miller {
-    /// Create a Miller variable from a variable name.
-    /// If `mvar` does not contain it, push it there.
-    ///
-    /// The variable name "_" (joker) is mapped to a fresh name,
-    /// increasing the number of `jokers`.
-    fn from_string(v: String, mvar: &mut Vec<String>, jokers: &mut usize) -> Self {
-        let len = mvar.len();
-        let m = if v == "_" {
-            mvar.push(format!("🃏{}", jokers));
-            *jokers += 1;
-            len
-        } else {
-            let idx = mvar.iter().position(|id| *id == *v);
-            idx.unwrap_or_else(|| {
-                mvar.push(v);
-                len
-            })
-        };
-        Self::from(m)
     }
 }
 
 impl parse::Rule {
     pub fn scope<'s>(self, syms: &Symbols<'s>) -> Result<Rule<'s>, Error> {
         let ctx: Vec<_> = self.ctx.into_iter().map(|arg| arg.id).collect();
+        let mut ctxs = Stack::from(ctx.clone());
         let pre = parse::Pattern::try_from(self.lhs).map_err(|_| Error::NoPrepattern)?;
-        let pat = pre.scopen(syms, &ctx)?;
-
-        let mut ctx = Vec::new();
-        let pat = pat.map_vars(&mut |v| Miller::from_string(v, &mut ctx, &mut 0));
+        let pat = pre.scopen(syms, &ctxs)?;
         let lhs = TopPattern::try_from(pat).map_err(|_| Error::NoTopPattern)?;
-        let mut ctxs: Stack<_> = ctx.iter().cloned().rev().collect();
         let rhs = self.rhs.scoper(syms, &mut ctxs)?;
         Ok(Rule { ctx, lhs, rhs })
     }
