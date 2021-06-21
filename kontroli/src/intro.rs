@@ -2,7 +2,7 @@ use core::fmt::{self, Display};
 
 /// The way we introduce a new name.
 #[derive(Debug, Clone)]
-pub enum Intro<Ty, Tm> {
+pub enum Intro<Ty, Tm = Ty> {
     Definition(Option<Ty>, Option<Tm>),
     Theorem(Ty, Tm),
     Declaration(Ty),
