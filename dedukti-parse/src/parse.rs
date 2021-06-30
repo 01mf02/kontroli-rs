@@ -81,14 +81,14 @@ pub fn yield_command<'s>(
     }
 }
 
-impl<'s, S: From<&'s str>> Command<S> {
+impl<'s> Command<&'s str> {
     pub fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
         match iter.next() {
             Some(Token::Ident(id)) => Ok(Self::Intro(
-                id.into(),
+                id,
                 Self::parse_args(iter)?,
                 Intro::Declaration(Self::parse_type(iter)?),
             )),
@@ -135,7 +135,7 @@ impl<'s, S: From<&'s str>> Command<S> {
         }
     }
 
-    fn parse_args<I>(iter: &mut Peekable<I>) -> Result<Vec<(S, Term<S>)>, Error>
+    fn parse_args<I>(iter: &mut Peekable<I>) -> Result<Vec<(&'s str, Term<&'s str>)>, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
@@ -150,7 +150,7 @@ impl<'s, S: From<&'s str>> Command<S> {
         Ok(args)
     }
 
-    fn parse_type<I>(iter: &mut Peekable<I>) -> Result<Term<S>, Error>
+    fn parse_type<I>(iter: &mut Peekable<I>) -> Result<Term<&'s str>, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
@@ -161,8 +161,8 @@ impl<'s, S: From<&'s str>> Command<S> {
     }
 }
 
-impl<'s, S: From<&'s str>> Rule<S> {
-    fn parse<I>(iter: &mut Peekable<I>) -> Result<Rule<S, Term<S>>, Error>
+impl<'s> Rule<&'s str> {
+    fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
@@ -170,7 +170,7 @@ impl<'s, S: From<&'s str>> Rule<S> {
         match iter.next() {
             Some(Token::Ident(id)) => {
                 let ty = Self::parse_type0(iter)?;
-                ctx.push((id.into(), ty));
+                ctx.push((id, ty));
                 loop {
                     match iter.next() {
                         Some(Token::Comma) => {
@@ -192,7 +192,7 @@ impl<'s, S: From<&'s str>> Rule<S> {
         Ok(Rule { ctx, lhs, rhs })
     }
 
-    fn parse_type0<I>(iter: &mut Peekable<I>) -> Result<Option<Term<S>>, Error>
+    fn parse_type0<I>(iter: &mut Peekable<I>) -> Result<Option<Term<&'s str>>, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
@@ -206,7 +206,7 @@ impl<'s, S: From<&'s str>> Rule<S> {
     }
 }
 
-impl<'s, S: From<&'s str>> Term<S> {
+impl<'s> Term<&'s str> {
     pub fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
@@ -231,17 +231,17 @@ impl<'s, S: From<&'s str>> Term<S> {
                 // `s`
                 None => {
                     iter.next();
-                    Ok(Term::Symb(Vec::new(), s.into()))
+                    Ok(Term::Symb(Vec::new(), s))
                 }
                 // `x : A -> B` or `x : A => t`
                 Some(Token::Colon) => {
                     iter.next();
-                    Self::binder(s.into(), iter)
+                    Self::binder(s, iter)
                 }
                 // `x => t`
                 Some(Token::FatArrow) => {
                     iter.next();
-                    Ok(Term::Abst(s.into(), None, Box::new(Self::parse(iter)?)))
+                    Ok(Term::Abst(s, None, Box::new(Self::parse(iter)?)))
                 }
                 // `s t1 ... tn`
                 Some(_) => Ok(Self::parse_appl(Self::symb(s, iter)?, iter)?),
@@ -256,7 +256,7 @@ impl<'s, S: From<&'s str>> Term<S> {
     where
         I: Iterator<Item = Token<'s>>,
     {
-        let mut last = head.into();
+        let mut last = head;
         let mut before = Vec::new();
         while let Some(Token::Dot) = iter.peek() {
             iter.next();
@@ -265,9 +265,9 @@ impl<'s, S: From<&'s str>> Term<S> {
         Ok(Self::Symb(before, last))
     }
 
-    fn parse_ident(iter: &mut impl Iterator<Item = Token<'s>>) -> Result<S, Error> {
+    fn parse_ident(iter: &mut impl Iterator<Item = Token<'s>>) -> Result<&'s str, Error> {
         match iter.next() {
-            Some(Token::Ident(id)) => Ok(id.into()),
+            Some(Token::Ident(id)) => Ok(id),
             _ => Err(Error::ExpectedIdent),
         }
     }
@@ -293,7 +293,7 @@ impl<'s, S: From<&'s str>> Term<S> {
         Self::parse_appl(Self::parse_m1(iter)?, iter)
     }
 
-    fn binder<I>(head: S, iter: &mut Peekable<I>) -> Result<Self, Error>
+    fn binder<I>(head: &'s str, iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
