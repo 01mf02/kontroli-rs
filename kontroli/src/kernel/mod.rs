@@ -15,9 +15,14 @@ use super::Rc;
 pub use rterm::RTerm;
 pub use typing::Typing;
 
-use crate::scope::pattern::{Pattern, TopPattern};
-use crate::scope::Symbol;
+use crate::Symbol;
 use alloc::string::String;
+
+/// Rewrite pattern.
+pub type Pattern<'s> = crate::Pattern<Symbol<'s>>;
+
+/// Pattern at the left-hand side of a rewrite rule.
+pub type TopPattern<'s> = crate::pattern::TopPattern<Symbol<'s>>;
 
 /// Rewrite rules with strings as bound variable identifiers,
 /// a top pattern (symbol application) as left-hand side, and
@@ -25,7 +30,7 @@ use alloc::string::String;
 pub type Rule<'s> = crate::Rule<String, TopPattern<'s>, RTerm<'s>>;
 
 /// The way we introduce a new name.
-pub type Intro<'s> = crate::Intro<RTerm<'s>, RTerm<'s>>;
+pub type Intro<'s> = crate::Intro<RTerm<'s>>;
 
 pub type Signature<'s> = crate::Signature<Symbol<'s>, Pattern<'s>, RTerm<'s>>;
 

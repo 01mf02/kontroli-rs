@@ -1,6 +1,8 @@
 //! Rewrite patterns.
 
 use crate::application::format as fmt_appl;
+use crate::parse;
+use crate::{BTerm, Term};
 use alloc::vec::Vec;
 use core::convert::TryFrom;
 use core::fmt::{self, Display};
@@ -43,6 +45,41 @@ pub enum Pattern<S> {
 /// The top pattern of a rule must be an application of patterns to a symbol.
 /// This is to exclude rules matching any term, such as `[X] X --> f`.
 pub type TopPattern<S> = crate::Application<S, Pattern<S>>;
+
+impl<S> Pattern<S> {
+    pub fn try_map<S2, E>(self, f: &impl Fn(S) -> Result<S2, E>) -> Result<Pattern<S2>, E> {
+        match self {
+            Self::Symb(s, args) => {
+                let args = args.into_iter().map(|p| p.try_map(f));
+                Ok(Pattern::Symb(f(s)?, args.collect::<Result<_, _>>()?))
+            }
+            Self::MVar(m) => Ok(Pattern::MVar(m)),
+            Self::Joker => Ok(Pattern::Joker),
+        }
+    }
+}
+
+impl<V> TryFrom<BTerm<parse::Symbol, V>> for Pattern<parse::Symbol> {
+    type Error = ();
+
+    fn try_from(tm: BTerm<parse::Symbol, V>) -> Result<Self, Self::Error> {
+        use Term::*;
+        match tm.get() {
+            Symb(s) if s.name == "_" && s.path.is_empty() => Ok(Pattern::Joker),
+            Symb(s) => Ok(Self::Symb(s, Vec::new())),
+            BVar(v) => Ok(Self::MVar(v)),
+            Appl(head, args2) => match Self::try_from(head)? {
+                Self::Symb(s, mut args) => {
+                    let args2 = args2.into_iter().map(Self::try_from);
+                    args.append(&mut args2.collect::<Result<_, _>>()?);
+                    Ok(Self::Symb(s, args))
+                }
+                _ => Err(()),
+            },
+            _ => Err(()),
+        }
+    }
+}
 
 impl<S> From<TopPattern<S>> for Pattern<S> {
     fn from(tp: TopPattern<S>) -> Self {

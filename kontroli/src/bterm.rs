@@ -2,14 +2,14 @@
 
 use super::Term;
 use alloc::boxed::Box;
-use core::fmt;
+use core::fmt::{self, Display};
 
 /// Pointer to a term.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct RTerm<'s>(Box<Term<'s>>);
+pub struct BTerm<C, V>(Box<Term<C, V, BTerm<C, V>>>);
 
-impl<'s> RTerm<'s> {
-    pub fn new(tm: Term<'s>) -> Self {
+impl<C, V> BTerm<C, V> {
+    pub fn new(tm: Term<C, V, BTerm<C, V>>) -> Self {
         Self(Box::new(tm))
     }
 
@@ -20,12 +20,12 @@ impl<'s> RTerm<'s> {
     /// because only `Box` allows for dereferencing and moving at the same time
     /// due to being a special type.
     /// See <https://manishearth.github.io/blog/2017/01/10/rust-tidbits-box-is-special/>.
-    pub fn get(self) -> Term<'s> {
+    pub fn get(self) -> Term<C, V, BTerm<C, V>> {
         *self.0
     }
 }
 
-impl<'s> fmt::Display for RTerm<'s> {
+impl<C: Display, V: Display> Display for BTerm<C, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }

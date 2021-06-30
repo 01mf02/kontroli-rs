@@ -29,17 +29,16 @@ impl<'s> State<'s> {
     /// This does not yet evaluate anything, as can be seen from following example:
     ///
     /// ~~~
-    /// # use kontroli::Error;
-    /// # use kontroli::scope::{Term as STerm, Symbols};
-    /// # use kontroli::rc::{RTerm, Signature, Term};
+    /// # use kontroli::{Error, Symbols};
+    /// # use kontroli::scope::{BTerm as SBTerm};
+    /// # use kontroli::rc::{RTerm, Signature};
     /// # use kontroli::rc::state::State;
     /// let syms = Symbols::new();
     ///
-    /// let term = Term::from(STerm::parse(r"(x => x) (x => x).", &syms)?);
-    /// let rterm = RTerm::new(term);
+    /// let term = RTerm::share(SBTerm::parse(r"(x => x) (x => x).")?, &syms)?;
     ///
-    /// let state = State::new(rterm.clone());
-    /// assert!(RTerm::ptr_eq(&RTerm::from(state), &rterm));
+    /// let state = State::new(term.clone());
+    /// assert!(RTerm::ptr_eq(&RTerm::from(state), &term));
     /// # Ok::<(), Error>(())
     /// ~~~
     pub fn new(term: RTerm<'s>) -> Self {

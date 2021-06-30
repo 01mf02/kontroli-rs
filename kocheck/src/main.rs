@@ -5,8 +5,9 @@ use kocheck::{par, parse, seq, Error, Event, Opt, PathRead};
 use structopt::StructOpt;
 
 fn produce(pr: PathRead, opt: &Opt) -> impl Iterator<Item = Result<Event, Error>> {
+    use kontroli::scope::Scope;
     let path = std::iter::once(Ok(Event::Module(pr.path)));
-    let cmds = parse(pr.read, &opt).map(|cmd| cmd.map(Event::Command));
+    let cmds = parse(pr.read, &opt).map(|cmd| cmd.map(|c| Event::Command(c.scope())));
     path.chain(cmds)
 }
 

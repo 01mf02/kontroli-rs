@@ -3,23 +3,27 @@
 use crate::{Error, Event, Opt};
 use colosseum::unsync::Arena;
 use kontroli::error::Error as KoError;
-use kontroli::parse;
 use kontroli::rc::{Intro, Rule, Signature, Typing};
-use kontroli::scope::{self, Symbols};
+use kontroli::{Symbol, Symbols};
 
-struct Command<'s>(scope::Command<'s, scope::Symbol<'s>>);
+struct Command<'s>(kontroli::Command<Symbol<'s>, Intro<'s>, Rule<'s>>);
 
 impl<'s> Command<'s> {
     fn from_precommand(
-        cmd: parse::Command,
+        cmd: super::event::Command,
         syms: &mut Symbols<'s>,
         arena: &'s Arena<String>,
     ) -> Result<Self, KoError> {
-        match cmd.scope(&syms)? {
-            scope::Command::Intro(id, it) => {
-                Ok(scope::Command::Intro(syms.insert(arena.alloc(id))?, it))
+        match cmd {
+            kontroli::Command::Intro(id, it) => {
+                let it = Intro::share(it, syms)?;
+                let id = syms.insert(arena.alloc(id))?;
+                Ok(kontroli::Command::Intro(id, it))
             }
-            scope::Command::Rules(rules) => Ok(scope::Command::Rules(rules)),
+            kontroli::Command::Rules(rules) => {
+                let rules = rules.into_iter().map(|r| Rule::share(r, syms));
+                Ok(kontroli::Command::Rules(rules.collect::<Result<_, _>>()?))
+            }
         }
         .map(Self)
     }
@@ -37,12 +41,12 @@ impl<'s> Command<'s> {
 
     fn infer_check(self, check: bool, sig: &mut Signature<'s>) -> Result<(), KoError> {
         match self.0 {
-            scope::Command::Intro(sym, it) => {
-                let typing = Typing::new(Intro::from(it), &sig)?;
+            kontroli::Command::Intro(sym, it) => {
+                let typing = Typing::new(it, &sig)?;
                 let typing = if check { typing.check(&sig)? } else { typing };
                 Ok(sig.insert(sym, typing)?)
             }
-            scope::Command::Rules(rules) => Ok(sig.add_rules(rules.into_iter().map(Rule::from))?),
+            kontroli::Command::Rules(rules) => Ok(sig.add_rules(rules.into_iter())?),
         }
     }
 }

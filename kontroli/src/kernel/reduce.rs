@@ -44,17 +44,17 @@ impl<'s> State<'s> {
     /// Evaluate the state to its weak head normal form.
     ///
     /// ~~~
-    /// # use kontroli::Error;
-    /// # use kontroli::scope::{Term as STerm, Symbols};
+    /// # use kontroli::{Error, Symbols};
+    /// # use kontroli::scope::{BTerm as SBTerm, Term as STerm};
     /// # use kontroli::rc::{RTerm, Signature, Term};
     /// # use kontroli::rc::state::State;
     /// let sig = Signature::new();
     /// let syms = Symbols::new();
     ///
-    /// let term = Term::from(STerm::parse(r"(x => x) (x => x).", &syms)?);
-    /// let whnf = State::new(RTerm::new(term)).whnf(&sig);
+    /// let term = RTerm::share(SBTerm::parse(r"(x => x) (x => x).")?, &syms)?;
+    /// let whnf = State::new(term).whnf(&sig);
     ///
-    /// let expected = Term::from(STerm::parse(r"(x => x).", &syms)?);
+    /// let expected = Term::share(STerm::parse(r"(x => x).")?, &syms)?;
     /// assert!(whnf.ctx.is_empty());
     /// assert!(whnf.stack.is_empty());
     /// assert_eq!(*whnf.term, expected);
@@ -167,21 +167,21 @@ impl<'s> Stack<'s> {
     /// Return a new machine context containing variable assignments in case of a match.
     ///
     /// ~~~
-    /// # use kontroli::Error;
-    /// # use kontroli::scope::{Rule as SRule, Term as STerm, Symbols};
-    /// # use kontroli::rc::{RTerm, Rule, Signature, Term};
     /// # use kontroli::rc::state::State;
+    /// # use kontroli::rc::{RTerm, Rule, Signature, Term};
+    /// # use kontroli::scope::{BTerm as SBTerm, Rule as SRule, Term as STerm};
+    /// # use kontroli::{Error, Symbols};
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
     /// let sig = Signature::new();
-    ///
-    /// let rule = Rule::from(SRule::parse("[A] id A --> A.\n", &syms)?);
-    /// let term = Term::from(STerm::parse("id f a.\n", &syms)?);
-    ///
-    /// let stack = State::new(RTerm::new(term)).whnf(&sig).stack;
+
+    /// let rule = Rule::share(SRule::parse("[A] id A --> A.\n")?, &syms)?;
+    /// let term = RTerm::share(SBTerm::parse("id f a.\n")?, &syms)?;
+
+    /// let stack = State::new(term).whnf(&sig).stack;
     /// let subst = stack.match_flatten(&rule, &sig).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
-    ///
-    /// let expected = Term::from(STerm::parse("f.\n", &syms)?);
+
+    /// let expected = Term::share(STerm::parse("f.\n")?, &syms)?;
     /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~

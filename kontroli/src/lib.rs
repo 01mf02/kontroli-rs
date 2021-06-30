@@ -33,8 +33,7 @@
 //! can be executed by running `cargo test`.)
 //!
 //! ~~~
-//! # use kontroli::Error;
-//! # use kontroli::scope::{Command, Symbols};
+//! # use kontroli::{Command, Error, Symbols};
 //! # use kontroli::rc::{Intro, Rule, Signature, Typing};
 //! # use colosseum::unsync::Arena;
 //! let cmds = [
@@ -56,20 +55,26 @@
 //!
 //! for c in cmds.iter() {
 //!     // parse and scope command in one go
-//!     let cmd: Command<String> = Command::parse(c, &syms)?;
+//!     let cmd = Command::parse(c)?;
 //!     match cmd {
 //!         // introduction of a new name
 //!         Command::Intro(id, it) => {
+//!             let it = Intro::share(it, &syms)?;
+//!
 //!             let id: &str = arena.alloc(id);
 //!             // add symbol to symbol table and fail if it is not new
 //!             let sym = syms.insert(id)?;
 //!
 //!             // typecheck and insert into signature
-//!             let typing: Typing = Typing::new(Intro::from(it), &sig)?.check(&sig)?;
+//!             let typing: Typing = Typing::new(it, &sig)?.check(&sig)?;
 //!             sig.insert(sym, typing)?
 //!         }
 //!         // addition of rewrite rules
-//!         Command::Rules(rules) => sig.add_rules(rules.into_iter().map(Rule::from))?
+//!         Command::Rules(rules) => {
+//!             for rule in rules {
+//!                 sig.add_rule(Rule::share(rule, &syms)?)?
+//!             }
+//!         }
 //!     }
 //! }
 //! # Ok::<_, Error>(())
@@ -112,7 +117,6 @@ extern crate nom;
 extern crate log;
 
 pub mod parse;
-pub mod scope;
 
 /// Multi-threading kernel.
 #[cfg(not(doctest))]
@@ -132,24 +136,46 @@ pub mod rc {
 
 mod application;
 mod arg;
+mod bterm;
 mod command;
 pub mod error;
 mod intro;
 mod pattern;
 mod rule;
+pub mod scope;
 mod signature;
 mod stack;
+mod symbol;
+mod symbols;
 mod term;
 mod typing;
 
 pub use application::Application;
 pub use arg::Arg;
+pub use bterm::BTerm;
 pub use command::Command;
 pub use error::Error;
 pub use intro::Intro;
 pub use pattern::Pattern;
 pub use rule::Rule;
+pub use scope::Scope;
 pub use signature::Signature;
 pub use stack::Stack;
+pub use symbol::Symbol;
+pub use symbols::Symbols;
 pub use term::Term;
 pub use typing::Typing;
+
+use error::ScopeError;
+
+impl parse::Symbol {
+    pub fn share<'s>(self, syms: &Symbols<'s>) -> Result<Symbol<'s>, ScopeError> {
+        if self.name == "_" {
+            Err(ScopeError::Underscore)
+        } else {
+            use alloc::string::ToString;
+            syms.get(&self.path, &self.name)
+                .ok_or_else(|| ScopeError::UndeclaredSymbol(self.to_string()))
+        }
+    }
+}

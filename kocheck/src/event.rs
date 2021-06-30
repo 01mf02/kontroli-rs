@@ -1,6 +1,7 @@
 use core::fmt::{self, Display};
-use kontroli::parse::Command;
-use kontroli::scope::Symbols;
+use kontroli::Symbols;
+
+pub type Command = kontroli::scope::Command<kontroli::parse::Symbol>;
 
 /// Commands with interspersed module opening.
 pub enum Event {

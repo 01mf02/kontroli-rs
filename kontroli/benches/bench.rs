@@ -1,11 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kontroli::parse::{opt_lex, phrase, Command, Parser};
 use kontroli::rc::{Intro, Rule, Signature, Typing};
-use kontroli::scope::{self, Symbols};
-use kontroli::Error;
+use kontroli::{Command, Error, Symbols};
 use std::include_bytes;
 
-fn check(cmds: Vec<Command>) -> Result<(), Error> {
+fn check(cmds: Vec<kontroli::parse::Command>) -> Result<(), Error> {
     use colosseum::unsync::Arena;
 
     let arena = Arena::new();
@@ -13,28 +11,36 @@ fn check(cmds: Vec<Command>) -> Result<(), Error> {
     let mut sig = Signature::new();
 
     for c in cmds.into_iter() {
-        match c.scope(&syms)? {
+        use kontroli::Scope;
+        match c.scope() {
             // introduction of a new name
-            scope::Command::Intro(id, it) => {
+            Command::Intro(id, it) => {
+                let it = Intro::share(it, &syms)?;
+
                 let id: &str = arena.alloc(id);
                 // add symbol to symbol table and fail if it is not new
                 let sym = syms.insert(id)?;
 
                 // typecheck and insert into signature
-                let typing: Typing = Typing::new(Intro::from(it), &sig)?.check(&sig)?;
+                let typing: Typing = Typing::new(it, &sig)?.check(&sig)?;
                 sig.insert(sym, typing)?
             }
             // addition of rewrite rules
-            scope::Command::Rules(rules) => sig.add_rules(rules.into_iter().map(Rule::from))?,
+            Command::Rules(rules) => {
+                for rule in rules {
+                    sig.add_rule(Rule::share(rule, &syms)?)?
+                }
+            }
         }
     }
 
     Ok(())
 }
 
-fn parse(buffer: &[u8]) -> Vec<Command> {
+fn parse(buffer: &[u8]) -> Vec<kontroli::parse::Command> {
+    use kontroli::parse::{opt_lex, phrase, Parser};
     use nom::combinator::iterator;
-    let parse = opt_lex(phrase(Command::parse));
+    let parse = opt_lex(phrase(kontroli::parse::Command::parse));
     iterator(buffer, parse).filter_map(|c| c).collect()
 }
 

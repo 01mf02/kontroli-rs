@@ -20,20 +20,36 @@ pub enum Term<Sym, Id, Tm> {
     Abst(Arg<Id, Option<Tm>>, Tm),
 }
 
-impl<Sym, Id, Tm> Term<Sym, Id, Tm> {
-    pub fn map<FId, FTm, Id2, Tm2>(self, fid: FId, ftm: &FTm) -> Term<Sym, Id2, Tm2>
+impl<C, V, T> Term<C, V, T> {
+    pub fn try_map<FC, FV, FT, C2, V2, T2, E>(
+        self,
+        fc: FC,
+        fv: FV,
+        ft: FT,
+    ) -> Result<Term<C2, V2, T2>, E>
     where
-        FId: Fn(Id) -> Id2,
-        FTm: Fn(Tm) -> Tm2,
+        FC: Fn(C) -> Result<C2, E>,
+        FV: Fn(V) -> V2,
+        FT: Fn(T) -> Result<T2, E>,
     {
         match self {
-            Self::Kind => Term::Kind,
-            Self::Type => Term::Type,
-            Self::Symb(s) => Term::Symb(s),
-            Self::BVar(b) => Term::BVar(b),
-            Self::Appl(tm, args) => Term::Appl(ftm(tm), args.into_iter().map(ftm).collect()),
-            Self::Prod(arg, tm) => Term::Prod(arg.map_id(fid).map_ty(ftm), ftm(tm)),
-            Self::Abst(arg, tm) => Term::Abst(arg.map_id(fid).map_ty(|ty| ty.map(ftm)), ftm(tm)),
+            Self::Kind => Ok(Term::Kind),
+            Self::Type => Ok(Term::Type),
+            Self::Symb(s) => Ok(Term::Symb(fc(s)?)),
+            Self::BVar(b) => Ok(Term::BVar(b)),
+            Self::Appl(tm, args) => Ok(Term::Appl(
+                ft(tm)?,
+                args.into_iter().map(ft).collect::<Result<_, _>>()?,
+            )),
+            Self::Prod(arg, tm) => {
+                let tm = ft(tm)?;
+                Ok(Term::Prod(arg.map_id(fv).map_ty_res(ft)?, tm))
+            }
+            Self::Abst(arg, tm) => {
+                let tm = ft(tm)?;
+                let arg = arg.map_id(fv).map_ty_res(|ty| ty.map(ft).transpose())?;
+                Ok(Term::Abst(arg, tm))
+            }
         }
     }
 }
