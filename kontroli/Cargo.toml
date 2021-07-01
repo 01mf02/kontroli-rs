@@ -11,6 +11,7 @@ keywords = ["verification", "dependent-types", "type-checking", "rewriting", "de
 categories = ["concurrency", "no-std", "parser-implementations", "science"]
 
 [dependencies]
+dedukti-parse = { path = "../dedukti-parse" }
 fnv = "1.0.3"
 im = "14.3"
 lazy-st = "0.2"
