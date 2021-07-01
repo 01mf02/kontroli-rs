@@ -4,5 +4,9 @@ version = "0.1.0"
 authors = ["Michael Färber <01mf02@gmail.com>"]
 edition = "2018"
 
+[features]
+default = ["itertools"]
+
 [dependencies]
 logos = "0.12"
+itertools = { version = "0.10", optional = true }
