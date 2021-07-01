@@ -21,6 +21,29 @@ pub enum Term<Sym, Id, Tm> {
 }
 
 impl<C, V, T> Term<C, V, T> {
+    pub fn map<FC, FV, FT, C2, V2, T2>(self, fc: FC, fv: FV, ft: FT) -> Term<C2, V2, T2>
+    where
+        FC: Fn(C) -> C2,
+        FV: Fn(V) -> V2,
+        FT: Fn(T) -> T2,
+    {
+        match self {
+            Self::Kind => Term::Kind,
+            Self::Type => Term::Type,
+            Self::Symb(s) => Term::Symb(fc(s)),
+            Self::BVar(b) => Term::BVar(b),
+            Self::Appl(tm, args) => Term::Appl(ft(tm), args.into_iter().map(ft).collect()),
+            Self::Prod(arg, tm) => {
+                let tm = ft(tm);
+                Term::Prod(arg.map_id(fv).map_ty(ft), tm)
+            }
+            Self::Abst(arg, tm) => {
+                let tm = ft(tm);
+                Term::Abst(arg.map_id(fv).map_ty(|ty| ty.map(ft)), tm)
+            }
+        }
+    }
+
     pub fn try_map<FC, FV, FT, C2, V2, T2, E>(
         self,
         fc: FC,
