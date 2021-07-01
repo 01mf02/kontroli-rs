@@ -18,5 +18,5 @@ pub fn lex<'s>(s: &'s str) -> impl Iterator<Item = Token<'s>> {
 #[cfg(feature = "itertools")]
 pub fn lexes<'s>(s: &'s str) -> impl Iterator<Item = Result<Vec<Token<'s>>, Error>> {
     use itertools::Itertools;
-    Token::lexer(s).batching(parse::yield_command)
+    Token::lexer(s).batching(parse::until_period)
 }

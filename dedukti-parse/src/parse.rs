@@ -44,10 +44,10 @@ pub enum Error {
     ExpectedDot,
     ExpectedColon,
     ExpectedColonEq,
-    ExpectedColonEqOrEoc,
+    ExpectedColonEqOrDot,
     ExpectedColonOrColonEq,
     ExpectedLBrk,
-    ExpectedLBrkOrEoc,
+    ExpectedLBrkOrDot,
     ExpectedArrow,
     ExpectedLongArrow,
     ExpectedTerm,
@@ -58,7 +58,7 @@ pub enum Error {
     ExpectedCmd,
 }
 
-pub fn yield_command<'s>(
+pub fn until_period<'s>(
     tokens: &mut impl Iterator<Item = Token<'s>>,
 ) -> Option<Result<Vec<Token<'s>>, Error>> {
     let mut cmd = Vec::new();
@@ -102,7 +102,7 @@ impl<'s> Command<&'s str> {
                         let tm = match iter.next() {
                             Some(Token::ColonEq) => Some(Term::parse(iter)?),
                             None => None,
-                            _ => return Err(Error::ExpectedColonEqOrEoc),
+                            _ => return Err(Error::ExpectedColonEqOrDot),
                         };
                         (Some(ty), tm)
                     }
@@ -128,7 +128,7 @@ impl<'s> Command<&'s str> {
                     match iter.next() {
                         Some(Token::LBrk) => rules.push(Rule::parse_after_lbrk(iter)?),
                         None => return Ok(Self::Rules(rules)),
-                        _ => return Err(Error::ExpectedLBrkOrEoc),
+                        _ => return Err(Error::ExpectedLBrkOrDot),
                     }
                 }
             }
