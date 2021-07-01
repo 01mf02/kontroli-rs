@@ -46,7 +46,8 @@ pub enum Error {
     ExpectedColonEq,
     ExpectedColonEqOrEoc,
     ExpectedColonOrColonEq,
-    ExpectedRuleOrEoc,
+    ExpectedLBrk,
+    ExpectedLBrkOrEoc,
     ExpectedArrow,
     ExpectedLongArrow,
     ExpectedTerm,
@@ -122,12 +123,12 @@ impl<'s> Command<&'s str> {
             }
             Some(Token::LBrk) => {
                 let mut rules = Vec::new();
-                rules.push(Rule::parse(iter)?);
+                rules.push(Rule::parse_after_lbrk(iter)?);
                 loop {
                     match iter.next() {
-                        Some(Token::LBrk) => rules.push(Rule::parse(iter)?),
+                        Some(Token::LBrk) => rules.push(Rule::parse_after_lbrk(iter)?),
                         None => return Ok(Self::Rules(rules)),
-                        _ => return Err(Error::ExpectedRuleOrEoc),
+                        _ => return Err(Error::ExpectedLBrkOrEoc),
                     }
                 }
             }
@@ -162,7 +163,17 @@ impl<'s> Command<&'s str> {
 }
 
 impl<'s> Rule<&'s str> {
-    fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
+    pub fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Token<'s>>,
+    {
+        match iter.next() {
+            Some(Token::LBrk) => Self::parse_after_lbrk(iter),
+            _ => return Err(Error::ExpectedLBrk),
+        }
+    }
+
+    fn parse_after_lbrk<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
