@@ -33,7 +33,7 @@
 //! can be executed by running `cargo test`.)
 //!
 //! ~~~
-//! # use kontroli::{Command, Error, Symbols};
+//! # use kontroli::{Command, Error, Share, Symbols};
 //! # use kontroli::rc::{Intro, Rule, Signature, Typing};
 //! # use colosseum::unsync::Arena;
 //! let cmds = [
@@ -59,7 +59,7 @@
 //!     match cmd {
 //!         // introduction of a new name
 //!         Command::Intro(id, it) => {
-//!             let it = Intro::share(it, &syms)?;
+//!             let it = it.share(&syms)?;
 //!
 //!             let id: &str = arena.alloc(id);
 //!             // add symbol to symbol table and fail if it is not new
@@ -72,7 +72,7 @@
 //!         // addition of rewrite rules
 //!         Command::Rules(rules) => {
 //!             for rule in rules {
-//!                 sig.add_rule(Rule::share(rule, &syms)?)?
+//!                 sig.add_rule(rule.share(&syms)?)?
 //!             }
 //!         }
 //!     }

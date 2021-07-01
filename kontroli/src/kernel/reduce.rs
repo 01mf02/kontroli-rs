@@ -44,17 +44,17 @@ impl<'s> State<'s> {
     /// Evaluate the state to its weak head normal form.
     ///
     /// ~~~
-    /// # use kontroli::{Error, Symbols};
+    /// # use kontroli::{Error, Share, Symbols};
     /// # use kontroli::scope::{BTerm as SBTerm, Term as STerm};
     /// # use kontroli::rc::{RTerm, Signature, Term};
     /// # use kontroli::rc::state::State;
     /// let sig = Signature::new();
     /// let syms = Symbols::new();
     ///
-    /// let term = RTerm::share(SBTerm::parse(r"(x => x) (x => x).")?, &syms)?;
+    /// let term = SBTerm::parse(r"(x => x) (x => x).")?.share(&syms)?;
     /// let whnf = State::new(term).whnf(&sig);
     ///
-    /// let expected = Term::share(STerm::parse(r"(x => x).")?, &syms)?;
+    /// let expected = STerm::parse(r"(x => x).")?.share(&syms)?;
     /// assert!(whnf.ctx.is_empty());
     /// assert!(whnf.stack.is_empty());
     /// assert_eq!(*whnf.term, expected);
@@ -170,18 +170,18 @@ impl<'s> Stack<'s> {
     /// # use kontroli::rc::state::State;
     /// # use kontroli::rc::{RTerm, Rule, Signature, Term};
     /// # use kontroli::scope::{BTerm as SBTerm, Rule as SRule, Term as STerm};
-    /// # use kontroli::{Error, Symbols};
+    /// # use kontroli::{Error, Share, Symbols};
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
     /// let sig = Signature::new();
 
-    /// let rule = Rule::share(SRule::parse("[A] id A --> A.\n")?, &syms)?;
-    /// let term = RTerm::share(SBTerm::parse("id f a.\n")?, &syms)?;
+    /// let rule = SRule::parse("[A] id A --> A.\n")?.share(&syms)?;
+    /// let term = SBTerm::parse("id f a.\n")?.share(&syms)?;
 
     /// let stack = State::new(term).whnf(&sig).stack;
     /// let subst = stack.match_flatten(&rule, &sig).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
 
-    /// let expected = Term::share(STerm::parse("f.\n")?, &syms)?;
+    /// let expected: Term = STerm::parse("f.\n")?.share(&syms)?;
     /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~

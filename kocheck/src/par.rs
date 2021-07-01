@@ -4,7 +4,7 @@ use crate::{Error, Event, Opt};
 use colosseum::sync::Arena;
 use kontroli::arc::{Intro, Rule, Signature, Typing};
 use kontroli::error::Error as KoError;
-use kontroli::{Symbol, Symbols};
+use kontroli::{Share, Symbol, Symbols};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 struct Command<'s>(kontroli::Command<Symbol<'s>, Intro<'s>, Rule<'s>>);
@@ -19,12 +19,12 @@ impl<'s> Command<'s> {
     ) -> Result<Self, KoError> {
         match cmd {
             kontroli::Command::Intro(id, it) => {
-                let it = Intro::share(it, syms)?;
+                let it = it.share(syms)?;
                 let id = syms.insert(arena.alloc(id))?;
                 Ok(kontroli::Command::Intro(id, it))
             }
             kontroli::Command::Rules(rules) => {
-                let rules = rules.into_iter().map(|r| Rule::share(r, syms));
+                let rules = rules.into_iter().map(|r| r.share(syms));
                 Ok(kontroli::Command::Rules(rules.collect::<Result<_, _>>()?))
             }
         }

@@ -29,13 +29,13 @@ impl<'s> State<'s> {
     /// This does not yet evaluate anything, as can be seen from following example:
     ///
     /// ~~~
-    /// # use kontroli::{Error, Symbols};
+    /// # use kontroli::{Error, Share, Symbols};
     /// # use kontroli::scope::{BTerm as SBTerm};
     /// # use kontroli::rc::{RTerm, Signature};
     /// # use kontroli::rc::state::State;
     /// let syms = Symbols::new();
     ///
-    /// let term = RTerm::share(SBTerm::parse(r"(x => x) (x => x).")?, &syms)?;
+    /// let term: RTerm = SBTerm::parse(r"(x => x) (x => x).")?.share(&syms)?;
     ///
     /// let state = State::new(term.clone());
     /// assert!(RTerm::ptr_eq(&RTerm::from(state), &term));

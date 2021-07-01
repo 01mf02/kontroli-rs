@@ -7,46 +7,45 @@ use crate::{parse, scope};
 use crate::{Share, Symbols};
 use core::convert::TryFrom;
 
-impl<'s> Term<'s> {
+impl<'s> Share<'s, Term<'s>> for scope::Term<parse::Symbol> {
     /// Share a closed term.
     ///
     /// Kontroli differs from Dedukti by allowing to
     /// abstract over variables of name `_`:
     ///
     /// ~~~
-    /// # use kontroli::{Error, Symbols};
+    /// # use kontroli::{Error, Share, Symbols};
     /// # use kontroli::rc::Term;
     /// # use kontroli::scope::Term as STerm;
     /// let syms: Symbols = vec!["A"].into_iter().collect();
-    /// let tm = Term::share(STerm::parse(r"_ : A => _.\n")?, &syms)?;
+    /// let tm: Term = STerm::parse(r"_ : A => _.\n")?.share(&syms)?;
     /// # Ok::<_, Error>(())
     /// ~~~
-    pub fn share(tm: scope::Term<parse::Symbol>, syms: &Symbols<'s>) -> Result<Self, Error> {
-        tm.try_map(|c| c.share(syms), Rc::new, |tm| RTerm::share(tm, syms))
+    fn share(self, syms: &Symbols<'s>) -> Result<Term<'s>, Error> {
+        self.try_map(|c| c.share(syms), Rc::new, |tm| tm.share(syms))
     }
 }
 
-impl<'s> RTerm<'s> {
-    pub fn share(tm: scope::BTerm<parse::Symbol>, syms: &Symbols<'s>) -> Result<Self, Error> {
-        Ok(Self::new(Term::share(tm.get(), syms)?))
+impl<'s> Share<'s, RTerm<'s>> for scope::BTerm<parse::Symbol> {
+    fn share(self, syms: &Symbols<'s>) -> Result<RTerm<'s>, Error> {
+        Ok(RTerm::new(self.get().share(syms)?))
     }
 }
 
-impl<'s> Rule<'s> {
-    pub fn share(rule: scope::Rule<parse::Symbol>, syms: &Symbols<'s>) -> Result<Self, Error> {
-        let ctx = rule.ctx;
-        let lhs = Pattern::try_from(rule.lhs).map_err(|_| Error::NoPrepattern)?;
+impl<'s> Share<'s, Rule<'s>> for scope::Rule<parse::Symbol> {
+    fn share(self, syms: &Symbols<'s>) -> Result<Rule<'s>, Error> {
+        let ctx = self.ctx;
+        let lhs = Pattern::try_from(self.lhs).map_err(|_| Error::NoPrepattern)?;
         let lhs = lhs.try_map(&|c| c.share(syms))?;
         let lhs = TopPattern::try_from(lhs).map_err(|_| Error::NoTopPattern)?;
-        let rhs = RTerm::share(rule.rhs, &syms)?;
-        Ok(Self { ctx, lhs, rhs })
+        let rhs = self.rhs.share(&syms)?;
+        Ok(Rule { ctx, lhs, rhs })
     }
 }
 
-impl<'s> Intro<'s> {
-    pub fn share(intro: scope::Intro<parse::Symbol>, syms: &Symbols<'s>) -> Result<Self, Error> {
-        intro
-            .map_type_err(|ty| RTerm::share(ty, syms))?
-            .map_term_err(|tm| RTerm::share(tm, syms))
+impl<'s> Share<'s, Intro<'s>> for scope::Intro<parse::Symbol> {
+    fn share(self, syms: &Symbols<'s>) -> Result<Intro<'s>, Error> {
+        self.map_type_err(|ty| ty.share(syms))?
+            .map_term_err(|tm| tm.share(syms))
     }
 }

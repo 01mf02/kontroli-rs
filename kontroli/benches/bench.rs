@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kontroli::rc::{Intro, Rule, Signature, Typing};
-use kontroli::{Command, Error, Symbols};
+use kontroli::rc::{Signature, Typing};
+use kontroli::{Command, Error, Share, Symbols};
 use std::include_bytes;
 
 fn check(cmds: Vec<kontroli::parse::Command>) -> Result<(), Error> {
@@ -15,7 +15,7 @@ fn check(cmds: Vec<kontroli::parse::Command>) -> Result<(), Error> {
         match c.scope() {
             // introduction of a new name
             Command::Intro(id, it) => {
-                let it = Intro::share(it, &syms)?;
+                let it = it.share(&syms)?;
 
                 let id: &str = arena.alloc(id);
                 // add symbol to symbol table and fail if it is not new
@@ -28,7 +28,7 @@ fn check(cmds: Vec<kontroli::parse::Command>) -> Result<(), Error> {
             // addition of rewrite rules
             Command::Rules(rules) => {
                 for rule in rules {
-                    sig.add_rule(Rule::share(rule, &syms)?)?
+                    sig.add_rule(rule.share(&syms)?)?
                 }
             }
         }
