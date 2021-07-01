@@ -3,8 +3,8 @@
 use super::{Intro, RTerm, Rc, Rule, Term};
 use crate::error::ScopeError as Error;
 use crate::pattern::{Pattern, TopPattern};
-use crate::Symbols;
 use crate::{parse, scope};
+use crate::{Share, Symbols};
 use core::convert::TryFrom;
 
 impl<'s> Term<'s> {

@@ -143,6 +143,7 @@ mod intro;
 mod pattern;
 mod rule;
 pub mod scope;
+mod share;
 mod signature;
 mod stack;
 mod symbol;
@@ -159,23 +160,10 @@ pub use intro::Intro;
 pub use pattern::Pattern;
 pub use rule::Rule;
 pub use scope::Scope;
+pub use share::Share;
 pub use signature::Signature;
 pub use stack::Stack;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
 pub use term::Term;
 pub use typing::Typing;
-
-use error::ScopeError;
-
-impl parse::Symbol {
-    pub fn share<'s>(self, syms: &Symbols<'s>) -> Result<Symbol<'s>, ScopeError> {
-        if self.name == "_" {
-            Err(ScopeError::Underscore)
-        } else {
-            use alloc::string::ToString;
-            syms.get(&self.path, &self.name)
-                .ok_or_else(|| ScopeError::UndeclaredSymbol(self.to_string()))
-        }
-    }
-}
