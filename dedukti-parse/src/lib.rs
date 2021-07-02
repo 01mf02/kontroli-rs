@@ -6,7 +6,7 @@ pub mod lex;
 pub mod parse;
 
 pub use lex::Token;
-pub use parse::{Command, Error, Intro, Rule, Term};
+pub use parse::{Command, Error, Intro, Parse, Rule, Term};
 
 use alloc::vec::Vec;
 use logos::Logos;

@@ -82,8 +82,32 @@ pub fn until_period<'s>(
     }
 }
 
-impl<'s> Command<&'s str> {
-    pub fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
+pub trait Parse<'s>: Sized {
+    fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Token<'s>>;
+
+    fn consume(iter: impl Iterator<Item = Token<'s>>) -> Result<Self, Error> {
+        let mut iter = iter.peekable();
+        let y = Self::parse(&mut iter)?;
+        if iter.next().is_none() {
+            Ok(y)
+        } else {
+            Err(Error::ExpectedDot)
+        }
+    }
+
+    fn parse_vec(tokens: Vec<Token<'s>>) -> Result<Self, Error> {
+        Self::consume(&mut tokens.into_iter())
+    }
+
+    fn parse_str(s: &'s str) -> Result<Self, Error> {
+        Self::consume(&mut super::lex(s))
+    }
+}
+
+impl<'s> Parse<'s> for Command<&'s str> {
+    fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
@@ -135,7 +159,9 @@ impl<'s> Command<&'s str> {
             _ => Err(Error::ExpectedCmd),
         }
     }
+}
 
+impl<'s> Command<&'s str> {
     fn parse_args<I>(iter: &mut Peekable<I>) -> Result<Vec<(&'s str, Term<&'s str>)>, Error>
     where
         I: Iterator<Item = Token<'s>>,
@@ -162,8 +188,8 @@ impl<'s> Command<&'s str> {
     }
 }
 
-impl<'s> Rule<&'s str> {
-    pub fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
+impl<'s> Parse<'s> for Rule<&'s str> {
+    fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
@@ -172,7 +198,9 @@ impl<'s> Rule<&'s str> {
             _ => return Err(Error::ExpectedLBrk),
         }
     }
+}
 
+impl<'s> Rule<&'s str> {
     fn parse_after_lbrk<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
@@ -217,8 +245,8 @@ impl<'s> Rule<&'s str> {
     }
 }
 
-impl<'s> Term<&'s str> {
-    pub fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
+impl<'s> Parse<'s> for Term<&'s str> {
+    fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
@@ -232,7 +260,9 @@ impl<'s> Term<&'s str> {
             _ => Ok(tm),
         }
     }
+}
 
+impl<'s> Term<&'s str> {
     fn parse_non_lr<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
