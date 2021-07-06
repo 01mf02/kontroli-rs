@@ -1,9 +1,8 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use kontroli::rc::{Signature, Typing};
-use kontroli::{Command, Error, Share, Symbols};
-use std::include_bytes;
+use kontroli::{Command, Error, Scope, Share, Symbols};
 
-fn check(cmds: Vec<kontroli::parse::Command>) -> Result<(), Error> {
+fn check<'s>(cmds: Vec<kontroli::scope::Command<&'s str>>) -> Result<(), Error> {
     use colosseum::unsync::Arena;
 
     let arena = Arena::new();
@@ -11,8 +10,7 @@ fn check(cmds: Vec<kontroli::parse::Command>) -> Result<(), Error> {
     let mut sig = Signature::new();
 
     for c in cmds.into_iter() {
-        use kontroli::Scope;
-        match c.scope() {
+        match c {
             // introduction of a new name
             Command::Intro(id, it) => {
                 let it = it.share(&syms)?;
@@ -37,16 +35,17 @@ fn check(cmds: Vec<kontroli::parse::Command>) -> Result<(), Error> {
     Ok(())
 }
 
-fn parse(buffer: &[u8]) -> Vec<kontroli::parse::Command> {
-    use kontroli::parse::{opt_lex, phrase, Parser};
-    use nom::combinator::iterator;
-    let parse = opt_lex(phrase(kontroli::parse::Command::parse));
-    iterator(buffer, parse).filter_map(|c| c).collect()
+fn parse(file: &str) -> Vec<kontroli::scope::Command<&str>> {
+    use kontroli::parse::{lexes, Command, Parse};
+    lexes(file)
+        .map(|tokens| Command::parse_vec(tokens?))
+        .map(|cmd| cmd.unwrap().scope())
+        .collect()
 }
 
 macro_rules! include_ex {
     ($x:expr) => {
-        include_bytes!(concat!("../../examples/", $x))
+        include_str!(concat!("../../examples/", $x))
     };
 }
 
@@ -60,10 +59,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let sudoku_easy = parse(include_ex!("sudoku/solve_easy.dk"));
     let or_n = parse(include_ex!("bench/or_n.dk"));
 
-    let cmd = b"def eq : Dep (fib (mul 2 4)) := dep (fib (mul 4 2)).\n";
+    let cmd = "def eq : Dep (fib (mul 2 4)) := dep (fib (mul 4 2)).";
     let fib8 = [nat.clone(), parse(cmd)].concat();
 
-    let cmd = b"def eq : Bool_Dep (or_n (mul 2 4)) := bool_dep F.\n";
+    let cmd = "def eq : Bool_Dep (or_n (mul 2 4)) := bool_dep F.";
     let or8 = [boole.clone(), nat, or_n, parse(cmd)].concat();
 
     let sudo = [boole, sudoku, sudoku_easy].concat();

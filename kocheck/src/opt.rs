@@ -1,7 +1,8 @@
-use byte_unit::{Byte, ByteError};
+use crate::Stage;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+// TODO: introduce --omit argument to replace no_* flags
 #[derive(Clone, Debug, StructOpt)]
 /// A typechecker for the lambda-Pi calculus modulo rewriting
 pub struct Opt {
@@ -13,30 +14,11 @@ pub struct Opt {
     #[structopt(long)]
     pub eta: bool,
 
-    /// Only parse; neither scope, infer, nor check
-    #[structopt(long)]
-    pub no_scope: bool,
-
-    /// Only parse and scope; neither infer nor check
-    #[structopt(long)]
-    pub no_infer: bool,
-
-    /// Only parse, scope, and infer; do not check
-    #[structopt(long)]
-    pub no_check: bool,
-
-    /// Size of the parse buffer
+    /// Perform only operations until (excluding) the given stage.
     ///
-    /// The parser repeatedly reads data into a buffer and parses a command.
-    /// If a command does not fit into the buffer,
-    /// the buffer size is doubled and parsing is retried,
-    /// until either parsing succeeds or the whole file is read.
-    ///
-    /// Therefore, the buffer size should be chosen to be
-    /// larger than the size of the largest expected command,
-    /// to avoid unnecessary retries.
-    #[structopt(long, default_value = "64MB", parse(try_from_str = parse_byte))]
-    pub buffer: Byte,
+    /// Possible values are: parse, scope, share, infer, check.
+    #[structopt(long)]
+    pub omit: Option<Stage>,
 
     /// Parse given number of commands in advance (∞ if argument omitted)
     ///
@@ -72,18 +54,8 @@ pub struct Opt {
     pub files: Vec<PathBuf>,
 }
 
-fn parse_byte<S: AsRef<str>>(s: S) -> Result<Byte, MyByteError> {
-    Byte::from_str(s).map_err(MyByteError)
-}
-
-#[derive(Debug)]
-struct MyByteError(ByteError);
-
-impl ToString for MyByteError {
-    fn to_string(&self) -> String {
-        match &self.0 {
-            ByteError::ValueIncorrect(s) => "Incorrect byte value: ".to_owned() + &s.clone(),
-            ByteError::UnitIncorrect(s) => "Incorrect byte unit: ".to_owned() + &s.clone(),
-        }
+impl Opt {
+    pub fn omits(&self, stage: Stage) -> bool {
+        self.omit == Some(stage)
     }
 }

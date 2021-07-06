@@ -38,15 +38,15 @@
 //! # use colosseum::unsync::Arena;
 //! let cmds = [
 //!     // declarations
-//!     "prop : Type.\n",
-//!     "imp : prop -> prop -> prop.\n",
+//!     "prop : Type",
+//!     "imp : prop -> prop -> prop",
 //!
 //!     // definition with a rewrite rule
-//!     "def proof : prop -> Type.\n",
-//!     "[x, y] proof (imp x y) --> proof x -> proof y.\n",
+//!     "def proof : prop -> Type",
+//!     "[x, y] proof (imp x y) --> proof x -> proof y",
 //!
 //!     // theorem
-//!     r"thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p.\n",
+//!     r"thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p",
 //! ];
 //!
 //! let arena = Arena::new();
@@ -112,11 +112,10 @@
 
 extern crate alloc;
 extern crate lazy_st;
-extern crate nom;
 #[macro_use]
 extern crate log;
 
-pub mod parse;
+pub use dedukti_parse as parse;
 
 /// Multi-threading kernel.
 #[cfg(not(doctest))]

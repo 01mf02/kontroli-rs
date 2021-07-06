@@ -3,11 +3,10 @@
 use super::{Intro, RTerm, Rc, Rule, Term};
 use crate::error::ScopeError as Error;
 use crate::pattern::{Pattern, TopPattern};
-use crate::{parse, scope};
-use crate::{Share, Symbols};
-use core::convert::TryFrom;
+use crate::{scope, Share, Symbols};
+use core::{borrow::Borrow, convert::TryFrom};
 
-impl<'s> Share<'s, Term<'s>> for scope::Term<parse::Symbol> {
+impl<'s, S: Borrow<str> + Ord> Share<'s, Term<'s>> for scope::Term<S> {
     /// Share a closed term.
     ///
     /// Kontroli differs from Dedukti by allowing to
@@ -18,7 +17,7 @@ impl<'s> Share<'s, Term<'s>> for scope::Term<parse::Symbol> {
     /// # use kontroli::rc::Term;
     /// # use kontroli::scope::Term as STerm;
     /// let syms: Symbols = vec!["A"].into_iter().collect();
-    /// let tm: Term = STerm::parse(r"_ : A => _.\n")?.share(&syms)?;
+    /// let tm: Term = STerm::parse(r"_ : A => _")?.share(&syms)?;
     /// # Ok::<_, Error>(())
     /// ~~~
     fn share(self, syms: &Symbols<'s>) -> Result<Term<'s>, Error> {
@@ -26,13 +25,13 @@ impl<'s> Share<'s, Term<'s>> for scope::Term<parse::Symbol> {
     }
 }
 
-impl<'s> Share<'s, RTerm<'s>> for scope::BTerm<parse::Symbol> {
+impl<'s, S: Borrow<str> + Ord> Share<'s, RTerm<'s>> for scope::BTerm<S> {
     fn share(self, syms: &Symbols<'s>) -> Result<RTerm<'s>, Error> {
         Ok(RTerm::new(self.get().share(syms)?))
     }
 }
 
-impl<'s> Share<'s, Rule<'s>> for scope::Rule<parse::Symbol> {
+impl<'s, S: Borrow<str> + Ord> Share<'s, Rule<'s>> for scope::Rule<S> {
     fn share(self, syms: &Symbols<'s>) -> Result<Rule<'s>, Error> {
         let ctx = self.ctx;
         let lhs = Pattern::try_from(self.lhs).map_err(|_| Error::NoPrepattern)?;
@@ -43,7 +42,7 @@ impl<'s> Share<'s, Rule<'s>> for scope::Rule<parse::Symbol> {
     }
 }
 
-impl<'s> Share<'s, Intro<'s>> for scope::Intro<parse::Symbol> {
+impl<'s, S: Borrow<str> + Ord> Share<'s, Intro<'s>> for scope::Intro<S> {
     fn share(self, syms: &Symbols<'s>) -> Result<Intro<'s>, Error> {
         self.map_type_err(|ty| ty.share(syms))?
             .map_term_err(|tm| tm.share(syms))

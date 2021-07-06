@@ -4,28 +4,32 @@ use core::convert::TryFrom;
 use kocheck::{par, parse, seq, Error, Event, Opt, PathRead};
 use structopt::StructOpt;
 
-fn produce(pr: PathRead, opt: &Opt) -> impl Iterator<Item = Result<Event, Error>> {
-    use kontroli::scope::Scope;
-    let path = std::iter::once(Ok(Event::Module(pr.path)));
-    let cmds = parse(pr.read, &opt).map(|cmd| cmd.map(|c| Event::Command(c.scope())));
-    path.chain(cmds)
-}
-
-/// Flatten an iterator of results of iterators of results into an iterator of results.
-///
-/// Source: <https://www.reddit.com/r/rust/comments/9u6846/rust_puzzle_flatten_a_nested_iterator_of_results>
-pub fn flatten_nested_results<O, I, T, E>(outer: O) -> impl Iterator<Item = Result<T, E>>
+fn produce<F, E>(opt: &Opt, send: F) -> Result<(), Error>
 where
-    O: Iterator<Item = Result<I, E>>,
-    I: Iterator<Item = Result<T, E>>,
+    F: Fn(Result<Event, Error>) -> Result<(), E>,
 {
-    outer.flat_map(|inner_result| {
-        let (v, r) = match inner_result {
-            Ok(v) => (Some(v), None),
-            Err(e) => (None, Some(Err(e))),
-        };
-        v.into_iter().flatten().chain(r)
-    })
+    for file in opt.files.iter() {
+        let file = PathRead::try_from(file)?;
+
+        use kontroli::parse::lexes;
+        //use rayon::iter::{ParallelBridge, ParallelIterator};
+        let cmds = lexes(&file.read)
+            // TODO: investigate the effect of par_bridge!
+            //.par_bridge()
+            .map(|tokens| parse::<String>(tokens?, &opt))
+            .map(|res| res.map_err(|e| e.into()).transpose())
+            .flatten();
+
+        let head = core::iter::once(Ok(Event::Module(file.path)));
+        let tail = cmds.map(|cmd| cmd.map(Event::Command));
+
+        // sending fails prematurely if consumption fails
+        // in that case, handle the error after this function exits
+        if head.chain(tail).try_for_each(|event| send(event)).is_err() {
+            return Ok(());
+        }
+    }
+    Ok(())
 }
 
 fn main() -> Result<(), Error> {
@@ -45,27 +49,9 @@ fn main() -> Result<(), Error> {
             .unwrap();
     }
 
-    // lazily produce events from all specified files
-    let iter = opt
-        .files
-        .iter()
-        .map(PathRead::try_from)
-        .map(|pr| Ok(produce(pr?, &opt)));
-    let iter = flatten_nested_results(iter)
-        .inspect(|r| r.iter().for_each(|event| log::info!("{}", event)));
-    // box the iterator to control type size growth
-    let mut iter = Box::new(iter);
-
     let parallel = opt.jobs.is_some();
 
-    // if parallel execution is enabled, assume an unbounded channel by default
-    let channel = if parallel {
-        Some(opt.channel_capacity.unwrap_or(None))
-    } else {
-        opt.channel_capacity
-    };
-
-    match channel {
+    match opt.channel_capacity {
         Some(capacity) => {
             let (sender, receiver) = match capacity {
                 Some(capacity) => flume::bounded(capacity),
@@ -81,18 +67,21 @@ fn main() -> Result<(), Error> {
                 }
             });
 
-            // sending fails prematurely if consumption fails
-            // in that case, get the error below
-            let _ = iter.try_for_each(|cmd| sender.send(cmd));
+            produce(&opt, |event| sender.send(event))?;
 
             // signalise that we are done sending precommands
             // (otherwise the consumer will eventually wait forever)
             drop(sender);
 
             // wait for all commands to be consumed
-            consumer.join().unwrap()?;
+            consumer.join().unwrap()
         }
-        None => seq::consume(iter, &opt)?,
+        None => {
+            if parallel {
+                par::run(&opt)
+            } else {
+                seq::run(&opt)
+            }
+        }
     }
-    Ok(())
 }

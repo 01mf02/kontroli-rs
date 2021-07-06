@@ -5,7 +5,7 @@ use std::path::{self, Path, PathBuf};
 /// Combination of a module path and a corresponding reader.
 pub struct PathRead {
     pub path: Vec<String>,
-    pub read: Box<dyn Read>,
+    pub read: String,
 }
 
 fn is_dash(file: &Path) -> bool {
@@ -21,11 +21,15 @@ impl core::convert::TryFrom<&PathBuf> for PathRead {
 
     fn try_from(file: &PathBuf) -> Result<Self, Error> {
         let path = module_path(file).ok_or(Error::Module)?;
-        let read: Box<dyn Read> = if is_dash(file) {
+        let mut read: Box<dyn Read> = if is_dash(file) {
             Box::new(io::stdin())
         } else {
             Box::new(std::fs::File::open(file)?)
         };
+        let mut contents = String::new();
+        read.read_to_string(&mut contents)?;
+        let read = contents;
+
         Ok(Self { path, read })
     }
 }

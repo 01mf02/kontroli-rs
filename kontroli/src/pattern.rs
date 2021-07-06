@@ -1,11 +1,11 @@
 //! Rewrite patterns.
 
 use crate::application::format as fmt_appl;
-use crate::parse;
+use crate::scope::Symbol;
 use crate::{BTerm, Term};
 use alloc::vec::Vec;
-use core::convert::TryFrom;
 use core::fmt::{self, Display};
+use core::{borrow::Borrow, convert::TryFrom};
 
 /// Miller variable.
 ///
@@ -59,13 +59,13 @@ impl<S> Pattern<S> {
     }
 }
 
-impl<V> TryFrom<BTerm<parse::Symbol, V>> for Pattern<parse::Symbol> {
+impl<S: Borrow<str>, V> TryFrom<BTerm<Symbol<S>, V>> for Pattern<Symbol<S>> {
     type Error = ();
 
-    fn try_from(tm: BTerm<parse::Symbol, V>) -> Result<Self, Self::Error> {
+    fn try_from(tm: BTerm<Symbol<S>, V>) -> Result<Self, Self::Error> {
         use Term::*;
         match tm.get() {
-            Symb(s) if s.name == "_" && s.path.is_empty() => Ok(Pattern::Joker),
+            Symb(s) if s.name.borrow() == "_" && s.path.is_empty() => Ok(Pattern::Joker),
             Symb(s) => Ok(Self::Symb(s, Vec::new())),
             BVar(v) => Ok(Self::MVar(v)),
             Appl(head, args2) => match Self::try_from(head)? {

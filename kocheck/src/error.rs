@@ -1,4 +1,4 @@
-use kontroli::error::Error as KoError;
+use kontroli as ko;
 use std::io;
 
 /// Central error type.
@@ -6,7 +6,7 @@ use std::io;
 pub enum Error {
     Module,
     Io(io::Error),
-    Ko(KoError),
+    Ko(ko::Error),
 }
 
 impl From<io::Error> for Error {
@@ -15,8 +15,8 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<KoError> for Error {
-    fn from(err: KoError) -> Self {
+impl From<ko::Error> for Error {
+    fn from(err: ko::Error) -> Self {
         Self::Ko(err)
     }
 }

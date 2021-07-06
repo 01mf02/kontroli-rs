@@ -1,11 +1,12 @@
 //! Common error type.
 
+use crate::parse;
 use alloc::string::String;
 
 /// Common error type.
 #[derive(Debug)]
 pub enum Error {
-    Parse,
+    Parse(parse::Error),
     Scope(ScopeError),
     Signature(SignatureError),
     Symbols(SymbolsError),
@@ -45,9 +46,9 @@ pub enum TypingError {
     TypeNotFound,
 }
 
-impl<'a> From<nom::Err<nom::error::VerboseError<&'a [u8]>>> for Error {
-    fn from(_: nom::Err<nom::error::VerboseError<&'a [u8]>>) -> Self {
-        Self::Parse
+impl From<parse::Error> for Error {
+    fn from(err: parse::Error) -> Self {
+        Self::Parse(err)
     }
 }
 

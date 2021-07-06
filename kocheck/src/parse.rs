@@ -1,21 +1,24 @@
-use crate::{Error, Opt, ParseBuffer};
-use kontroli::error::Error as KoError;
-use kontroli::parse::Command;
-use nom::error::VerboseError;
-use std::convert::TryInto;
-use std::io::Read;
+use crate::{Opt, Stage};
+use kontroli::parse::{Command as PCommand, Parse, Token};
+use kontroli::scope::{Command as SCommand, Scope};
+use kontroli::Error;
 
-/// Produce a stream of commands from given input.
-pub fn parse<R: Read>(read: R, opt: &Opt) -> impl Iterator<Item = Result<Command, Error>> {
-    use kontroli::parse::{opt_lex, phrase, Parse, Parser};
-    let parse: fn(&[u8]) -> Parse<_> = |i| opt_lex(phrase(Command::parse))(i);
-    let mut pb = ParseBuffer {
-        buf: circular::Buffer::with_capacity(opt.buffer.get_bytes().try_into().unwrap()),
-        read,
-        parse,
-        fail: |_: nom::Err<VerboseError<&[u8]>>| Error::Ko(KoError::Parse),
+pub fn parse<'s, S>(tokens: Vec<Token<'s>>, opt: &Opt) -> Result<Option<SCommand<S>>, Error>
+where
+    S: From<&'s str>,
+{
+    if opt.omits(Stage::Parse) {
+        return Ok(None);
+    }
+    let cmd = PCommand::parse_vec(tokens)?;
+
+    match &cmd {
+        PCommand::Intro(id, _, _) => log::info!("Introduce symbol {}", id),
+        PCommand::Rules(rules) => log::info!("Add {} rules", rules.len()),
     };
-    pb.fill().unwrap();
-    // consider only non-whitespace entries
-    pb.map(|entry| entry.transpose()).flatten()
+
+    if opt.omits(Stage::Scope) {
+        return Ok(None);
+    }
+    Ok(Some(cmd.scope()))
 }

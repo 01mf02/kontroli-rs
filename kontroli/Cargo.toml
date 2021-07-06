@@ -1,6 +1,6 @@
 [package]
 name = "kontroli"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2018"
 description = "Type checking for the lambda-Pi calculus modulo rewriting"
@@ -17,7 +17,6 @@ im = "14.3"
 lazy-st = "0.2"
 log = "0.4"
 nested-modules = "0.2"
-nom = "5.0"
 
 [lib]
 bench = false
