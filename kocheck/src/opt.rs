@@ -8,9 +8,9 @@ use structopt::StructOpt;
 pub struct Opt {
     /// Reduce terms modulo eta
     ///
-    /// When this flag is enabled, checking whether
-    /// `\ x => t` and `u` are convertible will succeed if
-    /// `\ x => t` and `\ y => u y` are convertible.
+    /// When this is enabled,
+    /// `x => t` and `u` are convertible if
+    /// `x => t` and `y => u y` are convertible.
     #[structopt(long)]
     pub eta: bool,
 
