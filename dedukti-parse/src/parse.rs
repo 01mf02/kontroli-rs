@@ -14,14 +14,14 @@ pub enum Term<S> {
     Prod(Option<S>, Box<Term<S>>, Box<Term<S>>),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Intro<Ty, Tm = Ty> {
     Definition(Option<Ty>, Option<Tm>),
     Theorem(Ty, Tm),
     Declaration(Ty),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Rule<S, Tm = Term<S>> {
     /// context (bound variables)
     pub ctx: Vec<(S, Option<Tm>)>,
@@ -31,7 +31,7 @@ pub struct Rule<S, Tm = Term<S>> {
     pub rhs: Tm,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Command<S, Tm = Term<S>> {
     // Introduce a new symbol with arguments
     Intro(S, Vec<(S, Tm)>, Intro<Tm>),
@@ -39,7 +39,7 @@ pub enum Command<S, Tm = Term<S>> {
     Rules(Vec<Rule<S, Tm>>),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Error {
     ExpectedDot,
     ExpectedColon,
