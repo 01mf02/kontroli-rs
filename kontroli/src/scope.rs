@@ -100,12 +100,17 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
 
 impl<'s, S: From<&'s str>> Scope<Rule<S>> for parse::Rule<&'s str> {
     fn scope(self) -> Rule<S> {
-        let ctx: Vec<_> = self.ctx.into_iter().map(|(name, _ty)| name).collect();
+        let mut bnd = Bound::new();
+        let mut ctx = Vec::new();
+        for (id, ty) in self.ctx {
+            let ty = ty.map(|ty| ty.scopen(&mut bnd));
+            bnd.push(id);
+            let id = id.to_string();
+            ctx.push(crate::Arg { id, ty });
+        }
 
-        let mut bnd: Bound = Stack::from(ctx.clone());
         let lhs = self.lhs.scopen(&mut bnd);
         let rhs = self.rhs.scopen(&mut bnd);
-        let ctx: Vec<_> = ctx.into_iter().map(|x| x.to_string()).collect();
 
         Rule { ctx, lhs, rhs }
     }

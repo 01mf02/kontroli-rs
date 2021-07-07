@@ -5,7 +5,7 @@ use core::fmt::{self, Display};
 #[derive(Clone, Debug)]
 pub struct Rule<V, L, R = L> {
     /// context (bound variables)
-    pub ctx: Vec<V>,
+    pub ctx: Vec<crate::Arg<V, Option<R>>>,
     /// left-hand side (pattern to match with)
     pub lhs: L,
     /// right-hand side (term to replace with)
