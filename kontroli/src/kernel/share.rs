@@ -44,7 +44,7 @@ impl<'s, S: Borrow<str> + Ord> Share<'s, Rule<'s>> for scope::Rule<S> {
 
 impl<'s, S: Borrow<str> + Ord> Share<'s, Intro<'s>> for scope::Intro<S> {
     fn share(self, syms: &Symbols<'s>) -> Result<Intro<'s>, Error> {
-        self.map_type_err(|ty| ty.share(syms))?
-            .map_term_err(|tm| tm.share(syms))
+        self.try_map_type(|ty| ty.share(syms))?
+            .try_map_term(|tm| tm.share(syms))
     }
 }

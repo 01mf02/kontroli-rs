@@ -30,7 +30,7 @@ impl<Ty, Tm> Intro<Ty, Tm> {
         }
     }
 
-    pub fn map_type_err<F, U, E>(self, f: F) -> Result<Intro<U, Tm>, E>
+    pub fn try_map_type<F, U, E>(self, f: F) -> Result<Intro<U, Tm>, E>
     where
         F: FnOnce(Ty) -> Result<U, E>,
     {
@@ -41,7 +41,7 @@ impl<Ty, Tm> Intro<Ty, Tm> {
         }
     }
 
-    pub fn map_term_err<F, U, E>(self, f: F) -> Result<Intro<Ty, U>, E>
+    pub fn try_map_term<F, U, E>(self, f: F) -> Result<Intro<Ty, U>, E>
     where
         F: FnOnce(Tm) -> Result<U, E>,
     {

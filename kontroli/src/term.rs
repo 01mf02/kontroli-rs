@@ -35,11 +35,11 @@ impl<C, V, T> Term<C, V, T> {
             Self::Appl(tm, args) => Term::Appl(ft(tm), args.into_iter().map(ft).collect()),
             Self::Prod(arg, tm) => {
                 let tm = ft(tm);
-                Term::Prod(arg.map_id(fv).map_ty(ft), tm)
+                Term::Prod(arg.map_id(fv).map_type(ft), tm)
             }
             Self::Abst(arg, tm) => {
                 let tm = ft(tm);
-                Term::Abst(arg.map_id(fv).map_ty(|ty| ty.map(ft)), tm)
+                Term::Abst(arg.map_id(fv).map_type(|ty| ty.map(ft)), tm)
             }
         }
     }
@@ -66,11 +66,11 @@ impl<C, V, T> Term<C, V, T> {
             )),
             Self::Prod(arg, tm) => {
                 let tm = ft(tm)?;
-                Ok(Term::Prod(arg.map_id(fv).map_ty_res(ft)?, tm))
+                Ok(Term::Prod(arg.map_id(fv).try_map_type(ft)?, tm))
             }
             Self::Abst(arg, tm) => {
                 let tm = ft(tm)?;
-                let arg = arg.map_id(fv).map_ty_res(|ty| ty.map(ft).transpose())?;
+                let arg = arg.map_id(fv).try_map_type(|ty| ty.map(ft).transpose())?;
                 Ok(Term::Abst(arg, tm))
             }
         }

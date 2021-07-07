@@ -8,14 +8,12 @@ impl<'s> RTerm<'s> {
     where
         S: Fn(usize, usize) -> RTerm<'s>,
     {
+        let sub = |tm: RTerm<'s>| tm.apply_subst(subst, k);
         match &*self {
             Term::BVar(n) if *n >= k => subst(*n, k),
             Term::Appl(f, args) => {
-                let f2 = f.clone().apply_subst(subst, k);
-                let args2: Vec<RTerm> = args
-                    .iter()
-                    .map(|a| a.clone().apply_subst(subst, k))
-                    .collect();
+                let f2 = sub(f.clone());
+                let args2: Vec<RTerm> = args.iter().cloned().map(sub).collect();
                 if f.ptr_eq(&f2) && args.iter().zip(args2.iter()).all(|(a, a2)| a.ptr_eq(a2)) {
                     self
                 } else {
@@ -23,7 +21,7 @@ impl<'s> RTerm<'s> {
                 }
             }
             Term::Abst(arg, f) => {
-                let arg2 = arg.clone().map_ty(|o| o.map(|ty| ty.apply_subst(subst, k)));
+                let arg2 = arg.clone().map_type(|o| o.map(sub));
                 let f2 = f.clone().apply_subst(subst, k + 1);
                 if arg.type_ptr_eq(&arg2) && f.ptr_eq(&f2) {
                     self
@@ -32,7 +30,7 @@ impl<'s> RTerm<'s> {
                 }
             }
             Term::Prod(arg, f) => {
-                let arg2 = arg.clone().map_ty(|ty| ty.apply_subst(subst, k));
+                let arg2 = arg.clone().map_type(sub);
                 let f2 = f.clone().apply_subst(subst, k + 1);
                 if arg.ty.ptr_eq(&arg2.ty) && f.ptr_eq(&f2) {
                     self
