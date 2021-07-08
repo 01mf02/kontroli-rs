@@ -1,7 +1,7 @@
+use crate::Arg;
 use alloc::vec::Vec;
 use core::convert::TryFrom;
 use core::fmt::{self, Display};
-use crate::Arg;
 
 /// Rewrite rule.
 #[derive(Clone, Debug)]

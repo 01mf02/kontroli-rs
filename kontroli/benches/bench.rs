@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kontroli::rc::{Signature, Intro, Typing};
+use kontroli::rc::{Intro, Signature, Typing};
 use kontroli::{Command, Error, Scope, Share, Symbols};
 
 fn check<'s>(cmds: Vec<kontroli::scope::Command<&'s str>>) -> Result<(), Error> {
