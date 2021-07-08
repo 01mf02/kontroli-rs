@@ -85,12 +85,12 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
                 let x = x.unwrap_or("$");
                 let id = x.to_string();
                 let ty = ty.scopen(bnd);
-                bnd.with_pushed(x, |bnd| Term::Prod(Arg { id, ty }, tm.scopen(bnd)))
+                Term::Prod(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
             }
             Self::Abst(x, ty, tm) => {
                 let id = x.to_string();
                 let ty = ty.map(|ty| ty.scopen(bnd));
-                bnd.with_pushed(x, |bnd| Term::Abst(Arg { id, ty }, tm.scopen(bnd)))
+                Term::Abst(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
             }
         }
     }
@@ -104,7 +104,7 @@ impl<'s, S: From<&'s str>> Scope<Rule<S>> for parse::Rule<&'s str> {
             let ty = ty.map(|ty| ty.scopen(&mut bnd));
             bnd.push(id);
             let id = id.to_string();
-            ctx.push(crate::Arg { id, ty });
+            ctx.push(Arg { id, ty });
         }
 
         let lhs = self.lhs.scopen(&mut bnd);
