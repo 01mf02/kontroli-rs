@@ -81,6 +81,23 @@ impl<S: Borrow<str>, V> TryFrom<BTerm<Symbol<S>, V>> for Pattern<Symbol<S>> {
     }
 }
 
+impl<C, V, T: From<Term<C, V, T>>> TryFrom<Pattern<C>> for Term<C, V, T> {
+    type Error = ();
+
+    fn try_from(p: Pattern<C>) -> Result<Self, Self::Error> {
+        use Pattern::*;
+        match p {
+            Symb(s, args) => {
+                let args = args.into_iter().map(|a| Self::try_from(a).map(T::from));
+                let args: Result<_, _> = args.collect();
+                Ok(Term::Appl(T::from(Term::Symb(s)), args?))
+            }
+            MVar(v) => Ok(Term::BVar(v)),
+            Joker => Err(()),
+        }
+    }
+}
+
 impl<S> From<TopPattern<S>> for Pattern<S> {
     fn from(tp: TopPattern<S>) -> Self {
         Self::Symb(tp.symbol, tp.args)
