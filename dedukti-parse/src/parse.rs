@@ -195,7 +195,7 @@ impl<'s> Parse<'s> for Rule<&'s str> {
     {
         match iter.next() {
             Some(Token::LBrk) => Self::parse_after_lbrk(iter),
-            _ => return Err(Error::ExpectedLBrk),
+            _ => Err(Error::ExpectedLBrk),
         }
     }
 }
