@@ -61,3 +61,9 @@ impl<'s> core::ops::Deref for RTerm<'s> {
         &*self.0
     }
 }
+
+impl<'s> From<Term<'s>> for RTerm<'s> {
+    fn from(tm: Term<'s>) -> Self {
+        Self::new(tm)
+    }
+}
