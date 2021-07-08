@@ -107,7 +107,7 @@ impl<'s> State<'s> {
                     Some(rules) => {
                         match rules
                             .iter()
-                            .filter_map(|r| Some((stack.match_flatten(&r, sig)?, r)))
+                            .filter_map(|r| Some((stack.match_flatten(r, sig)?, r)))
                             .next()
                         {
                             None => break,
