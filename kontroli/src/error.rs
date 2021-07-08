@@ -16,7 +16,6 @@ pub enum Error {
 #[derive(Debug, Eq, PartialEq)]
 pub enum ScopeError {
     UndeclaredSymbol(String),
-    Underscore,
     NoPrepattern,
     NoTopPattern,
     PatternArguments,
