@@ -43,7 +43,7 @@
 //!
 //!     // definition with a rewrite rule
 //!     "def proof : prop -> Type",
-//!     "[x, y] proof (imp x y) --> proof x -> proof y",
+//!     "[x: prop, y: prop] proof (imp x y) --> proof x -> proof y",
 //!
 //!     // theorem
 //!     r"thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p",
@@ -59,15 +59,17 @@
 //!     match cmd {
 //!         // introduction of a new name
 //!         Command::Intro(id, it) => {
-//!             let it = it.share(&syms)?;
+//!             let it: Intro = it.share(&syms)?;
 //!
 //!             let id: &str = arena.alloc(id);
 //!             // add symbol to symbol table and fail if it is not new
 //!             let sym = syms.insert(id)?;
 //!
 //!             // typecheck and insert into signature
-//!             let typing: Typing = Typing::new(it, &sig)?.check(&sig)?;
-//!             sig.insert(sym, typing)?
+//!             let rewritable = it.rewritable();
+//!             let typing: Typing = Typing::intro(it, &sig)?;
+//!             typing.check(&sig)?;
+//!             sig.insert(sym, typing, rewritable)?
 //!         }
 //!         // addition of rewrite rules
 //!         Command::Rules(rules) => {

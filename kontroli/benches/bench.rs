@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kontroli::rc::{Signature, Typing};
+use kontroli::rc::{Signature, Intro, Typing};
 use kontroli::{Command, Error, Scope, Share, Symbols};
 
 fn check<'s>(cmds: Vec<kontroli::scope::Command<&'s str>>) -> Result<(), Error> {
@@ -13,15 +13,17 @@ fn check<'s>(cmds: Vec<kontroli::scope::Command<&'s str>>) -> Result<(), Error> 
         match c {
             // introduction of a new name
             Command::Intro(id, it) => {
-                let it = it.share(&syms)?;
+                let it: Intro = it.share(&syms)?;
 
                 let id: &str = arena.alloc(id);
                 // add symbol to symbol table and fail if it is not new
                 let sym = syms.insert(id)?;
 
                 // typecheck and insert into signature
-                let typing: Typing = Typing::new(it, &sig)?.check(&sig)?;
-                sig.insert(sym, typing)?
+                let rewritable = it.rewritable();
+                let typing: Typing = Typing::intro(it, &sig)?;
+                typing.check(&sig)?;
+                sig.insert(sym, typing, rewritable)?
             }
             // addition of rewrite rules
             Command::Rules(rules) => {

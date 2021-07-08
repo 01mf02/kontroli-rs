@@ -8,7 +8,7 @@ use core::hash::Hash;
 /// Immutable HashMap for fast signature cloning.
 type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 
-type Rule<Sym, Pat, Tm> = super::Rule<String, Application<Sym, Pat>, Tm>;
+type Rule<Sym, Pat, Tm> = super::Rule<crate::Arg<String, Option<Tm>>, Application<Sym, Pat>, Tm>;
 
 /// Map from symbols to their associated types and rewrite rules.
 ///
@@ -78,9 +78,9 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> Signature<Sym, Pat, Tm> {
     }
 
     /// Introduce a new symbol with given typing.
-    pub fn insert(&mut self, sym: Sym, typing: Typing<Tm>) -> Result<(), Error> {
+    pub fn insert(&mut self, sym: Sym, typing: Typing<Tm>, rewritable: bool) -> Result<(), Error> {
         self.intro_type(sym.clone(), typing.typ)?;
-        if typing.rewritable {
+        if rewritable {
             let rules = match typing.term {
                 None => Vec::new(),
                 Some((tm, _check)) => vec![Rule {

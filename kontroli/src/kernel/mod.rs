@@ -15,7 +15,7 @@ use super::Rc;
 pub use rterm::RTerm;
 pub use typing::Typing;
 
-use crate::Symbol;
+use crate::{Arg, Symbol};
 use alloc::string::String;
 
 /// Rewrite pattern.
@@ -27,7 +27,7 @@ pub type TopPattern<'s> = crate::pattern::TopPattern<Symbol<'s>>;
 /// Rewrite rules with strings as bound variable identifiers,
 /// a top pattern (symbol application) as left-hand side, and
 /// a shared term as right-hand side.
-pub type Rule<'s> = crate::Rule<String, TopPattern<'s>, RTerm<'s>>;
+pub type Rule<'s> = crate::Rule<Arg<String, Option<RTerm<'s>>>, TopPattern<'s>, RTerm<'s>>;
 
 /// The way we introduce a new name.
 pub type Intro<'s> = crate::Intro<RTerm<'s>>;
@@ -35,3 +35,10 @@ pub type Intro<'s> = crate::Intro<RTerm<'s>>;
 pub type Signature<'s> = crate::Signature<Symbol<'s>, Pattern<'s>, RTerm<'s>>;
 
 pub type Term<'s> = crate::Term<Symbol<'s>, Rc<String>, RTerm<'s>>;
+
+impl<'s> core::convert::TryFrom<TopPattern<'s>> for RTerm<'s> {
+    type Error = ();
+    fn try_from(p: TopPattern<'s>) -> Result<Self, Self::Error> {
+        Ok(Self::new(Term::try_from(Pattern::from(p))?))
+    }
+}

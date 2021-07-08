@@ -9,10 +9,10 @@ use core::fmt;
 pub type Typing<'s> = crate::Typing<RTerm<'s>>;
 
 impl<'s> Typing<'s> {
-    pub fn declare(typ: RTerm<'s>, rewritable: bool, sig: &Signature<'s>) -> Result<Self, Error> {
+    pub fn declare(typ: RTerm<'s>, sig: &Signature<'s>) -> Result<Self, Error> {
         match &*typ.infer(&sig)? {
             Term::Kind | Term::Type => Ok(Self {
-                rewritable,
+                ctx: Context::new(),
                 typ,
                 term: None,
             }),
@@ -23,7 +23,6 @@ impl<'s> Typing<'s> {
     pub fn define(
         oty: Option<RTerm<'s>>,
         term: RTerm<'s>,
-        rewritable: bool,
         sig: &Signature<'s>,
     ) -> Result<Self, Error> {
         let (typ, check) = match oty {
@@ -36,25 +35,32 @@ impl<'s> Typing<'s> {
         match &*typ {
             Term::Kind => Err(Error::UnexpectedKind),
             _ => Ok(Self {
+                ctx: Context::new(),
                 typ,
                 term: Some((term, check)),
-                rewritable,
             }),
         }
     }
 
+    pub fn rewrite(rule: crate::Rule<RTerm<'s>>, sig: &Signature<'s>) -> Result<Self, Error> {
+        // TODO: check types in context?
+        let mut ctx = Context::from(rule.ctx);
+        // TODO: check for Kind/Type?
+        Ok(Self {
+            typ: rule.lhs.infern(sig, &mut ctx)?,
+            term: Some((rule.rhs, Check::Unchecked)),
+            ctx,
+        })
+    }
+
     /// Verify whether `t: A` if this was not previously checked.
-    ///
-    /// Return a typing registering that `t: A` has been checked.
-    pub fn check(mut self, sig: &Signature<'s>) -> Result<Self, Error> {
-        if let Some((term, Check::Unchecked)) = self.term {
-            if term.check(&sig, self.typ.clone())? {
-                self.term = Some((term, Check::Checked));
-            } else {
+    pub fn check(&self, sig: &Signature<'s>) -> Result<(), Error> {
+        if let Some((term, Check::Unchecked)) = &self.term {
+            if !term.checkn(&sig, &mut self.ctx.clone(), self.typ.clone())? {
                 return Err(Error::Unconvertible);
             }
         };
-        Ok(self)
+        Ok(())
     }
 
     /// Construct a typing from an introduction command.
@@ -70,15 +76,15 @@ impl<'s> Typing<'s> {
     /// Constructing a typing from a command of the shape `x: A := t`
     /// does *not* check whether `t: A`. For this, the `check` function can be used.
     /// This allows us to postpone and parallelise type checking.
-    pub fn new(it: Intro<'s>, sig: &Signature<'s>) -> Result<Self, Error> {
+    pub fn intro(it: Intro<'s>, sig: &Signature<'s>) -> Result<Self, Error> {
         match it {
-            Intro::Declaration(ty) => Self::declare(ty, false, &sig),
+            Intro::Declaration(ty) => Self::declare(ty, &sig),
             Intro::Definition(oty, otm) => match (oty, otm) {
-                (Some(ty), None) => Self::declare(ty, true, &sig),
-                (oty, Some(tm)) => Self::define(oty, tm, true, &sig),
+                (Some(ty), None) => Self::declare(ty, &sig),
+                (oty, Some(tm)) => Self::define(oty, tm, &sig),
                 (None, None) => Err(Error::TypeAndTermEmpty),
             },
-            Intro::Theorem(ty, tm) => Self::define(Some(ty), tm, false, &sig),
+            Intro::Theorem(ty, tm) => Self::define(Some(ty), tm, &sig),
         }
     }
 }

@@ -1,7 +1,7 @@
 //! Scoping of parse structures, distinguishing variables from constants.
 
 use crate::parse;
-use crate::Stack;
+use crate::{Arg, Stack};
 use alloc::{string::String, string::ToString, vec::Vec};
 use core::fmt::{self, Display};
 
@@ -36,7 +36,7 @@ pub type Term<S> = crate::Term<Symbol<S>, String, BTerm<S>>;
 pub type BTerm<S> = crate::BTerm<Symbol<S>, String>;
 
 pub type Intro<S> = crate::Intro<BTerm<S>>;
-pub type Rule<S> = crate::Rule<String, BTerm<S>>;
+pub type Rule<S> = crate::Rule<Arg<String, Option<BTerm<S>>>, BTerm<S>>;
 pub type Command<S> = crate::Command<String, Intro<S>, Rule<S>>;
 
 type Bound<'s> = Stack<&'s str>;
@@ -85,14 +85,12 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
                 let x = x.unwrap_or("$");
                 let id = x.to_string();
                 let ty = ty.scopen(bnd);
-                let arg = crate::Arg { id, ty };
-                bnd.with_pushed(x, |bnd| Term::Prod(arg, tm.scopen(bnd)))
+                bnd.with_pushed(x, |bnd| Term::Prod(Arg { id, ty }, tm.scopen(bnd)))
             }
             Self::Abst(x, ty, tm) => {
                 let id = x.to_string();
                 let ty = ty.map(|ty| ty.scopen(bnd));
-                let arg = crate::Arg { id, ty };
-                bnd.with_pushed(x, |bnd| Term::Abst(arg, tm.scopen(bnd)))
+                bnd.with_pushed(x, |bnd| Term::Abst(Arg { id, ty }, tm.scopen(bnd)))
             }
         }
     }

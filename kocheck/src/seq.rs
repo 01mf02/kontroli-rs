@@ -39,11 +39,27 @@ fn share<'s, S: Borrow<str> + Ord>(
 fn infer_check<'s>(cmd: Command<'s>, check: bool, sig: &mut Signature<'s>) -> Result<(), KoError> {
     match cmd {
         kontroli::Command::Intro(sym, it) => {
-            let typing = Typing::new(it, &sig)?;
-            let typing = if check { typing.check(&sig)? } else { typing };
-            Ok(sig.insert(sym, typing)?)
+            let rewritable = it.rewritable();
+
+            let typing = Typing::intro(it, &sig)?;
+            if check {
+                typing.check(&sig)?
+            }
+            Ok(sig.insert(sym, typing, rewritable)?)
         }
-        kontroli::Command::Rules(rules) => Ok(sig.add_rules(rules.into_iter())?),
+        kontroli::Command::Rules(rules) => {
+            for rule in rules.clone() {
+                if let Ok(rule) = kontroli::Rule::try_from(rule) {
+                    let typing = Typing::rewrite(rule, &sig)?;
+                    if check {
+                        typing.check(&sig)?
+                    }
+                } else {
+                    log::warn!("Rewrite rule contains unannotated variable")
+                }
+            }
+            Ok(sig.add_rules(rules.into_iter())?)
+        }
     }
 }
 

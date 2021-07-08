@@ -6,9 +6,9 @@
 /// with respect to type checking.
 #[derive(Clone)]
 pub struct Typing<T> {
+    pub ctx: crate::Stack<T>,
     pub typ: T,
     pub term: Option<(T, Check)>,
-    pub rewritable: bool,
 }
 
 /// Have we assured that a given term matches a given type?
