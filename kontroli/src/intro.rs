@@ -9,6 +9,13 @@ pub enum Intro<Ty, Tm = Ty> {
 }
 
 impl<Ty, Tm> Intro<Ty, Tm> {
+    pub fn rewritable(&self) -> bool {
+        match self {
+            Self::Definition(_, _) => true,
+            Self::Declaration(_) | Self::Theorem(_, _) => false,
+        }
+    }
+
     pub fn map_type<F, U>(self, f: F) -> Intro<U, Tm>
     where
         F: FnOnce(Ty) -> U,
