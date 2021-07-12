@@ -145,18 +145,18 @@ impl<'s> Term<'s> {
             Type => Ok(RTerm::new(Kind)),
             Symb(s) => Ok(sig.types.get(&s).ok_or(Error::TypeNotFound)?.clone()),
             BVar(x) => Ok(ctx.get_type(*x).ok_or(Error::TypeNotFound)?),
-            Appl(f, args) => {
-                args.iter()
-                    .try_fold(f.infern(sig, ctx)?, |ty, arg| match &*ty.whnf(sig) {
-                        Prod(Arg { ty: a, .. }, b) => {
-                            if arg.checkn(sig, ctx, a.clone())? {
-                                Ok(b.clone().subst(&arg))
-                            } else {
-                                Err(Error::Unconvertible)
-                            }
+            Appl(tm, args) => {
+                let tm_ty = tm.infern(sig, ctx)?;
+                args.iter().try_fold(tm_ty, |ty, arg| match &*ty.whnf(sig) {
+                    Prod(Arg { ty: a, .. }, b) => {
+                        if arg.checkn(sig, ctx, a.clone())? {
+                            Ok(b.clone().subst(&arg))
+                        } else {
+                            Err(Error::Unconvertible)
                         }
-                        _ => Err(Error::ProductExpected),
-                    })
+                    }
+                    _ => Err(Error::ProductExpected),
+                })
             }
             Abst(Arg { id, ty: Some(ty) }, tm) => {
                 let tm_ty = ctx.bind_of_type(sig, ty.clone(), |ctx| tm.infern(sig, ctx))?;
