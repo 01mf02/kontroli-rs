@@ -42,18 +42,17 @@ fn share<'s, S: Borrow<str> + Ord>(
 }
 
 fn infer<'s>(cmd: Command<'s>, sig: &mut Signature<'s>) -> Result<Check<'s>, KoError> {
+    let mut check = (Vec::new(), sig.clone());
     match cmd {
         kontroli::Command::Intro(sym, it) => {
             let rewritable = it.rewritable();
 
             // defer checking to later
             let typing = Typing::intro(it, &sig)?;
-            let check = (Vec::from([typing.clone()]), sig.clone());
+            check.0.push(typing.clone());
             sig.insert(sym, typing, rewritable)?;
-            Ok(check)
         }
         kontroli::Command::Rules(rules) => {
-            let mut check = (Vec::new(), sig.clone());
             for rule in rules.clone() {
                 if let Ok(rule) = kontroli::Rule::try_from(rule) {
                     check.0.push(Typing::rewrite(rule, &sig)?);
@@ -62,9 +61,9 @@ fn infer<'s>(cmd: Command<'s>, sig: &mut Signature<'s>) -> Result<Check<'s>, KoE
                 }
             }
             sig.add_rules(rules.into_iter())?;
-            Ok(check)
         }
     }
+    Ok(check)
 }
 
 fn check((typings, sig): Check) -> Result<(), KoError> {
