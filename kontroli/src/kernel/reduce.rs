@@ -18,13 +18,10 @@ impl<'s> WState<'s> {
 
     /// Replace the state with its WHNF if it was not in WHNF before.
     fn whnf(&mut self, sig: &Signature<'s>) {
-        if self.whnfed {
-            return;
+        if !self.whnfed {
+            self.state.whnf(sig);
+            self.whnfed = true
         }
-
-        let state = core::mem::take(&mut self.state);
-        self.state = state.whnf(sig);
-        self.whnfed = true
     }
 }
 
@@ -52,70 +49,66 @@ impl<'s> State<'s> {
     /// let syms = Symbols::new();
     ///
     /// let term = SBTerm::parse(r"(x => x) (x => x)")?.share(&syms)?;
-    /// let whnf = State::new(term).whnf(&sig);
+    /// let mut state = State::new(term);
+    /// state.whnf(&sig);
     ///
     /// let expected = STerm::parse(r"(x => x)")?.share(&syms)?;
-    /// assert!(whnf.ctx.is_empty());
-    /// assert!(whnf.stack.is_empty());
-    /// assert_eq!(*whnf.term, expected);
+    /// assert!(state.ctx.is_empty());
+    /// assert!(state.stack.is_empty());
+    /// assert_eq!(*state.term, expected);
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn whnf(self, sig: &Signature<'s>) -> Self {
+    pub fn whnf(&mut self, sig: &Signature<'s>) {
         use crate::Term::*;
-        let Self {
-            mut ctx,
-            mut term,
-            mut stack,
-        } = self;
         loop {
-            trace!("whnf: {}", term);
-            match &*term {
+            trace!("whnf: {}", self.term);
+            match &*self.term {
                 Type | Kind | Prod(_, _) => break,
-                BVar(x) => match ctx.get(*x) {
+                BVar(x) => match self.ctx.get(*x) {
                     Some(ctm) => {
-                        term = ctm.force().clone();
-                        ctx.clear()
+                        self.term = ctm.force().clone();
+                        self.ctx.clear()
                     }
                     None => {
-                        if !ctx.is_empty() {
-                            term = RTerm::new(BVar(x - ctx.len()));
-                            ctx.clear();
+                        if !self.ctx.is_empty() {
+                            self.term = RTerm::new(BVar(x - self.ctx.len()));
+                            self.ctx.clear();
                         }
                         break;
                     }
                 },
-                Abst(_, t) => match stack.pop() {
+                Abst(_, t) => match self.stack.pop() {
                     None => break,
                     Some(p) => {
-                        term = t.clone();
-                        ctx.push(RTTerm::new(p));
+                        self.term = t.clone();
+                        self.ctx.push(RTTerm::new(p));
                     }
                 },
                 Appl(head, tail) => {
                     for t in tail.iter().rev() {
                         let st = State {
-                            ctx: ctx.clone(),
+                            ctx: self.ctx.clone(),
                             term: t.clone(),
                             stack: Stack::new(),
                         };
-                        stack.push(RState::new(WState::new(st)))
+                        self.stack.push(RState::new(WState::new(st)))
                     }
-                    term = head.clone();
+                    self.term = head.clone();
                 }
                 Symb(s) => match &sig.rules.get(&s) {
                     None => break,
                     Some(rules) => {
                         match rules
                             .iter()
-                            .filter_map(|r| Some((stack.match_flatten(r, sig)?, r)))
+                            .filter_map(|r| Some((self.stack.match_flatten(r, sig)?, r)))
                             .next()
                         {
                             None => break,
                             Some((subst, rule)) => {
                                 trace!("rewrite: {} ... ⟶ {}", s, rule);
-                                ctx = subst;
-                                term = rule.rhs.clone();
-                                stack.pop_many(rule.lhs.args.len());
+                                self.ctx = subst;
+                                self.term = rule.rhs.clone();
+                                self.stack.pop_many(rule.lhs.args.len());
                             }
                         }
                     }
@@ -123,11 +116,9 @@ impl<'s> State<'s> {
             }
         }
 
-        if let BVar(_) = &*term {
-            assert!(ctx.is_empty())
+        if let BVar(_) = &*self.term {
+            assert!(self.ctx.is_empty())
         }
-
-        State { ctx, term, stack }
     }
 }
 
@@ -135,7 +126,9 @@ impl<'s> RTerm<'s> {
     /// Return the weak head normal form of the term.
     pub fn whnf(self, sig: &Signature<'s>) -> Self {
         trace!("whnf of {}", self);
-        Self::from(State::new(self).whnf(sig))
+        let mut state = State::new(self);
+        state.whnf(sig);
+        Self::from(state)
     }
 }
 
@@ -177,8 +170,9 @@ impl<'s> Stack<'s> {
     /// let rule = SRule::parse("[A] id A --> A")?.share(&syms)?;
     /// let term = SBTerm::parse("id f a")?.share(&syms)?;
 
-    /// let stack = State::new(term).whnf(&sig).stack;
-    /// let subst = stack.match_flatten(&rule, &sig).unwrap();
+    /// let mut state = State::new(term);
+    /// state.whnf(&sig);
+    /// let subst = state.stack.match_flatten(&rule, &sig).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
 
     /// let expected: Term = STerm::parse("f")?.share(&syms)?;
