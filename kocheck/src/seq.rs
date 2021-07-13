@@ -58,7 +58,7 @@ fn infer_check<'s>(cmd: Command<'s>, check: bool, sig: &mut Signature<'s>) -> Re
                     log::warn!("Rewrite rule contains unannotated variable")
                 }
             }
-            Ok(sig.add_rules(rules.into_iter())?)
+            Ok(rules.into_iter().try_for_each(|r| sig.add_rule(r))?)
         }
     }
 }

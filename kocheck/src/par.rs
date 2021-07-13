@@ -60,7 +60,7 @@ fn infer<'s>(cmd: Command<'s>, sig: &mut Signature<'s>) -> Result<Check<'s>, KoE
                     log::warn!("Rewrite rule contains unannotated variable")
                 }
             }
-            sig.add_rules(rules.into_iter())?;
+            rules.into_iter().try_for_each(|r| sig.add_rule(r))?
         }
     }
     Ok(check)
