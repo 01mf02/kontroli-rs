@@ -31,7 +31,7 @@ impl<'s> State<'s> {
     /// ~~~
     /// # use kontroli::{Error, Share, Symbols};
     /// # use kontroli::scope::{BTerm as SBTerm};
-    /// # use kontroli::rc::{RTerm, Signature};
+    /// # use kontroli::rc::{GCtx, RTerm};
     /// # use kontroli::rc::state::State;
     /// let syms = Symbols::new();
     ///
@@ -74,7 +74,7 @@ impl<'s> RTTerm<'s> {
 /// A shared mutable state.
 ///
 /// We use `RefCell` instead of `Thunk` here
-/// because evaluation requires a signature and
+/// because evaluation requires a global context and
 /// because we sometimes wish to access the original state.
 #[derive(Clone)]
 pub struct RState<'s>(Rc<RefCell<WState<'s>>>);

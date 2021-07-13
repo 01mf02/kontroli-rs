@@ -1,6 +1,6 @@
 //! Convertibility checking.
 
-use super::{RTerm, Signature};
+use super::{GCtx, RTerm};
 use crate::Arg;
 use alloc::{vec, vec::Vec};
 
@@ -43,13 +43,13 @@ fn step<'s>((cn1, cn2): Constraint<'s>, cns: &mut Vec<Constraint<'s>>, eta: bool
 
 impl<'s> RTerm<'s> {
     /// Return true if the given terms have a common redex.
-    pub fn convertible(tm1: Self, tm2: Self, sig: &Signature<'s>) -> bool {
+    pub fn convertible(tm1: Self, tm2: Self, gc: &GCtx<'s>) -> bool {
         let mut cns = vec![(tm1, tm2)];
         loop {
             match cns.pop() {
                 Some((cn1, cn2)) => {
                     trace!("convertible: {} ~? {}", cn1, cn2);
-                    if cn1 != cn2 && !step((cn1.whnf(sig), cn2.whnf(sig)), &mut cns, sig.eta) {
+                    if cn1 != cn2 && !step((cn1.whnf(gc), cn2.whnf(gc)), &mut cns, gc.eta) {
                         break false;
                     }
                 }

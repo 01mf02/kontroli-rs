@@ -1,6 +1,6 @@
 //! Type checking and type inference for terms.
 
-use super::{Intro, RTerm, Signature, Term};
+use super::{GCtx, Intro, RTerm, Term};
 use crate::error::TypingError as Error;
 use crate::typing::Check;
 use crate::Arg;
@@ -9,10 +9,10 @@ use core::fmt;
 pub type Typing<'s> = crate::Typing<RTerm<'s>>;
 
 impl<'s> Typing<'s> {
-    pub fn declare(typ: RTerm<'s>, sig: &Signature<'s>) -> Result<Self, Error> {
-        match &*typ.infer(&sig)? {
+    pub fn declare(typ: RTerm<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
+        match &*typ.infer(&gc, &mut LCtx::new())? {
             Term::Kind | Term::Type => Ok(Self {
-                ctx: Context::new(),
+                lc: LCtx::new(),
                 typ,
                 term: None,
             }),
@@ -20,43 +20,39 @@ impl<'s> Typing<'s> {
         }
     }
 
-    pub fn define(
-        oty: Option<RTerm<'s>>,
-        term: RTerm<'s>,
-        sig: &Signature<'s>,
-    ) -> Result<Self, Error> {
-        let (typ, check) = match oty {
-            None => (term.infer(&sig)?, Check::Checked),
+    pub fn define(ty: Option<RTerm<'s>>, tm: RTerm<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
+        let (typ, check) = match ty {
+            None => (tm.infer(&gc, &mut LCtx::new())?, Check::Checked),
             Some(ty) => {
-                let _ = ty.infer(&sig)?;
+                let _ = ty.infer(&gc, &mut LCtx::new())?;
                 (ty, Check::Unchecked)
             }
         };
         match &*typ {
             Term::Kind => Err(Error::UnexpectedKind),
             _ => Ok(Self {
-                ctx: Context::new(),
+                lc: LCtx::new(),
                 typ,
-                term: Some((term, check)),
+                term: Some((tm, check)),
             }),
         }
     }
 
-    pub fn rewrite(rule: crate::Rule<RTerm<'s>>, sig: &Signature<'s>) -> Result<Self, Error> {
+    pub fn rewrite(rule: crate::Rule<RTerm<'s>>, gc: &GCtx<'s>) -> Result<Self, Error> {
         // TODO: check types in context?
-        let mut ctx = Context::from(rule.ctx);
+        let mut lc = LCtx::from(rule.ctx);
         // TODO: check for Kind/Type?
         Ok(Self {
-            typ: rule.lhs.infern(sig, &mut ctx)?,
+            typ: rule.lhs.infer(gc, &mut lc)?,
             term: Some((rule.rhs, Check::Unchecked)),
-            ctx,
+            lc,
         })
     }
 
     /// Verify whether `t: A` if this was not previously checked.
-    pub fn check(&self, sig: &Signature<'s>) -> Result<(), Error> {
+    pub fn check(&self, gc: &GCtx<'s>) -> Result<(), Error> {
         if let Some((term, Check::Unchecked)) = &self.term {
-            if !term.checkn(&sig, &mut self.ctx.clone(), self.typ.clone())? {
+            if !term.check(&gc, &mut self.lc.clone(), self.typ.clone())? {
                 return Err(Error::Unconvertible);
             }
         };
@@ -76,46 +72,46 @@ impl<'s> Typing<'s> {
     /// Constructing a typing from a command of the shape `x: A := t`
     /// does *not* check whether `t: A`. For this, the `check` function can be used.
     /// This allows us to postpone and parallelise type checking.
-    pub fn intro(it: Intro<'s>, sig: &Signature<'s>) -> Result<Self, Error> {
+    pub fn intro(it: Intro<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
         match it {
-            Intro::Declaration(ty) => Self::declare(ty, &sig),
+            Intro::Declaration(ty) => Self::declare(ty, &gc),
             Intro::Definition(oty, otm) => match (oty, otm) {
-                (Some(ty), None) => Self::declare(ty, &sig),
-                (oty, Some(tm)) => Self::define(oty, tm, &sig),
+                (Some(ty), None) => Self::declare(ty, &gc),
+                (oty, Some(tm)) => Self::define(oty, tm, &gc),
                 (None, None) => Err(Error::TypeAndTermEmpty),
             },
-            Intro::Theorem(ty, tm) => Self::define(Some(ty), tm, &sig),
+            Intro::Theorem(ty, tm) => Self::define(Some(ty), tm, &gc),
         }
     }
 }
 
 /// Map from de Bruijn indices to associated types.
-type Context<'s> = crate::Stack<RTerm<'s>>;
+type LCtx<'s> = crate::Stack<RTerm<'s>>;
 
-impl<'s> Context<'s> {
+impl<'s> LCtx<'s> {
     fn get_type(&self, n: usize) -> Option<RTerm<'s>> {
         Some(self.get(n)?.clone() << (n + 1))
     }
 
     fn bind<A, F>(&mut self, arg: RTerm<'s>, f: F) -> Result<A, Error>
     where
-        F: FnOnce(&mut Context<'s>) -> Result<A, Error>,
+        F: FnOnce(&mut LCtx<'s>) -> Result<A, Error>,
     {
         self.try_with_pushed(arg, f)
     }
 
-    fn bind_of_type<A, F>(&mut self, sig: &Signature<'s>, arg: RTerm<'s>, f: F) -> Result<A, Error>
+    fn bind_of_type<A, F>(&mut self, gc: &GCtx<'s>, arg: RTerm<'s>, f: F) -> Result<A, Error>
     where
-        F: FnOnce(&mut Context<'s>) -> Result<A, Error>,
+        F: FnOnce(&mut LCtx<'s>) -> Result<A, Error>,
     {
-        match &*arg.clone().infern(sig, self)? {
+        match &*arg.clone().infer(gc, self)? {
             Term::Type => self.bind(arg, f),
             _ => Err(Error::BindNoType),
         }
     }
 }
 
-impl<'s> fmt::Display for Context<'s> {
+impl<'s> fmt::Display for LCtx<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
         for (i, x) in self.iter().enumerate() {
@@ -126,30 +122,20 @@ impl<'s> fmt::Display for Context<'s> {
 }
 
 impl<'s> Term<'s> {
-    /// Infer the type of a closed term.
-    pub fn infer(&self, sig: &Signature<'s>) -> Result<RTerm<'s>, Error> {
-        self.infern(sig, &mut Context::new())
-    }
-
-    /// Check whether a closed term is of a given type.
-    pub fn check(&self, sig: &Signature<'s>, ty_exp: RTerm<'s>) -> Result<bool, Error> {
-        self.checkn(sig, &mut Context::new(), ty_exp)
-    }
-
-    /// Infer the type of an open term using supplied types of bound variables.
-    fn infern(&self, sig: &Signature<'s>, ctx: &mut Context<'s>) -> Result<RTerm<'s>, Error> {
+    /// Infer the type of a term using supplied types of bound variables.
+    fn infer(&self, gc: &GCtx<'s>, lc: &mut LCtx<'s>) -> Result<RTerm<'s>, Error> {
         debug!("infer type of {}", self);
         use crate::Term::*;
         match self {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(RTerm::new(Kind)),
-            Symb(s) => Ok(sig.types.get(&s).ok_or(Error::TypeNotFound)?.clone()),
-            BVar(x) => Ok(ctx.get_type(*x).ok_or(Error::TypeNotFound)?),
+            Symb(s) => Ok(gc.types.get(&s).ok_or(Error::TypeNotFound)?.clone()),
+            BVar(x) => Ok(lc.get_type(*x).ok_or(Error::TypeNotFound)?),
             Appl(tm, args) => {
-                let tm_ty = tm.infern(sig, ctx)?;
-                args.iter().try_fold(tm_ty, |ty, arg| match &*ty.whnf(sig) {
+                let tm_ty = tm.infer(gc, lc)?;
+                args.iter().try_fold(tm_ty, |ty, arg| match &*ty.whnf(gc) {
                     Prod(Arg { ty: a, .. }, b) => {
-                        if arg.checkn(sig, ctx, a.clone())? {
+                        if arg.check(gc, lc, a.clone())? {
                             Ok(b.clone().subst(&arg))
                         } else {
                             Err(Error::Unconvertible)
@@ -159,7 +145,7 @@ impl<'s> Term<'s> {
                 })
             }
             Abst(Arg { id, ty: Some(ty) }, tm) => {
-                let tm_ty = ctx.bind_of_type(sig, ty.clone(), |ctx| tm.infern(sig, ctx))?;
+                let tm_ty = lc.bind_of_type(gc, ty.clone(), |lc| tm.infer(gc, lc))?;
                 match &*tm_ty {
                     Kind => Err(Error::UnexpectedKind),
                     _ => {
@@ -170,7 +156,7 @@ impl<'s> Term<'s> {
                 }
             }
             Prod(Arg { ty, .. }, tm) => {
-                let tm_ty = ctx.bind_of_type(sig, ty.clone(), |ctx| tm.infern(sig, ctx))?;
+                let tm_ty = lc.bind_of_type(gc, ty.clone(), |lc| tm.infer(gc, lc))?;
                 match &*tm_ty {
                     Kind | Type => Ok(tm_ty),
                     _ => Err(Error::SortExpected),
@@ -180,34 +166,28 @@ impl<'s> Term<'s> {
         }
     }
 
-    /// Check whether an open term is of the given type,
-    /// using supplied types of bound variables.
-    fn checkn(
-        &self,
-        sig: &Signature<'s>,
-        ctx: &mut Context<'s>,
-        ty_exp: RTerm<'s>,
-    ) -> Result<bool, Error> {
-        debug!("check {} is of type {} when {}", self, ty_exp, ctx);
+    /// Check whether a term is of the given type, using supplied types of bound variables.
+    fn check(&self, gc: &GCtx<'s>, lc: &mut LCtx<'s>, ty_exp: RTerm<'s>) -> Result<bool, Error> {
+        debug!("check {} is of type {} when {}", self, ty_exp, lc);
         use crate::Term::*;
         match self {
-            Abst(arg, tm) => match &*ty_exp.whnf(sig) {
+            Abst(arg, tm) => match &*ty_exp.whnf(gc) {
                 Prod(Arg { ty: ty_a, .. }, ty_b) => {
                     let a_ok = match &arg.ty {
                         None => true,
                         Some(ty) => {
-                            let _ = ty.infern(sig, ctx)?;
-                            RTerm::convertible(ty.clone(), ty_a.clone(), sig)
+                            let _ = ty.infer(gc, lc)?;
+                            RTerm::convertible(ty.clone(), ty_a.clone(), gc)
                         }
                     };
-                    Ok(a_ok && ctx.bind(ty_a.clone(), |ctx| tm.checkn(sig, ctx, ty_b.clone()))?)
+                    Ok(a_ok && lc.bind(ty_a.clone(), |lc| tm.check(gc, lc, ty_b.clone()))?)
                 }
                 _ => Err(Error::ProductExpected),
             },
             _ => {
-                let ty_inf = self.infern(sig, ctx)?;
+                let ty_inf = self.infer(gc, lc)?;
                 debug!("checking convertibility: {} ~ {}", ty_inf, ty_exp);
-                Ok(RTerm::convertible(ty_inf, ty_exp, sig))
+                Ok(RTerm::convertible(ty_inf, ty_exp, gc))
             }
         }
     }

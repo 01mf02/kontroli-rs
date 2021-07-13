@@ -32,7 +32,7 @@ pub type Rule<'s> = crate::Rule<Arg<String, Option<RTerm<'s>>>, TopPattern<'s>, 
 /// The way we introduce a new name.
 pub type Intro<'s> = crate::Intro<RTerm<'s>>;
 
-pub type Signature<'s> = crate::Signature<Symbol<'s>, Pattern<'s>, RTerm<'s>>;
+pub type GCtx<'s> = crate::GCtx<Symbol<'s>, Pattern<'s>, RTerm<'s>>;
 
 pub type Term<'s> = crate::Term<Symbol<'s>, Rc<String>, RTerm<'s>>;
 

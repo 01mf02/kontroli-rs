@@ -1,7 +1,7 @@
 //! Reduction to weak head normal form (WHNF), including rewriting.
 
 use super::state::{Context, RState, RTTerm, Stack, State};
-use super::{RTerm, Rule, Signature};
+use super::{GCtx, RTerm, Rule};
 use core::cell::Ref;
 
 /// A version of `State` that tracks whether it was reduced to WHNF yet.
@@ -17,9 +17,9 @@ impl<'s> WState<'s> {
     }
 
     /// Replace the state with its WHNF if it was not in WHNF before.
-    fn whnf(&mut self, sig: &Signature<'s>) {
+    fn whnf(&mut self, gc: &GCtx<'s>) {
         if !self.whnfed {
-            self.state.whnf(sig);
+            self.state.whnf(gc);
             self.whnfed = true
         }
     }
@@ -27,8 +27,8 @@ impl<'s> WState<'s> {
 
 impl<'s> RState<'s> {
     /// Replace the state with its WHNF if it was not in WHNF before.
-    pub fn whnf(&self, sig: &Signature<'s>) {
-        self.borrow_mut().whnf(sig)
+    pub fn whnf(&self, gc: &GCtx<'s>) {
+        self.borrow_mut().whnf(gc)
     }
 
     /// Obtain a reference to the state.
@@ -43,14 +43,14 @@ impl<'s> State<'s> {
     /// ~~~
     /// # use kontroli::{Error, Share, Symbols};
     /// # use kontroli::scope::{BTerm as SBTerm, Term as STerm};
-    /// # use kontroli::rc::{RTerm, Signature, Term};
+    /// # use kontroli::rc::{GCtx, RTerm, Term};
     /// # use kontroli::rc::state::State;
-    /// let sig = Signature::new();
+    /// let gc = GCtx::new();
     /// let syms = Symbols::new();
     ///
     /// let term = SBTerm::parse(r"(x => x) (x => x)")?.share(&syms)?;
     /// let mut state = State::new(term);
-    /// state.whnf(&sig);
+    /// state.whnf(&gc);
     ///
     /// let expected = STerm::parse(r"(x => x)")?.share(&syms)?;
     /// assert!(state.ctx.is_empty());
@@ -58,7 +58,7 @@ impl<'s> State<'s> {
     /// assert_eq!(*state.term, expected);
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn whnf(&mut self, sig: &Signature<'s>) {
+    pub fn whnf(&mut self, gc: &GCtx<'s>) {
         use crate::Term::*;
         loop {
             trace!("whnf: {}", self.term);
@@ -95,12 +95,12 @@ impl<'s> State<'s> {
                     }
                     self.term = head.clone();
                 }
-                Symb(s) => match &sig.rules.get(&s) {
+                Symb(s) => match &gc.rules.get(&s) {
                     None => break,
                     Some(rules) => {
                         match rules
                             .iter()
-                            .filter_map(|r| Some((self.stack.match_flatten(r, sig)?, r)))
+                            .filter_map(|r| Some((self.stack.match_flatten(r, gc)?, r)))
                             .next()
                         {
                             None => break,
@@ -124,10 +124,10 @@ impl<'s> State<'s> {
 
 impl<'s> RTerm<'s> {
     /// Return the weak head normal form of the term.
-    pub fn whnf(self, sig: &Signature<'s>) -> Self {
+    pub fn whnf(self, gc: &GCtx<'s>) -> Self {
         trace!("whnf of {}", self);
         let mut state = State::new(self);
-        state.whnf(sig);
+        state.whnf(gc);
         Self::from(state)
     }
 }
@@ -139,15 +139,15 @@ impl<'s> RTerm<'s> {
 /// This is used for checking nonlinear pattern matches, because there
 /// we want to ensure that all states that were
 /// matched with the same variable are convertible.
-fn all_convertible<'s>(
-    mut iter: impl Iterator<Item = RState<'s>>,
-    sig: &Signature<'s>,
-) -> Option<RTTerm<'s>> {
+fn all_convertible<'s, I>(mut iter: I, gc: &GCtx<'s>) -> Option<RTTerm<'s>>
+where
+    I: Iterator<Item = RState<'s>>,
+{
     // assure that we have at least one term
     let tm = RTTerm::new(iter.next()?);
     for stn in iter {
         // the first term is only evaluated if we have some other terms
-        if !RTerm::convertible(tm.force().clone(), RTerm::from(stn), &sig) {
+        if !RTerm::convertible(tm.force().clone(), RTerm::from(stn), &gc) {
             return None;
         }
     }
@@ -161,28 +161,28 @@ impl<'s> Stack<'s> {
     ///
     /// ~~~
     /// # use kontroli::rc::state::State;
-    /// # use kontroli::rc::{RTerm, Rule, Signature, Term};
+    /// # use kontroli::rc::{GCtx, RTerm, Rule, Term};
     /// # use kontroli::scope::{BTerm as SBTerm, Rule as SRule, Term as STerm};
     /// # use kontroli::{Error, Share, Symbols};
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
-    /// let sig = Signature::new();
+    /// let gc = GCtx::new();
 
     /// let rule = SRule::parse("[A] id A --> A")?.share(&syms)?;
     /// let term = SBTerm::parse("id f a")?.share(&syms)?;
 
     /// let mut state = State::new(term);
-    /// state.whnf(&sig);
-    /// let subst = state.stack.match_flatten(&rule, &sig).unwrap();
+    /// state.whnf(&gc);
+    /// let subst = state.stack.match_flatten(&rule, &gc).unwrap();
     /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
 
     /// let expected: Term = STerm::parse("f")?.share(&syms)?;
     /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn match_flatten(&self, rule: &Rule<'s>, sig: &Signature<'s>) -> Option<Context<'s>> {
-        self.match_rule(rule, sig)?
+    pub fn match_flatten(&self, rule: &Rule<'s>, gc: &GCtx<'s>) -> Option<Context<'s>> {
+        self.match_rule(rule, gc)?
             .into_iter()
-            .map(|s| all_convertible(s.into_iter(), sig))
+            .map(|s| all_convertible(s.into_iter(), gc))
             .rev()
             .collect()
     }

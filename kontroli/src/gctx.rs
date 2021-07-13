@@ -1,11 +1,11 @@
 //! Maps from symbols to their associated types and rewrite rules.
 
 use super::{Application, Typing};
-use crate::error::SignatureError as Error;
+use crate::error::GCtxError as Error;
 use alloc::{string::String, vec, vec::Vec};
 use core::hash::Hash;
 
-/// Immutable HashMap for fast signature cloning.
+/// Immutable HashMap for fast cloning of global contexts.
 type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 
 type Rule<Sym, Pat, Tm> = super::Rule<crate::Arg<String, Option<Tm>>, Application<Sym, Pat>, Tm>;
@@ -14,13 +14,13 @@ type Rule<Sym, Pat, Tm> = super::Rule<crate::Arg<String, Option<Tm>>, Applicatio
 ///
 /// Furthermore, set whether convertibility should be checked modulo eta.
 #[derive(Clone)]
-pub struct Signature<Sym, Pat, Tm> {
+pub struct GCtx<Sym, Pat, Tm> {
     pub types: FnvHashMap<Sym, Tm>,
     pub rules: FnvHashMap<Sym, Vec<Rule<Sym, Pat, Tm>>>,
     pub eta: bool,
 }
 
-impl<Sym, Pat, Tm> Default for Signature<Sym, Pat, Tm> {
+impl<Sym, Pat, Tm> Default for GCtx<Sym, Pat, Tm> {
     fn default() -> Self {
         Self {
             types: Default::default(),
@@ -30,13 +30,13 @@ impl<Sym, Pat, Tm> Default for Signature<Sym, Pat, Tm> {
     }
 }
 
-impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> Signature<Sym, Pat, Tm> {
-    /// Construct an empty signature without eta modularity.
+impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> GCtx<Sym, Pat, Tm> {
+    /// Construct an empty global context without eta modularity.
     ///
     /// ~~~
-    /// # use kontroli::rc::Signature;
-    /// let sig = Signature::new();
-    /// assert!(sig.eta == false);
+    /// # use kontroli::rc::GCtx;
+    /// let gc = GCtx::new();
+    /// assert!(gc.eta == false);
     /// ~~~
     pub fn new() -> Self {
         Self {

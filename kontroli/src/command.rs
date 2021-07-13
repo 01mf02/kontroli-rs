@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
 
-/// Signature-changing command.
+/// Command that changes the global context.
 #[derive(Clone)]
 pub enum Command<Id, Intro, Rule> {
     /// Introduce a new name

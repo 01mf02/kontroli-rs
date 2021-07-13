@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kontroli::rc::{Intro, Signature, Typing};
+use kontroli::rc::{GCtx, Intro, Typing};
 use kontroli::{Command, Error, Scope, Share, Symbols};
 
 fn check<'s>(cmds: Vec<kontroli::scope::Command<&'s str>>) -> Result<(), Error> {
@@ -7,7 +7,7 @@ fn check<'s>(cmds: Vec<kontroli::scope::Command<&'s str>>) -> Result<(), Error> 
 
     let arena = Arena::new();
     let mut syms = Symbols::new();
-    let mut sig = Signature::new();
+    let mut gc = GCtx::new();
 
     for c in cmds.into_iter() {
         match c {
@@ -19,16 +19,16 @@ fn check<'s>(cmds: Vec<kontroli::scope::Command<&'s str>>) -> Result<(), Error> 
                 // add symbol to symbol table and fail if it is not new
                 let sym = syms.insert(id)?;
 
-                // typecheck and insert into signature
+                // typecheck and insert into global context
                 let rewritable = it.rewritable();
-                let typing: Typing = Typing::intro(it, &sig)?;
-                typing.check(&sig)?;
-                sig.insert(sym, typing, rewritable)?
+                let typing: Typing = Typing::intro(it, &gc)?;
+                typing.check(&gc)?;
+                gc.insert(sym, typing, rewritable)?
             }
             // addition of rewrite rules
             Command::Rules(rules) => {
                 for rule in rules {
-                    sig.add_rule(rule.share(&syms)?)?
+                    gc.add_rule(rule.share(&syms)?)?
                 }
             }
         }

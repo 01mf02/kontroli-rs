@@ -13,7 +13,7 @@
 //! adds a rewrite rule.
 //! The state of a Kontroli typechecking session consists of
 //! a [`Symbols`] table, keeping track of all previously introduced names, and
-//! a [`Signature`], recording types and rewrite rules attached to symbols.
+//! a global context [`GCtx`], recording types and rewrite rules attached to symbols.
 //!
 //! How is a user command processed?
 //! A command is parsed from a string to yield a [`parse::Command`].
@@ -22,19 +22,19 @@
 //! have been previously declared in the [`Symbols`] table.
 //! Once we have a scope command, we distinguish whether it
 //! introduces a name or adds a rewrite rule:
-//! In case of a rewrite rule, we add the rewrite rule to the signature.
+//! In case of a rewrite rule, we add the rewrite rule to the global context.
 //! In case of a name introduction, we first
 //! update the [`Symbols`] table with the newly introduced name and
 //! verify that the given types and terms are valid, yielding a [`Typing`].
-//! Once we have a typing, we add it to the signature.
+//! Once we have a typing, we add it to the global context.
 //!
-//! The following example parses a few commands and executes them on a signature.
+//! The following example parses a few commands and executes them on a global context.
 //! (By the way, this example, just as all other code examples in this library,
 //! can be executed by running `cargo test`.)
 //!
 //! ~~~
 //! # use kontroli::{Command, Error, Share, Symbols};
-//! # use kontroli::rc::{Intro, Rule, Signature, Typing};
+//! # use kontroli::rc::{GCtx, Intro, Rule, Typing};
 //! # use colosseum::unsync::Arena;
 //! let cmds = [
 //!     // declarations
@@ -51,7 +51,7 @@
 //!
 //! let arena = Arena::new();
 //! let mut syms = Symbols::new();
-//! let mut sig = Signature::new();
+//! let mut gc = GCtx::new();
 //!
 //! for c in cmds.iter() {
 //!     // parse and scope command in one go
@@ -65,16 +65,16 @@
 //!             // add symbol to symbol table and fail if it is not new
 //!             let sym = syms.insert(id)?;
 //!
-//!             // typecheck and insert into signature
+//!             // typecheck and insert into global context
 //!             let rewritable = it.rewritable();
-//!             let typing: Typing = Typing::intro(it, &sig)?;
-//!             typing.check(&sig)?;
-//!             sig.insert(sym, typing, rewritable)?
+//!             let typing: Typing = Typing::intro(it, &gc)?;
+//!             typing.check(&gc)?;
+//!             gc.insert(sym, typing, rewritable)?
 //!         }
 //!         // addition of rewrite rules
 //!         Command::Rules(rules) => {
 //!             for rule in rules {
-//!                 sig.add_rule(rule.share(&syms)?)?
+//!                 gc.add_rule(rule.share(&syms)?)?
 //!             }
 //!         }
 //!     }
@@ -140,12 +140,12 @@ mod arg;
 mod bterm;
 mod command;
 pub mod error;
+mod gctx;
 mod intro;
 mod pattern;
 mod rule;
 pub mod scope;
 mod share;
-mod signature;
 mod stack;
 mod symbol;
 mod symbols;
@@ -157,12 +157,12 @@ pub use arg::Arg;
 pub use bterm::BTerm;
 pub use command::Command;
 pub use error::Error;
+pub use gctx::GCtx;
 pub use intro::Intro;
 pub use pattern::Pattern;
 pub use rule::Rule;
 pub use scope::Scope;
 pub use share::Share;
-pub use signature::Signature;
 pub use stack::Stack;
 pub use symbol::Symbol;
 pub use symbols::Symbols;

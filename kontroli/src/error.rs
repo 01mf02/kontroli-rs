@@ -8,7 +8,7 @@ use alloc::string::String;
 pub enum Error {
     Parse(parse::Error),
     Scope(ScopeError),
-    Signature(SignatureError),
+    GCtx(GCtxError),
     Symbols(SymbolsError),
     Typing(TypingError),
 }
@@ -22,7 +22,7 @@ pub enum ScopeError {
 }
 
 #[derive(Debug)]
-pub enum SignatureError {
+pub enum GCtxError {
     Reintroduction,
     NonRewritable,
 }
@@ -57,9 +57,9 @@ impl From<ScopeError> for Error {
     }
 }
 
-impl From<SignatureError> for Error {
-    fn from(err: SignatureError) -> Self {
-        Self::Signature(err)
+impl From<GCtxError> for Error {
+    fn from(err: GCtxError) -> Self {
+        Self::GCtx(err)
     }
 }
 

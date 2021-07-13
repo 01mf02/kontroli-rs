@@ -6,7 +6,8 @@
 /// with respect to type checking.
 #[derive(Clone)]
 pub struct Typing<T> {
-    pub ctx: crate::Stack<T>,
+    /// local context
+    pub lc: crate::Stack<T>,
     pub typ: T,
     pub term: Option<(T, Check)>,
 }

@@ -2,7 +2,7 @@ use crate::{parse, Error, Event, Opt, PathRead, Stage};
 use colosseum::unsync::Arena;
 use core::{borrow::Borrow, convert::TryFrom};
 use kontroli::error::Error as KoError;
-use kontroli::rc::{Intro, Rule, Signature, Typing};
+use kontroli::rc::{GCtx, Intro, Rule, Typing};
 use kontroli::{Share, Symbol, Symbols};
 
 type Command<'s> = kontroli::Command<Symbol<'s>, Intro<'s>, Rule<'s>>;
@@ -36,29 +36,29 @@ fn share<'s, S: Borrow<str> + Ord>(
     }
 }
 
-fn infer_check<'s>(cmd: Command<'s>, check: bool, sig: &mut Signature<'s>) -> Result<(), KoError> {
+fn infer_check<'s>(cmd: Command<'s>, check: bool, gc: &mut GCtx<'s>) -> Result<(), KoError> {
     match cmd {
         kontroli::Command::Intro(sym, it) => {
             let rewritable = it.rewritable();
 
-            let typing = Typing::intro(it, &sig)?;
+            let typing = Typing::intro(it, &gc)?;
             if check {
-                typing.check(&sig)?
+                typing.check(&gc)?
             }
-            Ok(sig.insert(sym, typing, rewritable)?)
+            Ok(gc.insert(sym, typing, rewritable)?)
         }
         kontroli::Command::Rules(rules) => {
             for rule in rules.clone() {
                 if let Ok(rule) = kontroli::Rule::try_from(rule) {
-                    let typing = Typing::rewrite(rule, &sig)?;
+                    let typing = Typing::rewrite(rule, &gc)?;
                     if check {
-                        typing.check(&sig)?
+                        typing.check(&gc)?
                     }
                 } else {
                     log::warn!("Rewrite rule contains unannotated variable")
                 }
             }
-            Ok(rules.into_iter().try_for_each(|r| sig.add_rule(r))?)
+            Ok(rules.into_iter().try_for_each(|r| gc.add_rule(r))?)
         }
     }
 }
@@ -66,9 +66,9 @@ fn infer_check<'s>(cmd: Command<'s>, check: bool, sig: &mut Signature<'s>) -> Re
 pub fn run(opt: &Opt) -> Result<(), Error> {
     let arena: Arena<String> = Arena::new();
     let mut syms: Symbols = Symbols::new();
-    let mut sig: Signature = Signature::new();
+    let mut gc: GCtx = GCtx::new();
 
-    sig.eta = opt.eta;
+    gc.eta = opt.eta;
 
     for file in opt.files.iter() {
         let file = PathRead::try_from(file)?;
@@ -84,7 +84,7 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
             .map(|cmd| share(cmd?, &mut syms, &arena).map_err(Error::Ko))
             .filter(|cmd| !opt.omits(Infer) || cmd.is_err());
 
-        cmds.try_for_each(|cmd| infer_check(cmd?, !opt.omits(Check), &mut sig).map_err(Error::Ko))?;
+        cmds.try_for_each(|cmd| infer_check(cmd?, !opt.omits(Check), &mut gc).map_err(Error::Ko))?;
     }
     Ok(())
 }
@@ -95,9 +95,9 @@ where
 {
     let arena: Arena<String> = Arena::new();
     let mut syms: Symbols = Symbols::new();
-    let mut sig: Signature = Signature::new();
+    let mut gc: GCtx = GCtx::new();
 
-    sig.eta = opt.eta;
+    gc.eta = opt.eta;
 
     use Stage::{Check, Infer, Share};
 
@@ -109,5 +109,5 @@ where
         .flatten()
         .filter(|cmd| !opt.omits(Infer) || cmd.is_err());
 
-    cmds.try_for_each(|cmd| infer_check(cmd?, !opt.omits(Check), &mut sig).map_err(Error::Ko))
+    cmds.try_for_each(|cmd| infer_check(cmd?, !opt.omits(Check), &mut gc).map_err(Error::Ko))
 }
