@@ -1,8 +1,13 @@
 [package]
 name = "dedukti-parse"
 version = "0.1.0"
-authors = ["Michael Färber <01mf02@gmail.com>"]
+authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2018"
+description = "Parser for the Dedukti file format"
+repository = "https://github.com/01mf02/kontroli-rs"
+license = "GPL-3.0-only"
+keywords = ["dependent-types", "rewriting", "dedukti"]
+categories = ["no-std", "parser-implementations"]
 
 [features]
 default = ["itertools"]
