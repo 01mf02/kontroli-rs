@@ -8,7 +8,7 @@ readme = "../README.md"
 repository = "https://github.com/01mf02/kontroli-rs"
 license = "GPL-3.0-only"
 keywords = ["verification", "dependent-types", "type-checking", "rewriting", "dedukti"]
-categories = ["concurrency", "no-std", "parser-implementations", "science"]
+categories = ["concurrency", "no-std", "science"]
 
 [dependencies]
 dedukti-parse = { path = "../dedukti-parse" }
