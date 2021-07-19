@@ -3,7 +3,10 @@ members = [
     "dedukti-parse",
     "kontroli",
     "kocheck",
+    "koweb",
 ]
+
+default-members = [ "kocheck" ]
 
 [profile.release]
 codegen-units = 1

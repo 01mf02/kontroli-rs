@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/index.css">
+  <title>λ Kontroli</title>
+</head>
+
+<body>
+  <div id="grid">
+    <h1>λ Kontroli</h1>
+
+<pre><code class="editor" id="editor">
+def prop: Type.
+def imp: prop -> prop -> prop.
+def prf: prop -> Type.
+[x, y] prf (imp x y) --> prf x -> prf y.
+def imp_refl: x: prop -> prf (imp x x).
+[x] imp_refl x --> p: prf x => p.
+</code></pre>
+
+    <fieldset id="options">
+      <legend>Options</legend>
+      <input type="checkbox" id="eta" class="option" names="eta">
+      <label for="eta">Reduce terms modulo eta</label><br>
+
+      <input type="range" min="0" max="5" value="5" id="omit" list="tickmarks">
+      <datalist id="tickmarks">
+        <option value="0" label="lex"></option>
+        <option value="1" label="parse"></option>
+        <option value="2" label="scope"></option>
+        <option value="3" label="share"></option>
+        <option value="4" label="infer"></option>
+        <option value="5" label="check"></option>
+      </datalist>
+
+      <div>
+        <input type="url" name="url" id="url" placeholder="URL to a Dedukti file" pattern="https://.*" size="30"
+          required>
+      </div>
+
+      <div>
+        <input type="url" name="urlmake" id="urlmake" placeholder="URL to a theory dependencies Makefile" pattern="https://.*"
+          size="30" value="https://raw.githubusercontent.com/kami0xff/koweb/master/examples/matita_sttfa/deps.mk" required>
+      </div>
+    </fieldset>
+
+
+    <fieldset id="actions">
+      <legend>Actions</legend>
+      <button id="load_make" class="btn blue">Load make file</button>
+      <button id="load_url" class="btn blue">Load text from the url in the text editor</button>
+      <button id="run_url" class="btn green">Run Code from Url</button>
+      <button id="run" class="btn green">Run Code in Editor</button>
+      <button id="run_multiple" class="btn green">Run Selected Module</button>
+      <label for="file_to_run">Choose module to run</label>
+      <select name="file_to_run" id="file_to_run"></select>
+    </fieldset>
+
+    <div id="errors"></div>
+    <div id="output"></div>
+    <div id="footer"></div>
+
+  </div>
+
+  <script type="module">
+    import {CodeJar} from 'https://medv.io/codejar/codejar.js'
+    import {microlight} from '/js/microlight.js'
+    window.editor = CodeJar(document.querySelector('.editor'), microlight, {addClosing: false})
+  </script>
+  <script type="module">
+    import init from "/pkg/koweb.js";
+    await init();
+  </script>
+  <script type="module" src="./js/kocheck.js" defer></script>
+
+</body>
+
+</html>

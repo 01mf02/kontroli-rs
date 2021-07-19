@@ -1,0 +1,212 @@
+* {
+    box-sizing: border-box !important;
+}
+
+h1 {
+    text-align: center;
+    font-size: 64px;
+    font-weight: bold;
+    margin-bottom: 50px;
+}
+
+body {
+    /* margin-left: 10%;
+  margin-right: 10%; */
+    margin: 0;
+    padding: 0;
+    font-family: sans-serif;
+    color: rgb(20, 20, 20);
+}
+
+#grid {
+    width: auto;
+    /* max-width: 100%; */
+    /* width: 100%; */
+    overflow: hidden;
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    margin: 2em 8em 8em 8em;
+    /* height: 100vh; */
+    grid-template-columns: minmax(800px, 1fr);
+    grid-template-rows: auto minmax(300px, 1fr) auto auto auto auto 8em;
+    grid-template-areas:
+        "h1"
+        "editor"
+        "options"
+        "actions"
+        "errors"
+        "output"
+        "footer";
+}
+
+/* style="width: 1200px; height: 800px; border: 1px solid grey" */
+/* make my editor fill its slot of the grid */
+/* make the other elements space out */
+#editor {
+    /* margin-left: auto; */
+    /* margin-right: auto; */
+    /* margin-bottom: 25px; */
+    /* width: 80%; */
+    /* height: 650px; */
+
+    /* min-height:; */
+    place-self: stretch;
+    margin-bottom: 20px;
+    background: rgb(41, 60, 65);
+    color: #C1DEE6;
+    font-size: 16px;
+}
+
+#options {
+    width: max-content;
+    width: 50%;
+    padding: 10px;
+    border-radius: 10px;
+    border: solid;
+    border-color: grey;
+    margin-bottom: 20px;
+}
+
+#omit {
+    width: 100%;
+}
+
+datalist {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+#actions {
+    margin: 0 auto;
+    padding: 0;
+    width: 50%;
+    /* width: max-content; */
+    border-radius: 10px;
+    border-style: solid;
+    border: solid;
+    border-color: grey;
+    margin-bottom: 20px;
+}
+
+#errors {
+    width: 50%;
+}
+
+#output {
+    visibility: hidden;
+    width: 50%;
+    padding: 10px;
+    border: solid;
+    border-color: grey;
+    background-color: rgb(20, 20, 20);
+}
+
+#footer {
+}
+
+.display_output {
+    visibility: visible !important;
+}
+
+.error {
+    text-align: center;
+    background-color: #ff6961;
+    padding: 20px;
+    font-weight: bold;
+    color: white;
+    width: max-content;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    /* transform: scale(0);
+    transition: 0.5s; */
+    box-shadow: 0 0 5px rgb(240, 102, 0);
+}
+
+.bounce-in {
+    animation: bounce-in 0.8s ease;
+}
+
+@keyframes bounce-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    /* 70% { transform: scale(.9); } */
+    100% {
+        transform: scale(1);
+    }
+}
+
+#url {
+    padding-left: 10px;
+    width: 80%;
+    background-color: #e7e4e4;
+    margin-bottom: 10px;
+    border: none;
+}
+
+#urlmake {
+    padding-left: 10px;
+    width: 80%;
+    background-color: #e7e4e4;
+    margin-bottom: 10px;
+    border: none;
+}
+
+.btn {
+    border-radius: 5px;
+    padding: 10px 15px;
+    font-size: 18px;
+    text-decoration: none;
+    margin: 15px;
+    color: #fff;
+    position: relative;
+    display: inline-block;
+}
+
+.green {
+    background-color: #b8bb26;
+    /* background-color: #2ecc71; */
+    /* box-shadow: 0px 5px 0px 0px #15b358; */
+}
+
+.green:hover {
+    /* background-color: #48e68b; */
+}
+
+.blue {
+    /* background-color: #55acee; */
+    background-color: #83a598;
+    /* box-shadow: 0px 5px 0px 0px #3c93d5; */
+}
+
+.blue:hover {
+    /* background-color: #6fc6ff; */
+}
+
+.option {
+    font-size: 18;
+    margin-bottom: 10px;
+}
+
+.lambda {
+    color: #b16186;
+    font-weight: bold;
+}
+.header_output {
+    color: blue;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.line {
+    display: inline;
+    color: #fbf1c7;
+    /* font-weight: bold; */
+}
