@@ -66,8 +66,8 @@ function load_program_from_url(context_id) {
     }
 }
 
-function display_error_dom(error_msg) {
-    add_error(error_msg, context)
+function display_error_dom(error_msg, context) {
+    add_error(error_msg)
 }
 
 function load_text_from_url_in_editor(program_text) {
