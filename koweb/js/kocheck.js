@@ -105,7 +105,7 @@ function display_error_dom(error_msg, context) {
 }
 
 function load_text_from_url_in_editor(program_text) {
-    window.editor.updateCode(program_text);
+    document.getElementById('editor').value = program_text;
 }
 
 async function run(program = undefined) {
@@ -113,9 +113,10 @@ async function run(program = undefined) {
     remove_all_outputs_dom();
     // await init();
 
+    let text = program ?? document.getElementById('editor').value;
     let eta = document.getElementById("eta").checked;
     let omit = document.getElementById("omit").value;
-    check_single(program ?? window.editor.toString(), eta, omit);
+    check_single(text, eta, omit);
 }
 
 

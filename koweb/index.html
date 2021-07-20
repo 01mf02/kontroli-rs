@@ -13,11 +13,11 @@
   <div id="grid">
     <h1>λ Kontroli</h1>
 
-<div class="editor" id="editor">prop: Type.
+<textarea id="editor" spellcheck="false">prop: Type.
 imp: prop -> prop -> prop.
 def prf: prop -> Type.
 [x, y] prf (imp x y) --> prf x -> prf y.
-thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.</div>
+thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.</textarea>
 
     <fieldset id="options">
       <legend>Options</legend>
@@ -63,11 +63,6 @@ thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.</div>
 
   </div>
 
-  <script type="module">
-    import {CodeJar} from 'https://medv.io/codejar/codejar.js'
-    import {microlight} from '/js/microlight.js'
-    window.editor = CodeJar(document.querySelector('.editor'), microlight, {addClosing: false})
-  </script>
   <script type="module">
     import init from "/pkg/koweb.js";
     await init();

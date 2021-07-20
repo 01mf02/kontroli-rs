@@ -40,20 +40,13 @@ body {
         "footer";
 }
 
-/* style="width: 1200px; height: 800px; border: 1px solid grey" */
-/* make my editor fill its slot of the grid */
-/* make the other elements space out */
 #editor {
-    margin-left: auto;
-    margin-right: auto;
-    margin-bottom: 25px;
     width: 50%;
     height: 10em;
     padding: 10px;
     border-radius: 6px;
-
-    place-self: stretch;
     margin-bottom: 20px;
+
     font-size: 16px;
     background: rgb(41, 60, 65);
     color: #C1DEE6;
