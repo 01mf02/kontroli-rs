@@ -66,36 +66,6 @@ function load_program_from_url(context_id) {
     }
 }
 
-function run_program_from_url(context_id) {
-    remove_all_errors_dom();
-    const url = document.getElementById("url").value;
-    if (url != "") {
-        fetch(url)
-            .then(check_fetch)
-            .then((result) => {
-                result
-                    .text()
-                    .then((string) => {
-                        console.log(
-                            "THIS IS THE STRING WE RUN FROM THE URL :: ",
-                            string
-                        );
-                        run(string);
-                    })
-                    .catch((err) => {
-                        console.log("ERROR :", err);
-                        display_error_dom(err, context_id);
-                    });
-            })
-            .catch((err) => {
-                console.log("ERROR :", err);
-                display_error_dom(err, context_id);
-            });
-    } else {
-        display_error_dom("Empty url field", context_id);
-    }
-}
-
 function display_error_dom(error_msg) {
     add_error(error_msg, context)
 }
@@ -123,10 +93,6 @@ function clear_all_output(){
 
 document.getElementById("load_url").onclick = () => {
     load_program_from_url("errors");
-};
-
-document.getElementById("run_url").onclick = () => {
-    run_program_from_url("errors");
 };
 
 document.getElementById("run").onclick = async () => {

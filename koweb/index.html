@@ -48,13 +48,15 @@ thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.</textarea>
 
     <fieldset id="actions">
       <legend>Actions</legend>
-      <button id="load_make" class="btn blue">Load make file</button>
+
       <button id="load_url" class="btn blue">Load text from the url in the text editor</button>
-      <button id="run_url" class="btn green">Run Code from Url</button>
       <button id="run" class="btn green">Run Code in Editor</button>
-      <button id="run_multiple" class="btn green">Run Selected Module</button>
+      <br>
+
+      <button id="load_make" class="btn blue">Load make file</button>
       <label for="file_to_run">Choose module to run</label>
       <select name="file_to_run" id="file_to_run"></select>
+      <button id="run_multiple" class="btn green">Run Selected Module</button>
     </fieldset>
 
     <div id="errors"></div>
