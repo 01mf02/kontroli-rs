@@ -4,6 +4,8 @@ import init, {
     get_graph_rust,
 } from "../pkg/koweb.js";
 
+import { add_error } from "./export.js";
+
 let program_list = [];
 
 class Program {
@@ -94,14 +96,8 @@ function run_program_from_url(context_id) {
     }
 }
 
-function display_error_dom(error_msg, context) {
-    var error_msg_dom = document.createElement("p");
-    var text = document.createTextNode(error_msg);
-    error_msg_dom.classList.add("error");
-    error_msg_dom.classList.add("bounce-in");
-    error_msg_dom.appendChild(text);
-    var element = document.getElementById(context);
-    element.appendChild(error_msg_dom);
+function display_error_dom(error_msg) {
+    add_error(error_msg, context)
 }
 
 function load_text_from_url_in_editor(program_text) {

@@ -35,3 +35,14 @@ export function add_lambda_output(message) {
     output.className = "display_output";
     output.appendChild(div);
 }
+
+export function add_error(message) {
+    var p = document.createElement("p");
+    var text = document.createTextNode(message);
+    p.classList.add("error");
+    p.classList.add("bounce-in");
+    p.appendChild(text);
+
+    var element = document.getElementById("errors");
+    element.appendChild(p);
+}

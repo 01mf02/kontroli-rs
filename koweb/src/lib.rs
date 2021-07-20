@@ -12,6 +12,9 @@ extern "C" {
 
     #[wasm_bindgen]
     fn add_lambda_output(s: &str);
+
+    #[wasm_bindgen]
+    fn add_error(s: &str);
 }
 
 struct Module<S> {
@@ -46,7 +49,10 @@ fn produce_multiple<'a>(
 
 fn consume(iter: impl Iterator<Item = Result<Event, Error>>, opt: &Opt) {
     let iter = iter.inspect(|r| r.iter().for_each(|ev| add_lambda_output(&ev.to_string())));
-    seq::consume(iter, &opt).expect("something went wrong in the consume");
+
+    if let Err(e) = seq::consume(iter, &opt) {
+        add_error(&format!("Error: {:?}", e))
+    }
 }
 
 fn get_omit(do_until: usize) -> Option<kocheck::Stage> {
