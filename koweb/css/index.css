@@ -29,7 +29,7 @@ body {
     margin: 2em 8em 8em 8em;
     /* height: 100vh; */
     grid-template-columns: minmax(800px, 1fr);
-    grid-template-rows: auto minmax(300px, 1fr) auto auto auto auto 8em;
+    grid-template-rows: auto auto auto auto auto auto 8em;
     grid-template-areas:
         "h1"
         "editor"
@@ -44,22 +44,22 @@ body {
 /* make my editor fill its slot of the grid */
 /* make the other elements space out */
 #editor {
-    /* margin-left: auto; */
-    /* margin-right: auto; */
-    /* margin-bottom: 25px; */
-    /* width: 80%; */
-    /* height: 650px; */
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 25px;
+    width: 50%;
+    height: 10em;
+    padding: 10px;
+    border-radius: 6px;
 
-    /* min-height:; */
     place-self: stretch;
     margin-bottom: 20px;
+    font-size: 16px;
     background: rgb(41, 60, 65);
     color: #C1DEE6;
-    font-size: 16px;
 }
 
 #options {
-    width: max-content;
     width: 50%;
     padding: 10px;
     border-radius: 10px;

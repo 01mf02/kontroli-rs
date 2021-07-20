@@ -13,14 +13,11 @@
   <div id="grid">
     <h1>λ Kontroli</h1>
 
-<pre><code class="editor" id="editor">
-def prop: Type.
-def imp: prop -> prop -> prop.
+<div class="editor" id="editor">prop: Type.
+imp: prop -> prop -> prop.
 def prf: prop -> Type.
 [x, y] prf (imp x y) --> prf x -> prf y.
-def imp_refl: x: prop -> prf (imp x x).
-[x] imp_refl x --> p: prf x => p.
-</code></pre>
+thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.</div>
 
     <fieldset id="options">
       <legend>Options</legend>
