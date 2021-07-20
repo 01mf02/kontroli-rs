@@ -180,10 +180,6 @@ function generate_run_options_html(graph_data) {
     }
 }
 
-function remove_all_files_dom() {
-    document.querySelectorAll(".fs").forEach((e) => e.remove());
-}
-
 function generate_gitraw_urls(list_of_files) {
     const top_url = document.getElementById("urlmake").value;
 
