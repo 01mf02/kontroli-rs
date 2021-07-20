@@ -75,20 +75,13 @@ function load_text_from_url_in_editor(program_text) {
 }
 
 async function run(program = undefined) {
-    // try {
+    remove_all_errors_dom();
     remove_all_outputs_dom();
-    // await init();
 
     let text = program ?? document.getElementById('editor').value;
     let eta = document.getElementById("eta").checked;
     let omit = document.getElementById("omit").value;
     check_single(text, eta, omit);
-}
-
-
-function clear_all_output(){
-    //hide the output box and remove all current output 
-    document.querySelectorAll(".prompt").forEach((e) => e.remove());
 }
 
 document.getElementById("load_url").onclick = () => {
@@ -101,7 +94,9 @@ document.getElementById("run").onclick = async () => {
 
 document.getElementById("run_multiple").onclick = async () => {
     // if the program_list is empty and this is clicked show some error message
-    clear_all_output();
+    remove_all_errors_dom();
+    remove_all_outputs_dom();
+
     let module_to_run = document.getElementById("file_to_run").value;
     let eta = document.getElementById("eta").checked;
     let omit = document.getElementById("omit").value;
