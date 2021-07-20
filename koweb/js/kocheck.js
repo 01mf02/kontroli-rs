@@ -27,10 +27,7 @@ function remove_all_errors_dom() {
 
 let check_fetch = function check_fetch(response) {
     if (response.ok === false) {
-        display_error_dom(
-            "ERROR IN FETCH : " + response.statusText + " - " + response.url,
-            "errors"
-        );
+        add_error("ERROR IN FETCH : " + response.statusText + " - " + response.url);
         throw Error(response.statusText);
     }
     return response; //why do we return tho
@@ -54,20 +51,16 @@ function load_program_from_url(context_id) {
                     })
                     .catch((err) => {
                         console.log("ERROR :", err);
-                        display_error_dom(err, context_id);
+                        add_error(err);
                     });
             })
             .catch((err) => {
                 console.log("ERROR :", err);
-                // display_error_dom(err, context_id);
+                // add_error(err);
             });
     } else {
-        display_error_dom("Empty url field", context_id);
+        add_error("Empty url field");
     }
-}
-
-function display_error_dom(error_msg, context) {
-    add_error(error_msg)
 }
 
 function load_text_from_url_in_editor(program_text) {
@@ -129,15 +122,15 @@ function fetch_make_text_from_url() {
                     }) //here we need to call the get dep from rust then we can generate the html and the css from it and the raw urls
                     .catch((err) => {
                         console.log("ERROR :", err);
-                        display_error_dom(err, "errors");
+                        add_error(err);
                     });
             })
             .catch((err) => {
                 console.log("ERROR :", err);
-                // display_error_dom(err, context_id);
+                // add_error(err);
             });
     } else {
-        display_error_dom("Empty url field", "errors");
+        add_error("Empty url field");
     }
 }
 
