@@ -1,3 +1,17 @@
+//! Parser for the Dedukti file format
+//!
+//! Example usage:
+//!
+//! ~~~
+//! use dedukti_parse::{lexes, Command, Error, Parse};
+//!
+//! let cmds = "prop: Type. def proof : prop -> Type.";
+//! let cmds = lexes(&cmds);
+//! let cmds = cmds.map(|cmd| Ok(Command::parse_vec(cmd?)));
+//! let cmds: Result<Vec<_>, _> = cmds.collect();
+//! assert_eq!(cmds?.len(), 2);
+//! # Ok::<_, Error>(())
+//! ~~~
 #![no_std]
 
 extern crate alloc;
