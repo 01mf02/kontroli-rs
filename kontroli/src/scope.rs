@@ -64,6 +64,7 @@ impl<'s, S: From<&'s str>> Scopen<'s, BTerm<S>> for parse::Term<&'s str> {
 
 impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
     fn scopen(self, bnd: &mut Bound<'s>) -> Term<S> {
+        use parse::TermC;
         match self {
             Self::Symb(path, name) => {
                 if path.is_empty() {
@@ -76,22 +77,24 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
                 }
                 Term::Symb(Symbol::new(path, name).map(|s| s.into()))
             }
-            // TODO: cover case that head is Appl?
-            Self::Appl(head, tail) => {
-                let tail = tail.into_iter().map(|tm| tm.scopen(bnd)).collect();
-                Term::Appl(head.scopen(bnd), tail)
-            }
-            Self::Prod(x, ty, tm) => {
-                let x = x.unwrap_or("$");
-                let id = x.to_string();
-                let ty = ty.scopen(bnd);
-                Term::Prod(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
-            }
-            Self::Abst(x, ty, tm) => {
-                let id = x.to_string();
-                let ty = ty.map(|ty| ty.scopen(bnd));
-                Term::Abst(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
-            }
+            Self::Comb(comb) => match *comb {
+                // TODO: cover case that head is Appl?
+                TermC::Appl(head, tail) => {
+                    let tail = tail.into_iter().map(|tm| tm.scopen(bnd)).collect();
+                    Term::Appl(head.scopen(bnd), tail)
+                }
+                TermC::Prod(x, ty, tm) => {
+                    let x = x.unwrap_or("$");
+                    let id = x.to_string();
+                    let ty = ty.scopen(bnd);
+                    Term::Prod(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
+                }
+                TermC::Abst(x, ty, tm) => {
+                    let id = x.to_string();
+                    let ty = ty.map(|ty| ty.scopen(bnd));
+                    Term::Abst(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
+                }
+            },
         }
     }
 }
@@ -130,14 +133,14 @@ impl<'s, S: From<&'s str>> Scope<Command<S>> for parse::Command<&'s str> {
         match self {
             Self::Intro(id, args, it) => {
                 use alloc::boxed::Box;
-                use parse::Term::{Abst, Prod};
+                use parse::Term::Comb;
+                use parse::TermC::{Abst, Prod};
 
                 let id = id.to_string();
                 let args = args.into_iter().rev();
                 let it = args.fold(crate::Intro::from(it), |it, (name, arg_ty)| {
-                    let arg_ty = Box::new(arg_ty);
-                    it.map_type(|ty| Prod(Some(name), arg_ty.clone(), Box::new(ty)))
-                        .map_term(|tm| Abst(name, Some(arg_ty), Box::new(tm)))
+                    it.map_type(|ty| Comb(Box::new(Prod(Some(name), arg_ty.clone(), ty))))
+                        .map_term(|tm| Comb(Box::new(Abst(name, Some(arg_ty), tm))))
                 });
                 Command::Intro(id, it.map_type(|tm| tm.scope()).map_term(|tm| tm.scope()))
             }

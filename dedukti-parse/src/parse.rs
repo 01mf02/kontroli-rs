@@ -6,12 +6,17 @@ use core::iter::Peekable;
 pub enum Term<S> {
     // Symbol name, preceded by module path
     Symb(Vec<S>, S),
+    Comb(Box<TermC<S>>),
+}
+
+#[derive(Clone, Debug)]
+pub enum TermC<S> {
     // Application
-    Appl(Box<Term<S>>, Vec<Term<S>>),
+    Appl(Term<S>, Vec<Term<S>>),
     // Abstraction (`x : A => t`)
-    Abst(S, Option<Box<Term<S>>>, Box<Term<S>>),
+    Abst(S, Option<Term<S>>, Term<S>),
     // Dependent product (`x : A -> t`)
-    Prod(Option<S>, Box<Term<S>>, Box<Term<S>>),
+    Prod(Option<S>, Term<S>, Term<S>),
 }
 
 #[derive(Clone, Debug)]
@@ -103,6 +108,12 @@ pub trait Parse<'s>: Sized {
 
     fn parse_str(s: &'s str) -> Result<Self, Error> {
         Self::consume(&mut super::lex(s))
+    }
+}
+
+impl<S> Term<S> {
+    pub fn comb(tm: TermC<S>) -> Self {
+        Self::Comb(Box::new(tm))
     }
 }
 
@@ -255,7 +266,7 @@ impl<'s> Parse<'s> for Term<&'s str> {
             Some(Token::Arrow) => {
                 iter.next();
                 let tm2 = Self::parse(iter)?;
-                Ok(Self::Prod(None, Box::new(tm), Box::new(tm2)))
+                Ok(Self::comb(TermC::Prod(None, tm, tm2)))
             }
             _ => Ok(tm),
         }
@@ -282,7 +293,7 @@ impl<'s> Term<&'s str> {
                 // `x => t`
                 Some(Token::FatArrow) => {
                     iter.next();
-                    Ok(Term::Abst(s, None, Box::new(Self::parse(iter)?)))
+                    Ok(Self::comb(TermC::Abst(s, None, Self::parse(iter)?)))
                 }
                 // `s t1 ... tn`
                 Some(_) => Ok(Self::parse_appl(Self::symb(s, iter)?, iter)?),
@@ -334,14 +345,14 @@ impl<'s> Term<&'s str> {
         Self::parse_appl(Self::parse_m1(iter)?, iter)
     }
 
-    fn binder<I>(head: &'s str, iter: &mut Peekable<I>) -> Result<Self, Error>
+    fn binder<I>(id: &'s str, iter: &mut Peekable<I>) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<'s>>,
     {
-        let ty = Box::new(Self::parse_a(iter)?);
+        let ty = Self::parse_a(iter)?;
         match iter.next() {
-            Some(Token::FatArrow) => Ok(Term::Abst(head, Some(ty), Box::new(Self::parse(iter)?))),
-            Some(Token::Arrow) => Ok(Term::Prod(Some(head), ty, Box::new(Self::parse(iter)?))),
+            Some(Token::FatArrow) => Ok(Self::comb(TermC::Abst(id, Some(ty), Self::parse(iter)?))),
+            Some(Token::Arrow) => Ok(Self::comb(TermC::Prod(Some(id), ty, Self::parse(iter)?))),
             _ => Err(Error::ExpectedArrow),
         }
     }
@@ -388,7 +399,7 @@ impl<'s> Term<&'s str> {
             Ok(self)
         } else {
             // TODO: handle case where self is Appl?
-            Ok(Term::Appl(Box::new(self), args))
+            Ok(Self::comb(TermC::Appl(self, args)))
         }
     }
 }
