@@ -54,20 +54,16 @@ impl<'s> RState<'s> {
             Pattern::Symb(sp, pats) => {
                 self.whnf(gc);
                 let state = self.borrow_state();
-                match &*state.term {
-                    Term::Symb(st) => {
-                        // The stack and pattern length have to be equal,
-                        // to exclude pattern matches like `f (g a) ~ f g`.
-                        // This is unlike `TopPattern::matches`, which
-                        // allows matches like `add 0 n ~ add 0`.
-                        if sp == st && state.stack.len() == pats.len() {
-                            state.stack.clone().into_match_pats(pats, gc)
-                        } else {
-                            Box::new(core::iter::once(None))
-                        }
+                if let Term::Symb(st) = &state.term {
+                    // The stack and pattern length have to be equal,
+                    // to exclude pattern matches like `f (g a) ~ f g`.
+                    // This is unlike `TopPattern::matches`, which
+                    // allows matches like `add 0 n ~ add 0`.
+                    if sp == st && state.stack.len() == pats.len() {
+                        return state.stack.clone().into_match_pats(pats, gc);
                     }
-                    _ => Box::new(core::iter::once(None)),
                 }
+                Box::new(core::iter::once(None))
             }
             Pattern::MVar(m) => Box::new(core::iter::once(Some((*m, self)))),
             Pattern::Joker => Box::new(core::iter::empty()),

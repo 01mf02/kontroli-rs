@@ -6,13 +6,13 @@ use core::iter::Peekable;
 pub enum Term<S> {
     // Symbol name, preceded by module path
     Symb(Vec<S>, S),
-    Comb(Box<TermC<S>>),
+    // Application
+    Appl(Box<Term<S>>, Vec<Term<S>>),
+    Bind(Box<TermB<S>>),
 }
 
 #[derive(Clone, Debug)]
-pub enum TermC<S> {
-    // Application
-    Appl(Term<S>, Vec<Term<S>>),
+pub enum TermB<S> {
     // Abstraction (`x : A => t`)
     Abst(S, Option<Term<S>>, Term<S>),
     // Dependent product (`x : A -> t`)
@@ -112,8 +112,8 @@ pub trait Parse<'s>: Sized {
 }
 
 impl<S> Term<S> {
-    pub fn comb(tm: TermC<S>) -> Self {
-        Self::Comb(Box::new(tm))
+    pub fn bind(tm: TermB<S>) -> Self {
+        Self::Bind(Box::new(tm))
     }
 }
 
@@ -266,7 +266,7 @@ impl<'s> Parse<'s> for Term<&'s str> {
             Some(Token::Arrow) => {
                 iter.next();
                 let tm2 = Self::parse(iter)?;
-                Ok(Self::comb(TermC::Prod(None, tm, tm2)))
+                Ok(Self::bind(TermB::Prod(None, tm, tm2)))
             }
             _ => Ok(tm),
         }
@@ -293,7 +293,7 @@ impl<'s> Term<&'s str> {
                 // `x => t`
                 Some(Token::FatArrow) => {
                     iter.next();
-                    Ok(Self::comb(TermC::Abst(s, None, Self::parse(iter)?)))
+                    Ok(Self::bind(TermB::Abst(s, None, Self::parse(iter)?)))
                 }
                 // `s t1 ... tn`
                 Some(_) => Ok(Self::parse_appl(Self::symb(s, iter)?, iter)?),
@@ -351,8 +351,8 @@ impl<'s> Term<&'s str> {
     {
         let ty = Self::parse_a(iter)?;
         match iter.next() {
-            Some(Token::FatArrow) => Ok(Self::comb(TermC::Abst(id, Some(ty), Self::parse(iter)?))),
-            Some(Token::Arrow) => Ok(Self::comb(TermC::Prod(Some(id), ty, Self::parse(iter)?))),
+            Some(Token::FatArrow) => Ok(Self::bind(TermB::Abst(id, Some(ty), Self::parse(iter)?))),
+            Some(Token::Arrow) => Ok(Self::bind(TermB::Prod(Some(id), ty, Self::parse(iter)?))),
             _ => Err(Error::ExpectedArrow),
         }
     }
@@ -399,7 +399,7 @@ impl<'s> Term<&'s str> {
             Ok(self)
         } else {
             // TODO: handle case where self is Appl?
-            Ok(Self::comb(TermC::Appl(self, args)))
+            Ok(Self::Appl(Box::new(self), args))
         }
     }
 }

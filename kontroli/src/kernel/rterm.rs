@@ -1,40 +1,18 @@
 //! Pointers to shared terms.
 
-use super::{Rc, Term};
+use super::{Rc, Term, TermC};
 use crate::Arg;
 use alloc::vec::Vec;
 use core::fmt;
 
 /// Pointer to a shared term.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct RTerm<'s>(Rc<Term<'s>>);
-
-impl<'s> fmt::Display for RTerm<'s> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        (**self).fmt(f)
-    }
-}
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RTerm<'s>(Rc<TermC<'s>>);
 
 impl<'s> RTerm<'s> {
     /// Create a term pointer from a term.
-    pub fn new(t: Term<'s>) -> Self {
-        Self(Rc::new(t))
-    }
-
-    /// Apply some terms to the term.
-    pub fn apply(self, mut args: Vec<RTerm<'s>>) -> Self {
-        if args.is_empty() {
-            self
-        } else {
-            match &*self {
-                Term::Appl(tm, args1) => {
-                    let mut args1 = args1.clone();
-                    args1.append(&mut args);
-                    RTerm::new(Term::Appl(tm.clone(), args1))
-                }
-                _ => RTerm::new(Term::Appl(self, args)),
-            }
-        }
+    pub fn new(tm: TermC<'s>) -> Self {
+        Self(Rc::new(tm))
     }
 
     /// Compare the memory addresses of two term pointers.
@@ -43,27 +21,61 @@ impl<'s> RTerm<'s> {
     }
 }
 
-impl<'s, Id> Arg<Id, Option<RTerm<'s>>> {
+impl<'s> Term<'s> {
+    /// Apply some terms to the term.
+    pub fn apply(self, mut args: Vec<Self>) -> Self {
+        if args.is_empty() {
+            return self;
+        }
+        if let Term::Comb(comb) = &self {
+            if let TermC::Appl(tm, args1) = &**comb {
+                let mut args1 = args1.clone();
+                args1.append(&mut args);
+                return Term::Comb(RTerm::new(TermC::Appl(tm.clone(), args1)));
+            }
+        };
+        Term::Comb(RTerm::new(TermC::Appl(self, args)))
+    }
+
+    /// Compare the memory addresses of two term pointers.
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        match (&self, &other) {
+            (Term::Kind, Term::Kind) | (Term::Type, Term::Type) => true,
+            (Term::Symb(c1), Term::Symb(c2)) => c1 == c2,
+            (Term::BVar(v1), Term::BVar(v2)) => v1 == v2,
+            (Term::Comb(l), Term::Comb(r)) => RTerm::ptr_eq(&l, &r),
+            _ => false,
+        }
+    }
+}
+
+impl<'s, Id> Arg<Id, Option<Term<'s>>> {
     /// Compare the memory addresses of the argument types.
     pub fn type_ptr_eq(&self, other: &Self) -> bool {
         match (&self.ty, &other.ty) {
             (None, None) => true,
-            (Some(ty1), Some(ty2)) => RTerm::ptr_eq(&ty1, &ty2),
+            (Some(ty1), Some(ty2)) => Term::ptr_eq(&ty1, &ty2),
             _ => false,
         }
     }
 }
 
 impl<'s> core::ops::Deref for RTerm<'s> {
-    type Target = Term<'s>;
+    type Target = TermC<'s>;
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &self.0
     }
 }
 
-impl<'s> From<Term<'s>> for RTerm<'s> {
-    fn from(tm: Term<'s>) -> Self {
+impl<'s> From<TermC<'s>> for RTerm<'s> {
+    fn from(tm: TermC<'s>) -> Self {
         Self::new(tm)
+    }
+}
+
+impl<'s> fmt::Display for RTerm<'s> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        (**self).fmt(f)
     }
 }

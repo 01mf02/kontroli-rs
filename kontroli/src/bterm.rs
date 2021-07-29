@@ -1,15 +1,16 @@
 //! Pointers to terms.
 
-use super::Term;
 use alloc::boxed::Box;
 use core::fmt::{self, Display};
 
+pub type TermC<C, V> = crate::term::TermC<V, crate::term::Term<C, BTerm<C, V>>>;
+
 /// Pointer to a term.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct BTerm<C, V>(Box<Term<C, V, BTerm<C, V>>>);
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BTerm<C, V>(Box<TermC<C, V>>);
 
 impl<C, V> BTerm<C, V> {
-    pub fn new(tm: Term<C, V, BTerm<C, V>>) -> Self {
+    pub fn new(tm: TermC<C, V>) -> Self {
         Self(Box::new(tm))
     }
 
@@ -20,7 +21,7 @@ impl<C, V> BTerm<C, V> {
     /// because only `Box` allows for dereferencing and moving at the same time
     /// due to being a special type.
     /// See <https://manishearth.github.io/blog/2017/01/10/rust-tidbits-box-is-special/>.
-    pub fn get(self) -> Term<C, V, BTerm<C, V>> {
+    pub fn get(self) -> TermC<C, V> {
         *self.0
     }
 }

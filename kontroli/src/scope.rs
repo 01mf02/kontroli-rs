@@ -32,11 +32,12 @@ impl<S: Display> Display for Symbol<S> {
     }
 }
 
-pub type Term<S> = crate::Term<Symbol<S>, String, BTerm<S>>;
+pub type Term<S> = crate::Term<Symbol<S>, BTerm<S>>;
+pub type TermC<S> = crate::bterm::TermC<Symbol<S>, String>;
 pub type BTerm<S> = crate::BTerm<Symbol<S>, String>;
 
-pub type Intro<S> = crate::Intro<BTerm<S>>;
-pub type Rule<S> = crate::Rule<Arg<String, Option<BTerm<S>>>, BTerm<S>>;
+pub type Intro<S> = crate::Intro<Term<S>>;
+pub type Rule<S> = crate::Rule<Arg<String, Option<Term<S>>>, Term<S>>;
 pub type Command<S> = crate::Command<String, Intro<S>, Rule<S>>;
 
 type Bound<'s> = Stack<&'s str>;
@@ -56,15 +57,8 @@ impl<'s, Target, T: Scopen<'s, Target>> Scope<Target> for T {
     }
 }
 
-impl<'s, S: From<&'s str>> Scopen<'s, BTerm<S>> for parse::Term<&'s str> {
-    fn scopen(self, bnd: &mut Bound<'s>) -> BTerm<S> {
-        crate::BTerm::new(self.scopen(bnd))
-    }
-}
-
 impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
     fn scopen(self, bnd: &mut Bound<'s>) -> Term<S> {
-        use parse::TermC;
         match self {
             Self::Symb(path, name) => {
                 if path.is_empty() {
@@ -77,24 +71,30 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
                 }
                 Term::Symb(Symbol::new(path, name).map(|s| s.into()))
             }
-            Self::Comb(comb) => match *comb {
-                // TODO: cover case that head is Appl?
-                TermC::Appl(head, tail) => {
-                    let tail = tail.into_iter().map(|tm| tm.scopen(bnd)).collect();
-                    Term::Appl(head.scopen(bnd), tail)
-                }
-                TermC::Prod(x, ty, tm) => {
-                    let x = x.unwrap_or("$");
-                    let id = x.to_string();
-                    let ty = ty.scopen(bnd);
-                    Term::Prod(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
-                }
-                TermC::Abst(x, ty, tm) => {
-                    let id = x.to_string();
-                    let ty = ty.map(|ty| ty.scopen(bnd));
-                    Term::Abst(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
-                }
-            },
+            // TODO: cover case that head is Appl?
+            Self::Appl(head, tail) => {
+                let tail = tail.into_iter().map(|tm| tm.scopen(bnd)).collect();
+                Term::Comb(BTerm::new(TermC::Appl(head.scopen(bnd), tail)))
+            }
+            Self::Bind(bind) => Term::Comb(BTerm::new(bind.scopen(bnd))),
+        }
+    }
+}
+
+impl<'s, S: From<&'s str>> Scopen<'s, TermC<S>> for parse::TermB<&'s str> {
+    fn scopen(self, bnd: &mut Bound<'s>) -> TermC<S> {
+        match self {
+            Self::Prod(x, ty, tm) => {
+                let x = x.unwrap_or("$");
+                let id = x.to_string();
+                let ty = ty.scopen(bnd);
+                TermC::Prod(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
+            }
+            Self::Abst(x, ty, tm) => {
+                let id = x.to_string();
+                let ty = ty.map(|ty| ty.scopen(bnd));
+                TermC::Abst(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)))
+            }
         }
     }
 }
@@ -132,15 +132,13 @@ impl<'s, S: From<&'s str>> Scope<Command<S>> for parse::Command<&'s str> {
     fn scope(self) -> Command<S> {
         match self {
             Self::Intro(id, args, it) => {
-                use alloc::boxed::Box;
-                use parse::Term::Comb;
-                use parse::TermC::{Abst, Prod};
+                use parse::TermB::{Abst, Prod};
 
                 let id = id.to_string();
                 let args = args.into_iter().rev();
                 let it = args.fold(crate::Intro::from(it), |it, (name, arg_ty)| {
-                    it.map_type(|ty| Comb(Box::new(Prod(Some(name), arg_ty.clone(), ty))))
-                        .map_term(|tm| Comb(Box::new(Abst(name, Some(arg_ty), tm))))
+                    it.map_type(|ty| parse::Term::bind(Prod(Some(name), arg_ty.clone(), ty)))
+                        .map_term(|tm| parse::Term::bind(Abst(name, Some(arg_ty), tm)))
                 });
                 Command::Intro(id, it.map_type(|tm| tm.scope()).map_term(|tm| tm.scope()))
             }
@@ -159,13 +157,6 @@ impl<'s> Command<&'s str> {
 }
 
 impl<'s> Term<&'s str> {
-    /// Parse a term and scope it. Used for testing.
-    pub fn parse(i: &'s str) -> Result<Self, Error> {
-        Ok(parse::Term::parse_str(i)?.scope())
-    }
-}
-
-impl<'s> BTerm<&'s str> {
     /// Parse a term and scope it. Used for testing.
     pub fn parse(i: &'s str) -> Result<Self, Error> {
         Ok(parse::Term::parse_str(i)?.scope())

@@ -13,7 +13,6 @@ mod typing;
 use super::Rc;
 
 pub use rterm::RTerm;
-pub use typing::Typing;
 
 use crate::{Arg, Symbol};
 use alloc::string::String;
@@ -27,18 +26,14 @@ pub type TopPattern<'s> = crate::pattern::TopPattern<Symbol<'s>>;
 /// Rewrite rules with strings as bound variable identifiers,
 /// a top pattern (symbol application) as left-hand side, and
 /// a shared term as right-hand side.
-pub type Rule<'s> = crate::Rule<Arg<String, Option<RTerm<'s>>>, TopPattern<'s>, RTerm<'s>>;
+pub type Rule<'s> = crate::Rule<Arg<String, Option<Term<'s>>>, TopPattern<'s>, Term<'s>>;
 
 /// The way we introduce a new name.
-pub type Intro<'s> = crate::Intro<RTerm<'s>>;
+pub type Intro<'s> = crate::Intro<Term<'s>>;
 
-pub type GCtx<'s> = crate::GCtx<Symbol<'s>, Pattern<'s>, RTerm<'s>>;
+pub type GCtx<'s> = crate::GCtx<Symbol<'s>, Pattern<'s>, Term<'s>>;
 
-pub type Term<'s> = crate::Term<Symbol<'s>, Rc<String>, RTerm<'s>>;
+pub type Term<'s> = crate::Term<Symbol<'s>, RTerm<'s>>;
+pub type TermC<'s> = crate::term::TermC<Rc<String>, Term<'s>>;
 
-impl<'s> core::convert::TryFrom<TopPattern<'s>> for RTerm<'s> {
-    type Error = ();
-    fn try_from(p: TopPattern<'s>) -> Result<Self, Self::Error> {
-        Ok(Self::new(Term::try_from(Pattern::from(p))?))
-    }
-}
+pub type Typing<'s> = crate::Typing<Term<'s>>;

@@ -1,7 +1,7 @@
 //! Abstract machines for the lazy evaluation of terms.
 
 use super::reduce::WState;
-use super::{RTerm, Term};
+use super::Term;
 use crate::stack;
 use alloc::rc::Rc;
 use core::cell::{Ref, RefCell, RefMut};
@@ -16,10 +16,10 @@ use lazy_st::Thunk;
 /// "A compact kernel for the calculus of inductive constructions".
 /// *Sadhana*. **34**: 71–144.
 /// doi: [10.1007/s12046-009-0003-3](https://doi.org/10.1007%2Fs12046-009-0003-3).
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct State<'s> {
     pub ctx: Context<'s>,
-    pub term: RTerm<'s>,
+    pub term: Term<'s>,
     pub stack: Stack<'s>,
 }
 
@@ -30,18 +30,18 @@ impl<'s> State<'s> {
     ///
     /// ~~~
     /// # use kontroli::{Error, Share, Symbols};
-    /// # use kontroli::scope::{BTerm as SBTerm};
-    /// # use kontroli::rc::{GCtx, RTerm};
+    /// # use kontroli::scope::Term as STerm;
+    /// # use kontroli::rc::{GCtx, Term};
     /// # use kontroli::rc::state::State;
     /// let syms = Symbols::new();
     ///
-    /// let term: RTerm = SBTerm::parse(r"(x => x) (x => x)")?.share(&syms)?;
+    /// let term: Term = STerm::parse(r"(x => x) (x => x)")?.share(&syms)?;
     ///
     /// let state = State::new(term.clone());
-    /// assert!(RTerm::ptr_eq(&RTerm::from(state), &term));
+    /// assert!(Term::ptr_eq(&Term::from(state), &term));
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn new(term: RTerm<'s>) -> Self {
+    pub fn new(term: Term<'s>) -> Self {
         Self {
             ctx: Context::new(),
             term,
@@ -58,7 +58,7 @@ pub type Stack<'s> = stack::Stack<RState<'s>>;
 
 /// A shared lazy term constructed from a shared mutable state.
 #[derive(Clone)]
-pub struct RTTerm<'s>(Rc<Thunk<RState<'s>, RTerm<'s>>>);
+pub struct RTTerm<'s>(Rc<Thunk<RState<'s>, Term<'s>>>);
 
 impl<'s> RTTerm<'s> {
     pub fn new(st: RState<'s>) -> Self {
@@ -66,7 +66,7 @@ impl<'s> RTTerm<'s> {
     }
 
     /// Force evaluation of the lazy term.
-    pub fn force(&self) -> &RTerm<'s> {
+    pub fn force(&self) -> &Term<'s> {
         &**self.0
     }
 }
@@ -93,19 +93,19 @@ impl<'s> RState<'s> {
     }
 }
 
-impl<'s> lazy_st::Evaluate<RTerm<'s>> for RState<'s> {
-    fn evaluate(self) -> RTerm<'s> {
-        RTerm::from(self)
+impl<'s> lazy_st::Evaluate<Term<'s>> for RState<'s> {
+    fn evaluate(self) -> Term<'s> {
+        Term::from(self)
     }
 }
 
-impl<'s> From<RState<'s>> for RTerm<'s> {
+impl<'s> From<RState<'s>> for Term<'s> {
     fn from(s: RState<'s>) -> Self {
-        RTerm::from(s.borrow_state().clone())
+        Term::from(s.borrow_state().clone())
     }
 }
 
-impl<'s> From<State<'s>> for RTerm<'s> {
+impl<'s> From<State<'s>> for Term<'s> {
     fn from(state: State<'s>) -> Self {
         state
             .term
@@ -114,7 +114,7 @@ impl<'s> From<State<'s>> for RTerm<'s> {
     }
 }
 
-impl<'s> RTerm<'s> {
+impl<'s> Term<'s> {
     fn psubst(self, args: &Context<'s>) -> Self {
         if args.is_empty() {
             self
@@ -124,9 +124,9 @@ impl<'s> RTerm<'s> {
     }
 }
 
-fn psubst<'s, 'c>(args: &'c Context<'s>) -> impl Fn(usize, usize) -> RTerm<'s> + 'c {
+fn psubst<'s, 'c>(args: &'c Context<'s>) -> impl Fn(usize, usize) -> Term<'s> + 'c {
     move |n: usize, k: usize| match args.get(n - k) {
         Some(arg) => arg.force().clone() << k,
-        None => RTerm::new(Term::BVar(n - args.len())),
+        None => Term::BVar(n - args.len()),
     }
 }

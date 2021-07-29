@@ -20,7 +20,7 @@ pub mod lex;
 pub mod parse;
 
 pub use lex::Token;
-pub use parse::{Command, Error, Intro, Parse, Rule, Term, TermC};
+pub use parse::{Command, Error, Intro, Parse, Rule, Term, TermB};
 
 use logos::Logos;
 

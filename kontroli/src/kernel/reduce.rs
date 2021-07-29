@@ -1,7 +1,7 @@
 //! Reduction to weak head normal form (WHNF), including rewriting.
 
 use super::state::{Context, RState, RTTerm, Stack, State};
-use super::{GCtx, RTerm, Rule};
+use super::{GCtx, Rule, Term, TermC};
 use core::cell::Ref;
 
 /// A version of `State` that tracks whether it was reduced to WHNF yet.
@@ -42,28 +42,28 @@ impl<'s> State<'s> {
     ///
     /// ~~~
     /// # use kontroli::{Error, Share, Symbols};
-    /// # use kontroli::scope::{BTerm as SBTerm, Term as STerm};
+    /// # use kontroli::scope::Term as STerm;
     /// # use kontroli::rc::{GCtx, RTerm, Term};
     /// # use kontroli::rc::state::State;
     /// let gc = GCtx::new();
     /// let syms = Symbols::new();
     ///
-    /// let term = SBTerm::parse(r"(x => x) (x => x)")?.share(&syms)?;
+    /// let term = STerm::parse(r"(x => x) (x => x)")?.share(&syms)?;
     /// let mut state = State::new(term);
     /// state.whnf(&gc);
     ///
     /// let expected = STerm::parse(r"(x => x)")?.share(&syms)?;
     /// assert!(state.ctx.is_empty());
     /// assert!(state.stack.is_empty());
-    /// assert_eq!(*state.term, expected);
+    /// assert_eq!(state.term, expected);
     /// # Ok::<(), Error>(())
     /// ~~~
     pub fn whnf(&mut self, gc: &GCtx<'s>) {
         use crate::Term::*;
         loop {
             trace!("whnf: {}", self.term);
-            match &*self.term {
-                Type | Kind | Prod(_, _) => break,
+            match &self.term {
+                Type | Kind => break,
                 BVar(x) => match self.ctx.get(*x) {
                     Some(ctm) => {
                         self.term = ctm.force().clone();
@@ -71,30 +71,12 @@ impl<'s> State<'s> {
                     }
                     None => {
                         if !self.ctx.is_empty() {
-                            self.term = RTerm::new(BVar(x - self.ctx.len()));
+                            self.term = BVar(x - self.ctx.len());
                             self.ctx.clear();
                         }
                         break;
                     }
                 },
-                Abst(_, t) => match self.stack.pop() {
-                    None => break,
-                    Some(p) => {
-                        self.term = t.clone();
-                        self.ctx.push(RTTerm::new(p));
-                    }
-                },
-                Appl(head, tail) => {
-                    for t in tail.iter().rev() {
-                        let st = State {
-                            ctx: self.ctx.clone(),
-                            term: t.clone(),
-                            stack: Stack::new(),
-                        };
-                        self.stack.push(RState::new(WState::new(st)))
-                    }
-                    self.term = head.clone();
-                }
                 Symb(s) => match &gc.rules.get(&s) {
                     None => break,
                     Some(rules) => {
@@ -113,16 +95,37 @@ impl<'s> State<'s> {
                         }
                     }
                 },
+                Comb(c) => match &**c {
+                    TermC::Prod(_, _) => break,
+                    TermC::Abst(_, t) => match self.stack.pop() {
+                        None => break,
+                        Some(p) => {
+                            self.term = t.clone();
+                            self.ctx.push(RTTerm::new(p));
+                        }
+                    },
+                    TermC::Appl(head, tail) => {
+                        for t in tail.iter().rev() {
+                            let st = State {
+                                ctx: self.ctx.clone(),
+                                term: t.clone(),
+                                stack: Stack::new(),
+                            };
+                            self.stack.push(RState::new(WState::new(st)))
+                        }
+                        self.term = head.clone();
+                    }
+                },
             }
         }
 
-        if let BVar(_) = &*self.term {
+        if let BVar(_) = self.term {
             assert!(self.ctx.is_empty())
         }
     }
 }
 
-impl<'s> RTerm<'s> {
+impl<'s> Term<'s> {
     /// Return the weak head normal form of the term.
     pub fn whnf(self, gc: &GCtx<'s>) -> Self {
         trace!("whnf of {}", self);
@@ -147,7 +150,7 @@ where
     let tm = RTTerm::new(iter.next()?);
     for stn in iter {
         // the first term is only evaluated if we have some other terms
-        if !RTerm::convertible(tm.force().clone(), RTerm::from(stn), &gc) {
+        if !Term::convertible(tm.force().clone(), Term::from(stn), &gc) {
             return None;
         }
     }
@@ -162,18 +165,18 @@ impl<'s> Stack<'s> {
     /// ~~~
     /// # use kontroli::rc::state::State;
     /// # use kontroli::rc::{GCtx, RTerm, Rule, Term};
-    /// # use kontroli::scope::{BTerm as SBTerm, Rule as SRule, Term as STerm};
+    /// # use kontroli::scope::{Rule as SRule, Term as STerm};
     /// # use kontroli::{Error, Share, Symbols};
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
     /// let gc = GCtx::new();
 
     /// let rule = SRule::parse("[A] id A --> A")?.share(&syms)?;
-    /// let term = SBTerm::parse("id f a")?.share(&syms)?;
+    /// let term = STerm::parse("id f a")?.share(&syms)?;
 
     /// let mut state = State::new(term);
     /// state.whnf(&gc);
     /// let subst = state.stack.match_flatten(&rule, &gc).unwrap();
-    /// let subst = subst.iter().map(|rtt| (**rtt.force()).clone());
+    /// let subst = subst.iter().map(|rtt| (*rtt.force()).clone());
 
     /// let expected: Term = STerm::parse("f")?.share(&syms)?;
     /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());

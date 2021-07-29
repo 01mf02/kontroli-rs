@@ -1,6 +1,6 @@
 //! Convert from scoped to shared structures.
 
-use super::{Intro, RTerm, Rc, Rule, Term};
+use super::{Intro, RTerm, Rc, Rule, Term, TermC};
 use crate::error::ScopeError as Error;
 use crate::pattern::{Pattern, TopPattern};
 use crate::{scope, Share, Symbols};
@@ -21,13 +21,13 @@ impl<'s, S: Borrow<str> + Ord> Share<'s, Term<'s>> for scope::Term<S> {
     /// # Ok::<_, Error>(())
     /// ~~~
     fn share(self, syms: &Symbols<'s>) -> Result<Term<'s>, Error> {
-        self.try_map(|c| c.share(syms), Rc::new, |tm| tm.share(syms))
+        self.try_map(|c| c.share(syms), |tm| tm.get().share(syms).map(RTerm::new))
     }
 }
 
-impl<'s, S: Borrow<str> + Ord> Share<'s, RTerm<'s>> for scope::BTerm<S> {
-    fn share(self, syms: &Symbols<'s>) -> Result<RTerm<'s>, Error> {
-        Ok(RTerm::new(self.get().share(syms)?))
+impl<'s, S: Borrow<str> + Ord> Share<'s, TermC<'s>> for scope::TermC<S> {
+    fn share(self, syms: &Symbols<'s>) -> Result<TermC<'s>, Error> {
+        Ok(self.try_map(Rc::new, |tm| tm.share(syms))?)
     }
 }
 
