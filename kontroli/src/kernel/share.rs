@@ -27,7 +27,7 @@ impl<'s, S: Borrow<str> + Ord> Share<'s, Term<'s>> for scope::Term<S> {
 
 impl<'s, S: Borrow<str> + Ord> Share<'s, TermC<'s>> for scope::TermC<S> {
     fn share(self, syms: &Symbols<'s>) -> Result<TermC<'s>, Error> {
-        Ok(self.try_map(Rc::new, |tm| tm.share(syms))?)
+        self.try_map(Rc::new, |tm| tm.share(syms))
     }
 }
 

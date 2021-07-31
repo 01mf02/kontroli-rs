@@ -95,8 +95,7 @@ where
         use Pattern::*;
         match p {
             Symb(s, args) => {
-                let args = args.into_iter().map(|a| Self::try_from(a));
-                let args: Result<_, _> = args.collect();
+                let args: Result<_, _> = args.into_iter().map(Self::try_from).collect();
                 Ok(Term::Comb(T::from(TermC::Appl(Term::Symb(s), args?))))
             }
             MVar(v) => Ok(Term::BVar(v)),
@@ -111,7 +110,7 @@ where
 {
     type Error = ();
     fn try_from(p: TopPattern<C>) -> Result<Self, Self::Error> {
-        Ok(Term::try_from(Pattern::from(p))?)
+        Term::try_from(Pattern::from(p))
     }
 }
 
