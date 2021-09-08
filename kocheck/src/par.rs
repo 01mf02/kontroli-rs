@@ -48,14 +48,14 @@ fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Check<'s>, KoError> 
             let rewritable = it.rewritable();
 
             // defer checking to later
-            let typing = Typing::intro(it, &gc)?;
+            let typing = Typing::intro(it, gc)?;
             check.0.push(typing.clone());
             gc.insert(sym, typing, rewritable)?;
         }
         kontroli::Command::Rules(rules) => {
             for rule in rules.clone() {
                 if let Ok(rule) = kontroli::Rule::try_from(rule) {
-                    check.0.push(Typing::rewrite(rule, &gc)?);
+                    check.0.push(Typing::rewrite(rule, gc)?);
                 } else {
                     log::warn!("Rewrite rule contains unannotated variable")
                 }
@@ -94,7 +94,7 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
         use Stage::{Check, Infer, Share};
 
         let cmds = kontroli::parse::lexes(&file.read)
-            .map(|tokens| parse::<&str>(tokens?, &opt))
+            .map(|tokens| parse::<&str>(tokens?, opt))
             .map(|res| res.transpose())
             .flatten()
             .filter(|cmd| !opt.omits(Share) || cmd.is_err())

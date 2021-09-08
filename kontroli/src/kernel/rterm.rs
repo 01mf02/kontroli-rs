@@ -43,7 +43,7 @@ impl<'s> Term<'s> {
             (Term::Kind, Term::Kind) | (Term::Type, Term::Type) => true,
             (Term::Symb(c1), Term::Symb(c2)) => c1 == c2,
             (Term::BVar(v1), Term::BVar(v2)) => v1 == v2,
-            (Term::Comb(l), Term::Comb(r)) => RTerm::ptr_eq(&l, &r),
+            (Term::Comb(l), Term::Comb(r)) => RTerm::ptr_eq(l, r),
             _ => false,
         }
     }
@@ -54,7 +54,7 @@ impl<'s, Id> Arg<Id, Option<Term<'s>>> {
     pub fn type_ptr_eq(&self, other: &Self) -> bool {
         match (&self.ty, &other.ty) {
             (None, None) => true,
-            (Some(ty1), Some(ty2)) => Term::ptr_eq(&ty1, &ty2),
+            (Some(ty1), Some(ty2)) => Term::ptr_eq(ty1, ty2),
             _ => false,
         }
     }

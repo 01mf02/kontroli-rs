@@ -77,7 +77,7 @@ impl<'s> State<'s> {
                         break;
                     }
                 },
-                Symb(s) => match &gc.rules.get(&s) {
+                Symb(s) => match &gc.rules.get(s) {
                     None => break,
                     Some(rules) => {
                         match rules
@@ -150,7 +150,7 @@ where
     let tm = RTTerm::new(iter.next()?);
     for stn in iter {
         // the first term is only evaluated if we have some other terms
-        if !Term::convertible(tm.force().clone(), Term::from(stn), &gc) {
+        if !Term::convertible(tm.force().clone(), Term::from(stn), gc) {
             return None;
         }
     }

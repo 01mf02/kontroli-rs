@@ -8,7 +8,7 @@ use core::fmt;
 
 impl<'s> Typing<'s> {
     pub fn declare(typ: Term<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
-        match typ.infer(&gc, &mut LCtx::new())? {
+        match typ.infer(gc, &mut LCtx::new())? {
             Term::Kind | Term::Type => Ok(Self {
                 lc: LCtx::new(),
                 typ,
@@ -20,9 +20,9 @@ impl<'s> Typing<'s> {
 
     pub fn define(ty: Option<Term<'s>>, tm: Term<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
         let (typ, check) = match ty {
-            None => (tm.infer(&gc, &mut LCtx::new())?, Check::Checked),
+            None => (tm.infer(gc, &mut LCtx::new())?, Check::Checked),
             Some(ty) => {
-                let _ = ty.infer(&gc, &mut LCtx::new())?;
+                let _ = ty.infer(gc, &mut LCtx::new())?;
                 (ty, Check::Unchecked)
             }
         };
@@ -50,7 +50,7 @@ impl<'s> Typing<'s> {
     /// Verify whether `t: A` if this was not previously checked.
     pub fn check(&self, gc: &GCtx<'s>) -> Result<(), Error> {
         if let Some((term, Check::Unchecked)) = &self.term {
-            if !term.check(&gc, &mut self.lc.clone(), self.typ.clone())? {
+            if !term.check(gc, &mut self.lc.clone(), self.typ.clone())? {
                 return Err(Error::Unconvertible);
             }
         };
@@ -72,13 +72,13 @@ impl<'s> Typing<'s> {
     /// This allows us to postpone and parallelise type checking.
     pub fn intro(it: Intro<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
         match it {
-            Intro::Declaration(ty) => Self::declare(ty, &gc),
+            Intro::Declaration(ty) => Self::declare(ty, gc),
             Intro::Definition(oty, otm) => match (oty, otm) {
-                (Some(ty), None) => Self::declare(ty, &gc),
-                (oty, Some(tm)) => Self::define(oty, tm, &gc),
+                (Some(ty), None) => Self::declare(ty, gc),
+                (oty, Some(tm)) => Self::define(oty, tm, gc),
                 (None, None) => Err(Error::TypeAndTermEmpty),
             },
-            Intro::Theorem(ty, tm) => Self::define(Some(ty), tm, &gc),
+            Intro::Theorem(ty, tm) => Self::define(Some(ty), tm, gc),
         }
     }
 }
@@ -127,7 +127,7 @@ impl<'s> Term<'s> {
         match self {
             Kind => Err(Error::KindNotTypable),
             Type => Ok(Kind),
-            Symb(s) => Ok(gc.types.get(&s).ok_or(Error::TypeNotFound)?.clone()),
+            Symb(s) => Ok(gc.types.get(s).ok_or(Error::TypeNotFound)?.clone()),
             BVar(x) => Ok(lc.get_type(*x).ok_or(Error::TypeNotFound)?),
             Comb(c) => c.infer(gc, lc),
         }
@@ -165,7 +165,7 @@ impl<'s> TermC<'s> {
                     let whnf = ty.whnf(gc);
                     let (Arg { ty: a, .. }, b) = whnf.get_prod().ok_or(Error::ProductExpected)?;
                     if arg.check(gc, lc, a.clone())? {
-                        Ok(b.clone().subst(&arg))
+                        Ok(b.clone().subst(arg))
                     } else {
                         Err(Error::Unconvertible)
                     }

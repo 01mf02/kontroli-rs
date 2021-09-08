@@ -40,7 +40,7 @@ impl<'s, S: Borrow<str> + Ord> Share<'s, Rule<'s>> for scope::Rule<S> {
         let lhs = Pattern::try_from(self.lhs).map_err(|_| Error::NoPrepattern)?;
         let lhs = lhs.try_map(&|c| c.share(syms))?;
         let lhs = TopPattern::try_from(lhs).map_err(|_| Error::NoTopPattern)?;
-        let rhs = self.rhs.share(&syms)?;
+        let rhs = self.rhs.share(syms)?;
         Ok(Rule { ctx, lhs, rhs })
     }
 }

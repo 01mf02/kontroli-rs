@@ -16,7 +16,7 @@ where
         let cmds = lexes(&file.read)
             // TODO: investigate the effect of par_bridge!
             //.par_bridge()
-            .map(|tokens| parse::<String>(tokens?, &opt))
+            .map(|tokens| parse::<String>(tokens?, opt))
             .map(|res| res.map_err(|e| e.into()).transpose())
             .flatten();
 
