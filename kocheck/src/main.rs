@@ -17,7 +17,7 @@ where
             // TODO: investigate the effect of par_bridge!
             //.par_bridge()
             .map(|tokens| parse::<String>(tokens?, opt))
-            .map(|res| res.map_err(|e| e.into()).transpose())
+            .map(|res| res.map_err(Error::from).transpose())
             .flatten();
 
         let head = core::iter::once(Ok(Event::Module(file.path)));
