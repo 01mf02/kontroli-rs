@@ -1,9 +1,13 @@
 Kontroli Web Interface
 ======================
 
-Use the `--release` flag for vastly more performance:
+First install `wasm-pack`:
 
-    wasm-pack build --target web
+    cargo install wasm-pack
+
+Compile the WASM binaries (use the `--release` flag for vastly more performance):
+
+    wasm-pack build --target web --release
 
 To serve:
 
