@@ -2,7 +2,6 @@ use crate::Stage;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-// TODO: introduce --omit argument to replace no_* flags
 #[derive(Clone, Debug, StructOpt)]
 /// A typechecker for the lambda-Pi calculus modulo rewriting
 pub struct Opt {
