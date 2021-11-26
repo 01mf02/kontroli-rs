@@ -15,6 +15,3 @@ default = ["itertools"]
 [dependencies]
 logos = "0.12"
 itertools = { version = "0.10", optional = true }
-
-[dev-dependencies]
-status-line = "0.1.1"
