@@ -1,5 +1,6 @@
 use crate::Token;
 use alloc::{boxed::Box, vec::Vec};
+use core::fmt::{self, Display};
 use core::iter::Peekable;
 
 #[derive(Clone, Debug)]
@@ -400,6 +401,40 @@ impl<'s> Term<&'s str> {
         } else {
             // TODO: handle case where self is Appl?
             Ok(Self::Appl(Box::new(self), args))
+        }
+    }
+}
+
+impl<S: Display> Display for Term<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Self::Symb(path, s) => {
+                path.iter().try_for_each(|p| write!(f, "{}.", p))?;
+                s.fmt(f)
+            }
+            Self::Appl(head, args) => {
+                if !args.is_empty() {
+                    write!(f, "(")?;
+                }
+                head.fmt(f)?;
+                args.iter().try_for_each(|a| write!(f, " {}", a))?;
+                if !args.is_empty() {
+                    write!(f, ")")?;
+                }
+                Ok(())
+            }
+            Self::Bind(b) => b.fmt(f),
+        }
+    }
+}
+
+impl<S: Display> Display for TermB<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Self::Abst(x, Some(ty), tm) => write!(f, "({} : {} => {})", x, ty, tm),
+            Self::Abst(x, None, tm) => write!(f, "({} => {})", x, tm),
+            Self::Prod(None, ty, tm) => write!(f, "({} -> {})", ty, tm),
+            Self::Prod(Some(x), ty, tm) => write!(f, "({} : {} -> {})", x, ty, tm),
         }
     }
 }
