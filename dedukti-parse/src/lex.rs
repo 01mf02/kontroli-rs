@@ -1,3 +1,4 @@
+use core::fmt::{self, Display};
 use logos::{Lexer, Logos};
 
 #[derive(Logos, Debug, PartialEq)]
@@ -53,6 +54,30 @@ pub enum Token<'s> {
     // it can be named anything you wish.
     #[error]
     Error,
+}
+
+impl<'s> Display for Token<'s> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        let s = match self {
+            Self::Def => "def",
+            Self::Thm => "thm",
+            Self::LBrk => "[",
+            Self::RBrk => "]",
+            Self::LPar => "(",
+            Self::RPar => ")",
+            Self::Colon => ":",
+            Self::ColonEq => ":=",
+            Self::Arrow => "->",
+            Self::FatArrow => "=>",
+            Self::LongArrow => "-->",
+            Self::Comma => ",",
+            Self::Dot => ".",
+            Self::Ident(s) => s,
+            Self::Space => " ",
+            Self::Error => return Err(Default::default()),
+        };
+        s.fmt(f)
+    }
 }
 
 fn ident<'s>(lex: &mut Lexer<'s, Token<'s>>) -> Option<&'s str> {
