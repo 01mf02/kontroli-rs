@@ -42,6 +42,8 @@ pub enum Token<'s> {
     #[token(".")]
     Dot,
 
+    Period,
+
     #[regex("[a-zA-Z0-9_!?][a-zA-Z0-9_!?']*")]
     #[token("{|", ident)]
     Ident(&'s str),
@@ -71,7 +73,7 @@ impl<'s> Display for Token<'s> {
             Self::FatArrow => "=>",
             Self::LongArrow => "-->",
             Self::Comma => ",",
-            Self::Dot => ".",
+            Self::Dot | Self::Period => ".",
             Self::Ident(s) => s,
             Self::Space => " ",
             Self::Error => return Err(Default::default()),
