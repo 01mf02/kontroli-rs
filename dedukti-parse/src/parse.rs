@@ -438,3 +438,42 @@ impl<S: Display> Display for TermB<S> {
         }
     }
 }
+
+impl<S: Display> Display for Rule<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "[")?;
+        let mut ctx = self.ctx.iter().peekable();
+        while let Some((x, ty)) = ctx.next() {
+            write!(f, "{}", x)?;
+            ty.iter().try_for_each(|ty| write!(f, ": {}", ty))?;
+            ctx.peek().iter().try_for_each(|_| write!(f, ", "))?;
+        }
+        write!(f, "] {} --> {}", self.lhs, self.rhs)
+    }
+}
+
+impl<S: Display> Display for Command<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Self::Intro(x, args, it) => {
+                match it {
+                    Intro::Theorem(_, _) => write!(f, "thm ")?,
+                    Intro::Definition(_, _) => write!(f, "def ")?,
+                    Intro::Declaration(_) => (),
+                };
+                write!(f, "{}", x)?;
+                args.iter()
+                    .try_for_each(|(x, ty)| write!(f, " ({} : {})", x, ty))?;
+                match it {
+                    Intro::Definition(ty, tm) => {
+                        ty.iter().try_for_each(|ty| write!(f, " : {}", ty))?;
+                        tm.iter().try_for_each(|tm| write!(f, " := {}", tm))
+                    }
+                    Intro::Theorem(ty, tm) => write!(f, " : {} := {}", ty, tm),
+                    Intro::Declaration(ty) => write!(f, " : {}", ty),
+                }
+            }
+            Self::Rules(rules) => rules.iter().try_for_each(|rule| rule.fmt(f)),
+        }
+    }
+}
