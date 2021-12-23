@@ -3,7 +3,7 @@ use kontroli::parse::{Command as PCommand, Parse, Token};
 use kontroli::scope::{Command as SCommand, Scope};
 use kontroli::Error;
 
-pub fn parse<'s, S>(tokens: Vec<Token<'s>>, opt: &Opt) -> Result<Option<SCommand<S>>, Error>
+pub fn parse<'s, S>(tokens: Vec<Token<&'s str>>, opt: &Opt) -> Result<Option<SCommand<S>>, Error>
 where
     S: From<&'s str>,
 {

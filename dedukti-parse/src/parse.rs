@@ -64,9 +64,9 @@ pub enum Error {
     ExpectedCmd,
 }
 
-pub fn until_period<'s>(
-    tokens: &mut impl Iterator<Item = Token<'s>>,
-) -> Option<Result<Vec<Token<'s>>, Error>> {
+pub fn until_period<S>(
+    tokens: &mut impl Iterator<Item = Token<S>>,
+) -> Option<Result<Vec<Token<S>>, Error>> {
     let mut cmd = Vec::new();
     loop {
         match tokens.next() {
@@ -91,9 +91,9 @@ pub fn until_period<'s>(
 pub trait Parse<'s>: Sized {
     fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>;
+        I: Iterator<Item = Token<&'s str>>;
 
-    fn consume(iter: impl Iterator<Item = Token<'s>>) -> Result<Self, Error> {
+    fn consume(iter: impl Iterator<Item = Token<&'s str>>) -> Result<Self, Error> {
         let mut iter = iter.peekable();
         let y = Self::parse(&mut iter)?;
         if iter.next().is_none() {
@@ -103,7 +103,7 @@ pub trait Parse<'s>: Sized {
         }
     }
 
-    fn parse_vec(tokens: Vec<Token<'s>>) -> Result<Self, Error> {
+    fn parse_vec(tokens: Vec<Token<&'s str>>) -> Result<Self, Error> {
         Self::consume(&mut tokens.into_iter())
     }
 
@@ -121,7 +121,7 @@ impl<S> Term<S> {
 impl<'s> Parse<'s> for Command<&'s str> {
     fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         match iter.next() {
             Some(Token::Ident(id)) => Ok(Self::Intro(
@@ -176,7 +176,7 @@ impl<'s> Parse<'s> for Command<&'s str> {
 impl<'s> Command<&'s str> {
     fn parse_args<I>(iter: &mut Peekable<I>) -> Result<Vec<(&'s str, Term<&'s str>)>, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         let mut args = Vec::new();
         while let Some(Token::LPar) = iter.peek() {
@@ -191,7 +191,7 @@ impl<'s> Command<&'s str> {
 
     fn parse_type<I>(iter: &mut Peekable<I>) -> Result<Term<&'s str>, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         match iter.next() {
             Some(Token::Colon) => Term::parse(iter),
@@ -203,7 +203,7 @@ impl<'s> Command<&'s str> {
 impl<'s> Parse<'s> for Rule<&'s str> {
     fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         match iter.next() {
             Some(Token::LBrk) => Self::parse_after_lbrk(iter),
@@ -215,7 +215,7 @@ impl<'s> Parse<'s> for Rule<&'s str> {
 impl<'s> Rule<&'s str> {
     fn parse_after_lbrk<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         let mut ctx = Vec::new();
         match iter.next() {
@@ -245,7 +245,7 @@ impl<'s> Rule<&'s str> {
 
     fn parse_type0<I>(iter: &mut Peekable<I>) -> Result<Option<Term<&'s str>>, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         match iter.peek() {
             Some(Token::Colon) => {
@@ -260,7 +260,7 @@ impl<'s> Rule<&'s str> {
 impl<'s> Parse<'s> for Term<&'s str> {
     fn parse<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         let tm = Self::parse_non_lr(iter)?;
         match iter.peek() {
@@ -277,7 +277,7 @@ impl<'s> Parse<'s> for Term<&'s str> {
 impl<'s> Term<&'s str> {
     fn parse_non_lr<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         match iter.next() {
             Some(Token::Ident(s)) => match iter.peek() {
@@ -307,7 +307,7 @@ impl<'s> Term<&'s str> {
 
     fn symb<I>(head: &'s str, iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         let mut last = head;
         let mut before = Vec::new();
@@ -318,7 +318,7 @@ impl<'s> Term<&'s str> {
         Ok(Self::Symb(before, last))
     }
 
-    fn parse_ident(iter: &mut impl Iterator<Item = Token<'s>>) -> Result<&'s str, Error> {
+    fn parse_ident(iter: &mut impl Iterator<Item = Token<&'s str>>) -> Result<&'s str, Error> {
         match iter.next() {
             Some(Token::Ident(id)) => Ok(id),
             _ => Err(Error::ExpectedIdent),
@@ -328,7 +328,7 @@ impl<'s> Term<&'s str> {
     /// Parse a term followed by a closing parenthesis ')'.
     fn parse_and_rpar<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         let tm = Self::parse(iter)?;
         if iter.next() == Some(Token::RPar) {
@@ -341,14 +341,14 @@ impl<'s> Term<&'s str> {
     // aterm
     fn parse_a<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         Self::parse_appl(Self::parse_m1(iter)?, iter)
     }
 
     fn binder<I>(id: &'s str, iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         let ty = Self::parse_a(iter)?;
         match iter.next() {
@@ -361,7 +361,7 @@ impl<'s> Term<&'s str> {
     // sterm
     fn parse_m0<I>(iter: &mut Peekable<I>) -> Result<Option<Self>, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         match iter.peek() {
             Some(Token::Ident(s)) => {
@@ -379,7 +379,7 @@ impl<'s> Term<&'s str> {
 
     fn parse_m1<I>(iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         match iter.next() {
             Some(Token::Ident(s)) => Self::symb(s, iter),
@@ -390,7 +390,7 @@ impl<'s> Term<&'s str> {
 
     fn parse_appl<I>(self, iter: &mut Peekable<I>) -> Result<Self, Error>
     where
-        I: Iterator<Item = Token<'s>>,
+        I: Iterator<Item = Token<&'s str>>,
     {
         let mut args = Vec::new();
         while let Some(tm) = Self::parse_m0(iter)? {

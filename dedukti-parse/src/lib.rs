@@ -24,7 +24,7 @@ pub use parse::{Command, Error, Intro, Parse, Rule, Term, TermB};
 
 use logos::Logos;
 
-pub fn lex(s: &str) -> impl Iterator<Item = Token> {
+pub fn lex(s: &str) -> impl Iterator<Item = Token<&str>> {
     Token::lexer(s).filter(|token| *token != Token::Space)
 }
 
@@ -32,7 +32,7 @@ pub fn lex(s: &str) -> impl Iterator<Item = Token> {
 use alloc::vec::Vec;
 
 #[cfg(feature = "itertools")]
-pub fn lexes(s: &str) -> impl Iterator<Item = Result<Vec<Token>, Error>> {
+pub fn lexes(s: &str) -> impl Iterator<Item = Result<Vec<Token<&str>>, Error>> {
     use itertools::Itertools;
     Token::lexer(s).batching(parse::until_period)
 }

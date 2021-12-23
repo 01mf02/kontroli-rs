@@ -2,7 +2,8 @@ use core::fmt::{self, Display};
 use logos::{Lexer, Logos};
 
 #[derive(Logos, Debug, PartialEq)]
-pub enum Token<'s> {
+#[logos(type S = &str)]
+pub enum Token<S> {
     #[token("def")]
     Def,
 
@@ -46,7 +47,7 @@ pub enum Token<'s> {
 
     #[regex("[a-zA-Z0-9_!?][a-zA-Z0-9_!?']*")]
     #[token("{|", ident)]
-    Ident(&'s str),
+    Ident(S),
 
     #[regex(r"[ \t\n\f]+")]
     #[token("(;", comment)]
@@ -58,37 +59,36 @@ pub enum Token<'s> {
     Error,
 }
 
-impl<'s> Display for Token<'s> {
+impl<S: Display> Display for Token<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        let s = match self {
-            Self::Def => "def",
-            Self::Thm => "thm",
-            Self::LBrk => "[",
-            Self::RBrk => "]",
-            Self::LPar => "(",
-            Self::RPar => ")",
-            Self::Colon => ":",
-            Self::ColonEq => ":=",
-            Self::Arrow => "->",
-            Self::FatArrow => "=>",
-            Self::LongArrow => "-->",
-            Self::Comma => ",",
-            Self::Dot | Self::Period => ".",
-            Self::Ident(s) => s,
-            Self::Space => " ",
+        match self {
+            Self::Def => "def".fmt(f),
+            Self::Thm => "thm".fmt(f),
+            Self::LBrk => "[".fmt(f),
+            Self::RBrk => "]".fmt(f),
+            Self::LPar => "(".fmt(f),
+            Self::RPar => ")".fmt(f),
+            Self::Colon => ":".fmt(f),
+            Self::ColonEq => ":=".fmt(f),
+            Self::Arrow => "->".fmt(f),
+            Self::FatArrow => "=>".fmt(f),
+            Self::LongArrow => "-->".fmt(f),
+            Self::Comma => ",".fmt(f),
+            Self::Dot | Self::Period => ".".fmt(f),
+            Self::Ident(s) => s.fmt(f),
+            Self::Space => " ".fmt(f),
             Self::Error => return Err(Default::default()),
-        };
-        s.fmt(f)
+        }
     }
 }
 
-fn ident<'s>(lex: &mut Lexer<'s, Token<'s>>) -> Option<&'s str> {
+fn ident<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<&'s str> {
     let len = lex.remainder().find("|}")?;
     lex.bump(len + 2); // include len of `|}`
     Some(lex.slice())
 }
 
-fn comment<'s>(lex: &mut Lexer<'s, Token<'s>>) -> Option<()> {
+fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<()> {
     // number of open comments
     let mut open = 1;
     let prefix: &[_] = &['(', ';'];
