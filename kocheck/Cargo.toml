@@ -11,10 +11,10 @@ keywords = ["verification", "dependent-types", "type-checking", "rewriting", "de
 categories = ["command-line-utilities", "science"]
 
 [dependencies]
+clap = { version = "3.0", features = ["derive"] }
 colosseum = "0.2"
 flume = { version = "0.8", default-features = false }
 kontroli = { version = "0.3", path = "../kontroli" }
 log = "0.4"
 env_logger = "0.7"
 rayon = "1.3"
-structopt = "0.3"

@@ -1,8 +1,8 @@
 use crate::Stage;
+use clap::Parser;
 use std::path::PathBuf;
-use structopt::StructOpt;
 
-#[derive(Clone, Debug, StructOpt)]
+#[derive(Clone, Debug, Parser)]
 /// A typechecker for the lambda-Pi calculus modulo rewriting
 pub struct Opt {
     /// Reduce terms modulo eta
@@ -10,13 +10,13 @@ pub struct Opt {
     /// When this is enabled,
     /// `x => t` and `u` are convertible if
     /// `x => t` and `y => u y` are convertible.
-    #[structopt(long)]
+    #[clap(long)]
     pub eta: bool,
 
     /// Perform only operations until (excluding) the given stage.
     ///
     /// Possible values are: parse, scope, share, infer, check.
-    #[structopt(long)]
+    #[clap(long)]
     pub omit: Option<Stage>,
 
     /// Parse given number of commands in advance (∞ if argument omitted)
@@ -28,7 +28,7 @@ pub struct Opt {
     /// the number of commands parsed in advance is unbounded.
     ///
     /// Note that unbounded parsing can lead to high memory usage!
-    #[structopt(long, short = "c")]
+    #[clap(long, short = 'c')]
     pub channel_capacity: Option<Option<usize>>,
 
     /// Typecheck concurrently
@@ -42,14 +42,14 @@ pub struct Opt {
     ///
     /// This option enables the parsing of commands in advance ("-c"),
     /// by default with an unbounded capacity.
-    #[structopt(long, short = "j")]
+    #[clap(long, short = 'j')]
     pub jobs: Option<Option<usize>>,
 
     /// Files to process (cumulative)
     ///
     /// Every file is wrapped in a module corresponding to the file path.
     /// To read from standard input, use "-" as file name.
-    #[structopt(name = "FILE", required = true)]
+    #[clap(name = "FILE", required = true)]
     pub files: Vec<PathBuf>,
 }
 

@@ -1,8 +1,8 @@
 //! A typechecker for the lambda-Pi calculus modulo rewriting.
 
+use clap::Parser;
 use core::convert::TryFrom;
 use kocheck::{par, parse, seq, Error, Event, Opt, PathRead};
-use structopt::StructOpt;
 
 fn produce<F, E>(opt: &Opt, send: F) -> Result<(), Error>
 where
@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
     // e.g. `LOG=trace kocheck ...`
     env_logger::from_env(Env::default().filter_or("LOG", "warn")).init();
 
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     // if a precise number of parallel jobs has been given
     if let Some(Some(jobs)) = opt.jobs {
