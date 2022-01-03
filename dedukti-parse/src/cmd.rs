@@ -94,7 +94,7 @@ pub enum State<S, Tm = Term<S>> {
 }
 
 impl<S, Tm> State<S, Tm> {
-    pub fn parse<I, F>(self, mut f: F, token: Token<S>, iter: &mut I) -> RState<S, Tm>
+    pub fn parse<I, F>(self, f: &mut F, token: Token<S>, iter: &mut I) -> RState<S, Tm>
     where
         I: Iterator<Item = Token<S>>,
         F: FnMut(Token<S>, &mut I) -> Result<(Tm, Option<Token<S>>), crate::term::Error>,
