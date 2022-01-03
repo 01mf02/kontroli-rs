@@ -77,7 +77,7 @@ impl<S: Display> Display for Token<S> {
             Self::Dot | Self::Period => ".".fmt(f),
             Self::Ident(s) => s.fmt(f),
             Self::Space => " ".fmt(f),
-            Self::Error => return Err(Default::default()),
+            Self::Error => Err(Default::default()),
         }
     }
 }
