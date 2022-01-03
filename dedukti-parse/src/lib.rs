@@ -16,8 +16,10 @@
 
 extern crate alloc;
 
+pub mod cmd;
 pub mod lex;
 pub mod parse;
+pub mod term;
 
 pub use lex::Token;
 pub use parse::{Command, Error, Intro, Parse, Rule, Term, TermB};
