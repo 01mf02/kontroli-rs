@@ -1,8 +1,8 @@
 //! Count number of commands in a Dedukti file.
 
 use dedukti_parse::Token;
-use std::io::{self, Read};
 use std::fmt::Display;
+use std::io::{self, Read};
 
 fn print_cmd<S: Display>(cmd: Vec<Token<S>>) {
     let mut space = false;
