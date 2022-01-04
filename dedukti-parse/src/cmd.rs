@@ -37,8 +37,10 @@ impl<S, Tm> RuleCtx<S, Tm> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
+    // TODO: eliminate this
+    ExpectedInput,
     ExpectedColon,
     ExpectedColonEq,
     ExpectedColonOrColonEq,
@@ -223,4 +225,68 @@ impl<S, Tm> State<S, Tm> {
             _ => Err(Error::ExpectedCmd),
         }
     }
+}
+
+impl<S, Tm> Command<S, Tm> {
+    pub fn parse_iter<I, F>(f: &mut F, iter: &mut I) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Token<S>>,
+        F: FnMut(Token<S>, &mut I) -> Result<(Tm, Option<Token<S>>), crate::term::Error>,
+    {
+        let mut state = State::Init;
+        while let Some(token) = iter.next() {
+            state = state.parse(f, token, iter)?;
+            if let State::Command(cmd) = state {
+                return Ok(cmd);
+            }
+        }
+        Err(Error::ExpectedInput)
+    }
+}
+
+impl<'s> Command<&'s str> {
+    pub fn parse_str(s: &'s str) -> Result<Self, Error> {
+        use logos::Logos;
+        let mut lexer = Token::lexer(s);
+        let mut tokens = Vec::new();
+        crate::period(&mut lexer, &mut tokens);
+        // fail if there is something after the first command
+        assert_eq!(lexer.next(), None);
+
+        let mut stack = Default::default();
+        let mut iter = tokens.drain(..);
+        let cmd = Self::parse_iter(
+            &mut |tok, iter| crate::Term::parse2(&mut stack, Some(tok), iter),
+            &mut iter,
+        )?;
+        assert_eq!(iter.next(), None);
+        Ok(cmd)
+    }
+}
+
+#[test]
+fn positive() -> Result<(), Error> {
+    Command::parse_str("prop : Type.")?;
+    Command::parse_str("imp: prop -> prop -> prop.")?;
+    Command::parse_str("def prf: prop -> Type.")?;
+    Command::parse_str("[x, y] prf (imp x y) --> prf x -> prf y.")?;
+    Command::parse_str("thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.")?;
+    Ok(())
+}
+
+#[test]
+fn negative() {
+    use Error::*;
+    let parse_err = |s: &str| Command::parse_str(s).unwrap_err();
+    assert_eq!(parse_err("."), ExpectedCmd);
+    assert_eq!(parse_err("def :"), ExpectedIdent);
+    assert_eq!(parse_err("def d ->"), ExpectedColonOrColonEq);
+    assert_eq!(parse_err("thm t := tm."), ExpectedColon);
+    assert_eq!(parse_err("thm t :  ty."), ExpectedColonEq);
+    assert_eq!(parse_err("thm t (->"), ExpectedIdent);
+    assert_eq!(parse_err("thm t (x ->"), ExpectedColon);
+    assert_eq!(parse_err("thm t (x : a -->"), ExpectedRPar);
+    assert_eq!(parse_err("[->"), ExpectedCommaOrRBrk);
+    assert_eq!(parse_err("[x ->"), ExpectedCommaOrRBrk);
+    assert_eq!(parse_err("[x] l."), ExpectedLongArrow);
 }
