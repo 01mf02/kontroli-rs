@@ -2,7 +2,7 @@ use crate::{Term, TermB, Token};
 use alloc::{boxed::Box, vec::Vec};
 use core::convert::TryFrom;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     // TODO: eliminate this
     ExpectedInput,
@@ -333,4 +333,37 @@ impl<S> Term<S> {
         }
         Err(Error::ExpectedInput)
     }
+}
+
+impl<'s> Term<&'s str> {
+    pub fn parse_str(s: &'s str) -> Result<Self, Error> {
+        let mut stack = Stack::default();
+        let mut iter = crate::lex(s).chain(core::iter::once(Token::Period));
+        let (tm, tok) = Self::parse2(&mut stack, iter.next(), &mut iter)?;
+        assert_eq!(iter.next(), None);
+        assert_eq!(tok, Some(Token::Period));
+        Ok(tm)
+    }
+}
+
+#[test]
+fn positive() -> Result<(), Error> {
+    Term::parse_str("x => y : a => z")?;
+    Term::parse_str("a -> x : b -> c")?;
+    Term::parse_str("(a b) (c d) e")?;
+    Term::parse_str("a (b c) (d e)")?;
+    Term::parse_str("((a (((b)))))")?;
+    Term::parse_str("m1.a m2.b")?;
+    Ok(())
+}
+
+#[test]
+fn negative() {
+    use Error::*;
+    assert_eq!(Term::parse_str("->").unwrap_err(), ExpectedIdentOrLPar);
+    assert_eq!(Term::parse_str("x : ->").unwrap_err(), ExpectedIdentOrLPar);
+    assert_eq!(Term::parse_str("(a ").unwrap_err(), UnclosedLPar);
+    assert_eq!(Term::parse_str("(a b ").unwrap_err(), UnclosedLPar);
+    assert_eq!(Term::parse_str("a b => c").unwrap_err(), AnonymousLambda);
+    assert_eq!(Term::parse_str("m1.m2. -> x").unwrap_err(), ExpectedIdent);
 }
