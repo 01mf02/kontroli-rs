@@ -30,6 +30,22 @@ pub fn lex(s: &str) -> impl Iterator<Item = Token<&str>> {
     Token::lexer(s).filter(|token| *token != Token::Space)
 }
 
+pub fn period<S>(iter: &mut impl Iterator<Item = Token<S>>, tokens: &mut Vec<Token<S>>) {
+    while let Some(token) = iter.next() {
+        match token {
+            Token::Space => (),
+            Token::Dot => match iter.next() {
+                Some(Token::Space) | None => {
+                    tokens.push(Token::Period);
+                    return;
+                }
+                Some(other) => tokens.extend([Token::Dot, other]),
+            },
+            _ => tokens.push(token),
+        }
+    }
+}
+
 #[cfg(feature = "itertools")]
 use alloc::vec::Vec;
 
