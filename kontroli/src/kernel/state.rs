@@ -35,7 +35,7 @@ impl<'s> State<'s> {
     /// # use kontroli::rc::state::State;
     /// let syms = Symbols::new();
     ///
-    /// let term: Term = STerm::parse(r"(x => x) (x => x)")?.share(&syms)?;
+    /// let term: Term = STerm::parse(r"(x => x) (x => x)").share(&syms)?;
     ///
     /// let state = State::new(term.clone());
     /// assert!(Term::ptr_eq(&Term::from(state), &term));

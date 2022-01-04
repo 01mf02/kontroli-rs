@@ -48,11 +48,11 @@ impl<'s> State<'s> {
     /// let gc = GCtx::new();
     /// let syms = Symbols::new();
     ///
-    /// let term = STerm::parse(r"(x => x) (x => x)")?.share(&syms)?;
+    /// let term = STerm::parse(r"(x => x) (x => x)").share(&syms)?;
     /// let mut state = State::new(term);
     /// state.whnf(&gc);
     ///
-    /// let expected = STerm::parse(r"(x => x)")?.share(&syms)?;
+    /// let expected = STerm::parse(r"(x => x)").share(&syms)?;
     /// assert!(state.ctx.is_empty());
     /// assert!(state.stack.is_empty());
     /// assert_eq!(state.term, expected);
@@ -170,15 +170,15 @@ impl<'s> Stack<'s> {
     /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
     /// let gc = GCtx::new();
 
-    /// let rule = SRule::parse("[A] id A --> A")?.share(&syms)?;
-    /// let term = STerm::parse("id f a")?.share(&syms)?;
+    /// let rule = SRule::parse("[A] id A --> A.").share(&syms)?;
+    /// let term = STerm::parse("id f a").share(&syms)?;
 
     /// let mut state = State::new(term);
     /// state.whnf(&gc);
     /// let subst = state.stack.match_flatten(&rule, &gc).unwrap();
     /// let subst = subst.iter().map(|rtt| (*rtt.force()).clone());
 
-    /// let expected: Term = STerm::parse("f")?.share(&syms)?;
+    /// let expected: Term = STerm::parse("f").share(&syms)?;
     /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~

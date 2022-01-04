@@ -38,15 +38,15 @@
 //! # use colosseum::unsync::Arena;
 //! let cmds = [
 //!     // declarations
-//!     "prop : Type",
-//!     "imp : prop -> prop -> prop",
+//!     "prop : Type.",
+//!     "imp : prop -> prop -> prop.",
 //!
 //!     // definition with a rewrite rule
-//!     "def proof : prop -> Type",
-//!     "[x: prop, y: prop] proof (imp x y) --> proof x -> proof y",
+//!     "def proof : prop -> Type.",
+//!     "[x: prop, y: prop] proof (imp x y) --> proof x -> proof y.",
 //!
 //!     // theorem
-//!     r"thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p",
+//!     r"thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p.",
 //! ];
 //!
 //! let arena = Arena::new();
@@ -55,7 +55,7 @@
 //!
 //! for c in cmds.iter() {
 //!     // parse and scope command in one go
-//!     let cmd = Command::parse(c)?;
+//!     let cmd = Command::parse(c);
 //!     match cmd {
 //!         // introduction of a new name
 //!         Command::Intro(id, it) => {

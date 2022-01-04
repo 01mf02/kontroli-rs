@@ -147,25 +147,28 @@ impl<'s, S: From<&'s str>> Scope<Command<S>> for parse::Command<&'s str> {
     }
 }
 
-use crate::parse::{Error, Parse};
-
+// TODO: make this `#[cfg(test)]`
+// for that, rewrite example in lib.rs
 impl<'s> Command<&'s str> {
     /// Parse a command and scope it. Used for testing.
-    pub fn parse(i: &'s str) -> Result<Self, Error> {
-        Ok(parse::Command::parse_str(i)?.scope())
+    pub fn parse(i: &'s str) -> Self {
+        parse::Command::parse_str(i).unwrap().scope()
     }
 }
 
 impl<'s> Term<&'s str> {
     /// Parse a term and scope it. Used for testing.
-    pub fn parse(i: &'s str) -> Result<Self, Error> {
-        Ok(parse::Term::parse_str(i)?.scope())
+    pub fn parse(i: &'s str) -> Self {
+        parse::Term::parse_str(i).unwrap().scope()
     }
 }
 
 impl<'s> Rule<&'s str> {
     /// Parse a rule and scope it. Used for testing.
-    pub fn parse(i: &'s str) -> Result<Self, Error> {
-        Ok(parse::Rule::parse_str(i)?.scope())
+    pub fn parse(i: &'s str) -> Self {
+        match parse::Command::parse_str(i).unwrap() {
+            parse::Command::Rules(mut rules) => rules.pop().unwrap().scope(),
+            _ => panic!("command is not a rule"),
+        }
     }
 }

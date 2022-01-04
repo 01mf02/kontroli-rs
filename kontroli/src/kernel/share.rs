@@ -17,7 +17,7 @@ impl<'s, S: Borrow<str> + Ord> Share<'s, Term<'s>> for scope::Term<S> {
     /// # use kontroli::rc::Term;
     /// # use kontroli::scope::Term as STerm;
     /// let syms: Symbols = vec!["A"].into_iter().collect();
-    /// let tm: Term = STerm::parse(r"_ : A => _")?.share(&syms)?;
+    /// let tm: Term = STerm::parse(r"_ : A => _").share(&syms)?;
     /// # Ok::<_, Error>(())
     /// ~~~
     fn share(self, syms: &Symbols<'s>) -> Result<Term<'s>, Error> {
