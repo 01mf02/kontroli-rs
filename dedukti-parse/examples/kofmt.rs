@@ -2,8 +2,9 @@
 
 use dedukti_parse::Token;
 use std::io::{self, Read};
+use std::fmt::Display;
 
-fn print_cmd(cmd: Vec<Token>) {
+fn print_cmd<S: Display>(cmd: Vec<Token<S>>) {
     let mut space = false;
 
     for token in cmd {
