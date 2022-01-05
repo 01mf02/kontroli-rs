@@ -111,6 +111,7 @@ impl<S, Tm> State<S, Tm> {
 
             // s + :
             (State::Decl(s, false), Token::Colon) => Ok(State::Decl(s, true)),
+            (State::Decl(_, false), _) => Err(Error::ExpectedColon),
 
             // def/thm + s
             (State::Def, Token::Ident(s)) => Ok(State::Args(DefThm::Def, s, Vec::new())),
@@ -227,40 +228,59 @@ impl<S, Tm> State<S, Tm> {
     }
 }
 
-impl<S, Tm> Command<S, Tm> {
-    pub fn parse_iter<I, F>(f: &mut F, iter: &mut I) -> Result<Self, Error>
-    where
-        I: Iterator<Item = Token<S>>,
-        F: FnMut(Token<S>, &mut I) -> Result<(Tm, Option<Token<S>>), crate::term::Error>,
-    {
-        let mut state = State::Init;
-        while let Some(token) = iter.next() {
-            state = state.parse(f, token, iter)?;
-            if let State::Command(cmd) = state {
-                return Ok(cmd);
-            }
+pub struct CmdIter<'s, S>
+where
+    Token<S>: logos::Logos<'s>,
+{
+    lexer: logos::Lexer<'s, Token<S>>,
+    tokens: Vec<Token<S>>,
+    stack: crate::term::Stack<S>,
+}
+
+impl<'s> CmdIter<'s, &'s str> {
+    pub fn new(s: &'s str) -> Self {
+        use logos::Logos;
+        Self {
+            lexer: Token::lexer(s),
+            tokens: Vec::new(),
+            stack: Default::default(),
         }
-        Err(Error::ExpectedInput)
+    }
+}
+
+impl<'s, S> Iterator for CmdIter<'s, S>
+where
+    Token<S>: logos::Logos<'s>,
+{
+    type Item = Result<Command<S>, Error>;
+    fn next(&mut self) -> Option<Self::Item> {
+        crate::period(&mut self.lexer, &mut self.tokens);
+        if self.tokens.is_empty() {
+            return None;
+        }
+
+        let mut state = State::Init;
+        let mut iter = self.tokens.drain(..);
+        let stack = &mut self.stack;
+
+        while let Some(token) = iter.next() {
+            match state.parse(
+                &mut |tok, iter| Term::parse2(stack, Some(tok), iter),
+                token,
+                &mut iter,
+            ) {
+                Err(e) => return Some(Err(e)),
+                Ok(State::Command(cmd)) => return Some(Ok(cmd)),
+                Ok(other) => state = other,
+            };
+        }
+        Some(Err(Error::ExpectedInput))
     }
 }
 
 impl<'s> Command<&'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
-        use logos::Logos;
-        let mut lexer = Token::lexer(s);
-        let mut tokens = Vec::new();
-        crate::period(&mut lexer, &mut tokens);
-        // fail if there is something after the first command
-        assert_eq!(lexer.next(), None);
-
-        let mut stack = Default::default();
-        let mut iter = tokens.drain(..);
-        let cmd = Self::parse_iter(
-            &mut |tok, iter| crate::Term::parse2(&mut stack, Some(tok), iter),
-            &mut iter,
-        )?;
-        assert_eq!(iter.next(), None);
-        Ok(cmd)
+        CmdIter::new(s).next().unwrap_or(Err(Error::ExpectedInput))
     }
 }
 
@@ -279,6 +299,7 @@ fn negative() {
     use Error::*;
     let parse_err = |s: &str| Command::parse_str(s).unwrap_err();
     assert_eq!(parse_err("."), ExpectedCmd);
+    assert_eq!(parse_err("x ->"), ExpectedColon);
     assert_eq!(parse_err("def :"), ExpectedIdent);
     assert_eq!(parse_err("def d ->"), ExpectedColonOrColonEq);
     assert_eq!(parse_err("thm t := tm."), ExpectedColon);
