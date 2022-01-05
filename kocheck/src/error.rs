@@ -5,7 +5,7 @@ use std::io;
 #[derive(Debug)]
 pub enum Error {
     Module,
-    Parse(ko::parse::cmd::Error),
+    Parse(ko::parse::Error),
     Io(io::Error),
     Ko(ko::Error),
 }

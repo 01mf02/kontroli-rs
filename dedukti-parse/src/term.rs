@@ -1,6 +1,64 @@
-use crate::{Term, TermB, Token};
+use crate::Token;
 use alloc::{boxed::Box, vec::Vec};
 use core::convert::TryFrom;
+use core::fmt::{self, Display};
+
+#[derive(Clone, Debug)]
+pub enum Term<S> {
+    // Symbol name, preceded by module path
+    Symb(Vec<S>, S),
+    // Application
+    Appl(Box<Term<S>>, Vec<Term<S>>),
+    Bind(Box<TermB<S>>),
+}
+
+#[derive(Clone, Debug)]
+pub enum TermB<S> {
+    // Abstraction (`x : A => t`)
+    Abst(S, Option<Term<S>>, Term<S>),
+    // Dependent product (`x : A -> t`)
+    Prod(Option<S>, Term<S>, Term<S>),
+}
+
+impl<S> Term<S> {
+    pub fn bind(tm: TermB<S>) -> Self {
+        Self::Bind(Box::new(tm))
+    }
+}
+
+impl<S: Display> Display for Term<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Self::Symb(path, s) => {
+                path.iter().try_for_each(|p| write!(f, "{}.", p))?;
+                s.fmt(f)
+            }
+            Self::Appl(head, args) => {
+                if !args.is_empty() {
+                    write!(f, "(")?;
+                }
+                head.fmt(f)?;
+                args.iter().try_for_each(|a| write!(f, " {}", a))?;
+                if !args.is_empty() {
+                    write!(f, ")")?;
+                }
+                Ok(())
+            }
+            Self::Bind(b) => b.fmt(f),
+        }
+    }
+}
+
+impl<S: Display> Display for TermB<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Self::Abst(x, Some(ty), tm) => write!(f, "({} : {} => {})", x, ty, tm),
+            Self::Abst(x, None, tm) => write!(f, "({} => {})", x, tm),
+            Self::Prod(None, ty, tm) => write!(f, "({} -> {})", ty, tm),
+            Self::Prod(Some(x), ty, tm) => write!(f, "({} : {} -> {})", x, ty, tm),
+        }
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Error {

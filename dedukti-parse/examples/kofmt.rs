@@ -1,20 +1,31 @@
-//! Count number of commands in a Dedukti file.
+//! Print commands in a Dedukti file, one command per line.
 
-use dedukti_parse::Token;
+use dedukti_parse::{period, Token};
 use std::fmt::Display;
 use std::io::{self, Read};
 
-fn print_cmd<S: Display>(cmd: Vec<Token<S>>) {
+fn no_space_after<S>(token: &Token<S>) -> bool {
+    matches!(token, Token::LBrk | Token::LPar | Token::Dot)
+}
+
+fn no_space_before<S>(token: &Token<S>) -> bool {
+    matches!(
+        token,
+        Token::RBrk | Token::RPar | Token::Comma | Token::Dot | Token::Period
+    )
+}
+
+fn print_cmd<S: Display>(cmd: impl Iterator<Item = Token<S>>) {
     let mut space = false;
 
     for token in cmd {
-        if space && !matches!(token, Token::RBrk | Token::RPar | Token::Comma | Token::Dot) {
+        if space && !no_space_before(&token) {
             print!(" ");
         }
         print!("{}", token);
-        space = !matches!(token, Token::LBrk | Token::LPar | Token::Dot);
+        space = !no_space_after(&token);
     }
-    println!(".");
+    println!("");
 }
 
 fn main() -> io::Result<()> {
@@ -22,12 +33,15 @@ fn main() -> io::Result<()> {
     let mut stdin = io::stdin();
     stdin.read_to_string(&mut buffer)?;
 
-    for cmd in dedukti_parse::lexes(&buffer) {
-        if let Ok(cmd) = cmd {
-            print_cmd(cmd)
-        } else {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "lexing command"));
+    use logos::Logos;
+    let mut lexer = Token::lexer(&buffer);
+    let mut tokens = Vec::new();
+    loop {
+        period(&mut lexer, &mut tokens);
+        if tokens.is_empty() {
+            break;
         }
+        print_cmd(tokens.drain(..))
     }
 
     Ok(())

@@ -9,9 +9,5 @@ license = "GPL-3.0-only"
 keywords = ["dependent-types", "rewriting", "dedukti"]
 categories = ["no-std", "parser-implementations"]
 
-[features]
-default = ["itertools"]
-
 [dependencies]
 logos = "0.12"
-itertools = { version = "0.10", optional = true }

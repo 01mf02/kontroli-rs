@@ -1,6 +1,70 @@
-use crate::Token;
-use crate::{Command, Intro, Rule, Term};
+use crate::{Term, Token};
 use alloc::vec::Vec;
+use core::fmt::{self, Display};
+
+#[derive(Clone, Debug)]
+pub enum Command<S, Tm = Term<S>> {
+    // Introduce a new symbol with arguments
+    Intro(S, Vec<(S, Tm)>, Intro<Tm>),
+    // Add rewrite rules
+    Rules(Vec<Rule<S, Tm>>),
+}
+
+#[derive(Clone, Debug)]
+pub enum Intro<Ty, Tm = Ty> {
+    Definition(Option<Ty>, Option<Tm>),
+    Theorem(Ty, Tm),
+    Declaration(Ty),
+}
+
+#[derive(Clone, Debug)]
+pub struct Rule<S, Tm = Term<S>> {
+    /// context (bound variables)
+    pub ctx: Vec<(S, Option<Tm>)>,
+    /// left-hand side (pattern to match with)
+    pub lhs: Tm,
+    /// right-hand side (term to replace with)
+    pub rhs: Tm,
+}
+
+impl<S: Display> Display for Command<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Self::Intro(x, args, it) => {
+                match it {
+                    Intro::Theorem(_, _) => write!(f, "thm ")?,
+                    Intro::Definition(_, _) => write!(f, "def ")?,
+                    Intro::Declaration(_) => (),
+                };
+                write!(f, "{}", x)?;
+                args.iter()
+                    .try_for_each(|(x, ty)| write!(f, " ({} : {})", x, ty))?;
+                match it {
+                    Intro::Definition(ty, tm) => {
+                        ty.iter().try_for_each(|ty| write!(f, " : {}", ty))?;
+                        tm.iter().try_for_each(|tm| write!(f, " := {}", tm))
+                    }
+                    Intro::Theorem(ty, tm) => write!(f, " : {} := {}", ty, tm),
+                    Intro::Declaration(ty) => write!(f, " : {}", ty),
+                }
+            }
+            Self::Rules(rules) => rules.iter().try_for_each(|rule| rule.fmt(f)),
+        }
+    }
+}
+
+impl<S: Display> Display for Rule<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "[")?;
+        let mut ctx = self.ctx.iter().peekable();
+        while let Some((x, ty)) = ctx.next() {
+            write!(f, "{}", x)?;
+            ty.iter().try_for_each(|ty| write!(f, ": {}", ty))?;
+            ctx.peek().iter().try_for_each(|_| write!(f, ", "))?;
+        }
+        write!(f, "] {} --> {}", self.lhs, self.rhs)
+    }
+}
 
 #[derive(Debug)]
 pub enum DefThm {
@@ -39,7 +103,6 @@ impl<S, Tm> RuleCtx<S, Tm> {
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    // TODO: eliminate this
     ExpectedInput,
     ExpectedColon,
     ExpectedColonEq,

@@ -94,7 +94,7 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
         use kontroli::scope::Command as SCommand;
         use Stage::{Check, Infer, Scope, Share};
 
-        let cmds = kontroli::parse::cmd::CmdIter::new(&file.read)
+        let cmds = kontroli::parse::CmdIter::new(&file.read)
             .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
             .filter(|cmd| !opt.omits(Scope) || cmd.is_err())
             .map(|cmd| Ok::<_, Error>(cmd?.scope() as SCommand<&str>))
