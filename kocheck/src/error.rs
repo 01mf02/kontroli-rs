@@ -5,8 +5,15 @@ use std::io;
 #[derive(Debug)]
 pub enum Error {
     Module,
+    Parse(ko::parse::cmd::Error),
     Io(io::Error),
     Ko(ko::Error),
+}
+
+impl From<ko::parse::cmd::Error> for Error {
+    fn from(err: ko::parse::cmd::Error) -> Self {
+        Self::Parse(err)
+    }
 }
 
 impl From<io::Error> for Error {
