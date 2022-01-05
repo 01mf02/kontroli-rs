@@ -1,11 +1,11 @@
 //! Parallel event processing.
 
-use crate::{parse, Error, Event, Opt, PathRead, Stage};
+use crate::{Error, Event, Opt, PathRead, Stage};
 use colosseum::sync::Arena;
 use core::{borrow::Borrow, convert::TryFrom};
 use kontroli::arc::{GCtx, Intro, Rule, Typing};
 use kontroli::error::Error as KoError;
-use kontroli::{Share, Symbol, Symbols};
+use kontroli::{Scope, Share, Symbol, Symbols};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 type Command<'s> = kontroli::Command<Symbol<'s>, Intro<'s>, Rule<'s>>;
@@ -91,12 +91,13 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
         let file = PathRead::try_from(file)?;
         syms.set_path(file.path);
 
-        use Stage::{Check, Infer, Share};
+        use kontroli::scope::Command as SCommand;
+        use Stage::{Check, Infer, Scope, Share};
 
-        let cmds = kontroli::parse::lexes(&file.read)
-            .map(|tokens| parse::<&str>(tokens?, opt))
-            .map(|res| res.transpose())
-            .flatten()
+        let cmds = kontroli::parse::cmd::CmdIter::new(&file.read)
+            .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
+            .filter(|cmd| !opt.omits(Scope) || cmd.is_err())
+            .map(|cmd| Ok::<_, Error>(cmd?.scope() as SCommand<&str>))
             .filter(|cmd| !opt.omits(Share) || cmd.is_err())
             .map(|cmd| share(cmd?, &mut syms, &arena).map_err(Error::Ko))
             .filter(|cmd| !opt.omits(Infer) || cmd.is_err());

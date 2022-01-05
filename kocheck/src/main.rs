@@ -2,7 +2,7 @@
 
 use clap::Parser;
 use core::convert::TryFrom;
-use kocheck::{par, parse, seq, Error, Event, Opt, PathRead};
+use kocheck::{par, seq, Error, Event, Opt, PathRead};
 
 fn produce<F, E>(opt: &Opt, send: F) -> Result<(), Error>
 where
@@ -11,14 +11,12 @@ where
     for file in opt.files.iter() {
         let file = PathRead::try_from(file)?;
 
-        use kontroli::parse::lexes;
-        //use rayon::iter::{ParallelBridge, ParallelIterator};
-        let cmds = lexes(&file.read)
-            // TODO: investigate the effect of par_bridge!
-            //.par_bridge()
-            .map(|tokens| parse::<String>(tokens?, opt))
-            .map(|res| res.map_err(Error::from).transpose())
-            .flatten();
+        use kontroli::scope::{Command as SCommand, Scope};
+
+        let cmds = kontroli::parse::cmd::CmdIter::new(&file.read)
+            .inspect(|cmd| cmd.iter().for_each(kocheck::log_cmd))
+            .filter(|cmd| !opt.omits(kocheck::Stage::Scope) || cmd.is_err())
+            .map(|cmd| Ok::<_, Error>(cmd?.scope() as SCommand<String>));
 
         let head = core::iter::once(Ok(Event::Module(file.path)));
         let tail = cmds.map(|cmd| cmd.map(Event::Command));

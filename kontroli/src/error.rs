@@ -1,12 +1,10 @@
 //! Common error type.
 
-use crate::parse;
 use alloc::string::String;
 
 /// Common error type.
 #[derive(Debug)]
 pub enum Error {
-    Parse(parse::Error),
     Scope(ScopeError),
     GCtx(GCtxError),
     Symbols(SymbolsError),
@@ -43,12 +41,6 @@ pub enum TypingError {
     DomainFreeAbstraction,
     TypeAndTermEmpty,
     TypeNotFound,
-}
-
-impl From<parse::Error> for Error {
-    fn from(err: parse::Error) -> Self {
-        Self::Parse(err)
-    }
 }
 
 impl From<ScopeError> for Error {
