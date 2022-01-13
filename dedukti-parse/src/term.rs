@@ -184,7 +184,7 @@ enum State<S> {
     /// `s :`
     VarOf(S),
 
-    Cont(Cont<S>),
+    ATerm(ATerm<S>),
 }
 
 #[derive(Debug)]
@@ -316,6 +316,31 @@ impl<S> ATerm<S> {
 enum Loop<T> {
     Return(T),
     Continue,
+}
+
+impl<S> State<S> {
+    #[allow(dead_code)]
+    pub fn cont<I>(self, stack: &mut Stack<S>, iter: &mut I) -> Result<(Term<S>, OToken<S>), Error>
+    where
+        I: Iterator<Item = Token<S>>,
+    {
+        match self {
+            State::Init => (),
+            State::Symb(s1) => match Term::ident(s1, stack, iter)? {
+                Loop::Continue => (),
+                Loop::Return(ret) => return Ok(ret),
+            },
+            State::VarOf(s1) => match Term::varof(s1, stack, iter)? {
+                Loop::Continue => (),
+                Loop::Return(ret) => return Ok(ret),
+            },
+            State::ATerm(atm) => match atm.parse(stack, iter.next(), iter)? {
+                ATm::ATm(atm, token) => return Ok(atm.finish(stack, token)?),
+                ATm::Term(ct) => stack.push(ct),
+            },
+        }
+        Term::parse(stack, iter.next(), iter)
+    }
 }
 
 impl<S> Term<S> {
