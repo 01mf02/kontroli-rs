@@ -270,7 +270,7 @@ impl<S> ATerm<S> {
         while let Some(tok) = token.take() {
             match tok {
                 Token::Ident(s) => match iter.next() {
-                    None => return Err(Error::ExpectedInput),
+                    None => self.app.1.push(Term::Symb(Vec::new(), s)),
                     Some(Token::Dot) => {
                         let (path, name, tok) = post_dot(s, iter)?;
                         self.app.1.push(Term::Symb(path, name));
@@ -313,7 +313,90 @@ impl<S> ATerm<S> {
     }
 }
 
+enum Loop<T> {
+    Return(T),
+    Continue,
+}
+
 impl<S> Term<S> {
+    fn ident<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<(Self, OToken<S>)>, Error>
+    where
+        I: Iterator<Item = Token<S>>,
+    {
+        match iter.next() {
+            None => return Err(Error::ExpectedInput),
+            Some(Token::Arrow) => {
+                let app = App::new(Term::Symb(Vec::new(), s1));
+                stack.push(Cont::ATerm(ATerm { x: None, app }, Some(Binder::Prod)))
+            }
+            Some(Token::FatArrow) => stack.push(Cont::VarArrow(s1)),
+            Some(Token::Colon) => match Self::varof(s1, stack, iter)? {
+                Loop::Continue => (),
+                Loop::Return(ret) => return Ok(Loop::Return(ret)),
+            },
+            Some(Token::Dot) => {
+                let (path, name, tok) = post_dot(s1, iter)?;
+                let app = App::new(Term::Symb(path, name));
+                match (ATerm { x: None, app }).parse(stack, tok, iter)? {
+                    ATm::ATm(atm, token) => return Ok(Loop::Return(atm.finish(stack, token)?)),
+                    ATm::Term(ct) => stack.push(ct),
+                }
+            }
+            Some(Token::Ident(s2)) => {
+                let app = App::new(Term::Symb(Vec::new(), s1));
+                match (ATerm { x: None, app }).parse(stack, Some(Token::Ident(s2)), iter)? {
+                    ATm::ATm(atm, token) => return Ok(Loop::Return(atm.finish(stack, token)?)),
+                    ATm::Term(ct) => stack.push(ct),
+                }
+            }
+            Some(Token::LPar) => {
+                let app = Some(App::new(Term::Symb(Vec::new(), s1)));
+                stack.push(Cont::LPar(LPar { x: None, app }));
+            }
+            Some(Token::RPar) => {
+                let app = App::new(Term::Symb(Vec::new(), s1));
+                match (ATerm { x: None, app }).parse(stack, Some(Token::RPar), iter)? {
+                    ATm::ATm(atm, token) => return Ok(Loop::Return(atm.finish(stack, token)?)),
+                    ATm::Term(ct) => stack.push(ct),
+                }
+            }
+            Some(other) => match Term::Symb(Vec::new(), s1).reduce(stack) {
+                (Some(_lpar), _) => return Err(Error::UnclosedLPar),
+                (None, tm) => return Ok(Loop::Return((tm, Some(other)))),
+            },
+        }
+        Ok(Loop::Continue)
+    }
+
+    fn varof<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<(Self, OToken<S>)>, Error>
+    where
+        I: Iterator<Item = Token<S>>,
+    {
+        match iter.next() {
+            None => return Err(Error::ExpectedInput),
+            Some(Token::Ident(s2)) => {
+                let (app, tok) = match iter.next() {
+                    None => return Err(Error::ExpectedInput),
+                    Some(Token::Dot) => {
+                        let (path, name, tok) = post_dot(s2, iter)?;
+                        (App::new(Term::Symb(path, name)), tok)
+                    }
+                    Some(tok) => (App::new(Term::Symb(Vec::new(), s2)), Some(tok)),
+                };
+                match (ATerm { x: Some(s1), app }).parse(stack, tok, iter)? {
+                    ATm::ATm(atm, token) => return Ok(Loop::Return(atm.finish(stack, token)?)),
+                    ATm::Term(ct) => stack.push(ct),
+                }
+            }
+            Some(Token::LPar) => stack.push(Cont::LPar(LPar {
+                x: Some(s1),
+                app: None,
+            })),
+            Some(_) => return Err(Error::ExpectedIdentOrLPar),
+        }
+        Ok(Loop::Continue)
+    }
+
     pub fn parse<I>(
         stack: &mut Stack<S>,
         mut token: OToken<S>,
@@ -324,65 +407,9 @@ impl<S> Term<S> {
     {
         while let Some(tok) = token.take() {
             match tok {
-                Token::Ident(s1) => match iter.next() {
-                    None => return Err(Error::ExpectedInput),
-                    Some(Token::Arrow) => {
-                        let app = App::new(Term::Symb(Vec::new(), s1));
-                        stack.push(Cont::ATerm(ATerm { x: None, app }, Some(Binder::Prod)))
-                    }
-                    Some(Token::FatArrow) => stack.push(Cont::VarArrow(s1)),
-                    Some(Token::Colon) => match iter.next() {
-                        None => return Err(Error::ExpectedInput),
-                        Some(Token::Ident(s2)) => {
-                            let (app, tok) = match iter.next() {
-                                None => return Err(Error::ExpectedInput),
-                                Some(Token::Dot) => {
-                                    let (path, name, tok) = post_dot(s2, iter)?;
-                                    (App::new(Term::Symb(path, name)), tok)
-                                }
-                                Some(tok) => (App::new(Term::Symb(Vec::new(), s2)), Some(tok)),
-                            };
-                            match (ATerm { x: Some(s1), app }).parse(stack, tok, iter)? {
-                                ATm::ATm(atm, token) => return atm.finish(stack, token),
-                                ATm::Term(ct) => stack.push(ct),
-                            }
-                        }
-                        Some(Token::LPar) => stack.push(Cont::LPar(LPar {
-                            x: Some(s1),
-                            app: None,
-                        })),
-                        Some(_) => return Err(Error::ExpectedIdentOrLPar),
-                    },
-                    Some(Token::Dot) => {
-                        let (path, name, tok) = post_dot(s1, iter)?;
-                        let app = App::new(Term::Symb(path, name));
-                        match (ATerm { x: None, app }).parse(stack, tok, iter)? {
-                            ATm::ATm(atm, token) => return atm.finish(stack, token),
-                            ATm::Term(ct) => stack.push(ct),
-                        }
-                    }
-                    Some(Token::Ident(s2)) => {
-                        let app = App::new(Term::Symb(Vec::new(), s1));
-                        match (ATerm { x: None, app }).parse(stack, Some(Token::Ident(s2)), iter)? {
-                            ATm::ATm(atm, token) => return atm.finish(stack, token),
-                            ATm::Term(ct) => stack.push(ct),
-                        }
-                    }
-                    Some(Token::LPar) => {
-                        let app = Some(App::new(Term::Symb(Vec::new(), s1)));
-                        stack.push(Cont::LPar(LPar { x: None, app }));
-                    }
-                    Some(Token::RPar) => {
-                        let app = App::new(Term::Symb(Vec::new(), s1));
-                        match (ATerm { x: None, app }).parse(stack, Some(Token::RPar), iter)? {
-                            ATm::ATm(atm, token) => return atm.finish(stack, token),
-                            ATm::Term(ct) => stack.push(ct),
-                        }
-                    }
-                    Some(other) => match Term::Symb(Vec::new(), s1).reduce(stack) {
-                        (Some(_lpar), _) => return Err(Error::UnclosedLPar),
-                        (None, tm) => return Ok((tm, Some(other))),
-                    },
+                Token::Ident(s1) => match Self::ident(s1, stack, iter)? {
+                    Loop::Continue => (),
+                    Loop::Return(ret) => return Ok(ret),
                 },
                 Token::LPar => stack.push(Cont::LPar(LPar { x: None, app: None })),
                 _ => return Err(Error::ExpectedIdentOrLPar),
