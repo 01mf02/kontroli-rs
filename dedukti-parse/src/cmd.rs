@@ -328,7 +328,7 @@ where
 
         while let Some(token) = iter.next() {
             match state.parse(
-                &mut |tok, iter| Term::parse2(stack, Some(tok), iter),
+                &mut |tok, iter| Term::parse(stack, Some(tok), iter),
                 token,
                 &mut iter,
             ) {

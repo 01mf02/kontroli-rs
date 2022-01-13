@@ -314,7 +314,7 @@ impl<S> ATerm<S> {
 }
 
 impl<S> Term<S> {
-    pub fn parse2<I>(
+    pub fn parse<I>(
         stack: &mut Stack<S>,
         mut token: OToken<S>,
         iter: &mut I,
@@ -397,7 +397,7 @@ impl<'s> Term<&'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         let mut stack = Stack::default();
         let mut iter = crate::lex(s).chain(core::iter::once(Token::Period));
-        let (tm, tok) = Self::parse2(&mut stack, iter.next(), &mut iter)?;
+        let (tm, tok) = Self::parse(&mut stack, iter.next(), &mut iter)?;
         assert_eq!(iter.next(), None);
         assert_eq!(tok, Some(Token::Period));
         Ok(tm)
