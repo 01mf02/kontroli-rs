@@ -173,8 +173,6 @@ enum Binder {
     Abst,
 }
 
-// TODO: this is for a future parser that can resume from incomplete input
-#[allow(dead_code)]
 #[derive(Debug)]
 enum State<S> {
     /// nothing
@@ -185,6 +183,8 @@ enum State<S> {
     VarOf(S),
 
     ATerm(ATerm<S>),
+
+    Term(Term<S>, Token<S>),
 }
 
 #[derive(Debug)]
@@ -302,12 +302,12 @@ impl<S> ATerm<S> {
         Ok(ATm::ATm(self, None))
     }
 
-    fn finish(self, stack: &mut Stack<S>, token: OToken<S>) -> Result<(Term<S>, OToken<S>), Error> {
+    fn finish(self, stack: &mut Stack<S>, token: OToken<S>) -> Result<State<S>, Error> {
         match token {
-            None => Err(Error::ExpectedInput),
+            None => Ok(State::ATerm(self)),
             Some(token) => match Term::from(App::try_from(self)?).reduce(stack) {
                 (Some(_lpar), _) => Err(Error::UnclosedLPar),
-                (None, tm) => Ok((tm, Some(token))),
+                (None, tm) => Ok(State::Term(tm, token)),
             },
         }
     }
@@ -320,36 +320,35 @@ enum Loop<T> {
 
 impl<S> State<S> {
     #[allow(dead_code)]
-    pub fn cont<I>(self, stack: &mut Stack<S>, iter: &mut I) -> Result<(Term<S>, OToken<S>), Error>
+    pub fn cont<I>(self, stack: &mut Stack<S>, iter: &mut I) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<S>>,
     {
         match self {
-            State::Init => (),
-            State::Symb(s1) => match Term::ident(s1, stack, iter)? {
+            Self::Init => (),
+            Self::Symb(s1) => match Self::ident(s1, stack, iter)? {
                 Loop::Continue => (),
                 Loop::Return(ret) => return Ok(ret),
             },
-            State::VarOf(s1) => match Term::varof(s1, stack, iter)? {
+            Self::VarOf(s1) => match Self::varof(s1, stack, iter)? {
                 Loop::Continue => (),
                 Loop::Return(ret) => return Ok(ret),
             },
-            State::ATerm(atm) => match atm.parse(stack, iter.next(), iter)? {
-                ATm::ATm(atm, token) => return Ok(atm.finish(stack, token)?),
+            Self::ATerm(atm) => match atm.parse(stack, iter.next(), iter)? {
+                ATm::ATm(atm, token) => return atm.finish(stack, token),
                 ATm::Term(ct) => stack.push(ct),
             },
+            Self::Term(_, _) => return Ok(self),
         }
-        Term::parse(stack, iter.next(), iter)
+        Self::init(stack, iter.next(), iter)
     }
-}
 
-impl<S> Term<S> {
-    fn ident<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<(Self, OToken<S>)>, Error>
+    fn ident<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>, Error>
     where
         I: Iterator<Item = Token<S>>,
     {
         match iter.next() {
-            None => return Err(Error::ExpectedInput),
+            None => return Ok(Loop::Return(Self::Symb(s1))),
             Some(Token::Arrow) => {
                 let app = App::new(Term::Symb(Vec::new(), s1));
                 stack.push(Cont::ATerm(ATerm { x: None, app }, Some(Binder::Prod)))
@@ -387,26 +386,25 @@ impl<S> Term<S> {
             }
             Some(other) => match Term::Symb(Vec::new(), s1).reduce(stack) {
                 (Some(_lpar), _) => return Err(Error::UnclosedLPar),
-                (None, tm) => return Ok(Loop::Return((tm, Some(other)))),
+                (None, tm) => return Ok(Loop::Return(Self::Term(tm, other))),
             },
         }
         Ok(Loop::Continue)
     }
 
-    fn varof<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<(Self, OToken<S>)>, Error>
+    fn varof<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>, Error>
     where
         I: Iterator<Item = Token<S>>,
     {
         match iter.next() {
-            None => return Err(Error::ExpectedInput),
+            None => return Ok(Loop::Return(Self::VarOf(s1))),
             Some(Token::Ident(s2)) => {
                 let (app, tok) = match iter.next() {
-                    None => return Err(Error::ExpectedInput),
                     Some(Token::Dot) => {
                         let (path, name, tok) = post_dot(s2, iter)?;
                         (App::new(Term::Symb(path, name)), tok)
                     }
-                    Some(tok) => (App::new(Term::Symb(Vec::new(), s2)), Some(tok)),
+                    tok => (App::new(Term::Symb(Vec::new(), s2)), tok),
                 };
                 match (ATerm { x: Some(s1), app }).parse(stack, tok, iter)? {
                     ATm::ATm(atm, token) => return Ok(Loop::Return(atm.finish(stack, token)?)),
@@ -422,11 +420,7 @@ impl<S> Term<S> {
         Ok(Loop::Continue)
     }
 
-    pub fn parse<I>(
-        stack: &mut Stack<S>,
-        mut token: OToken<S>,
-        iter: &mut I,
-    ) -> Result<(Self, OToken<S>), Error>
+    pub fn init<I>(stack: &mut Stack<S>, mut token: OToken<S>, iter: &mut I) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -441,7 +435,23 @@ impl<S> Term<S> {
             }
             token = iter.next()
         }
-        Err(Error::ExpectedInput)
+        Ok(Self::Init)
+    }
+}
+
+impl<S> Term<S> {
+    pub fn parse<I>(
+        stack: &mut Stack<S>,
+        token: OToken<S>,
+        iter: &mut I,
+    ) -> Result<(Self, Token<S>), Error>
+    where
+        I: Iterator<Item = Token<S>>,
+    {
+        match State::init(stack, token, iter)? {
+            State::Term(tm, tok) => Ok((tm, tok)),
+            _ => Err(Error::ExpectedInput),
+        }
     }
 }
 
@@ -451,7 +461,7 @@ impl<'s> Term<&'s str> {
         let mut iter = crate::lex(s).chain(core::iter::once(Token::Period));
         let (tm, tok) = Self::parse(&mut stack, iter.next(), &mut iter)?;
         assert_eq!(iter.next(), None);
-        assert_eq!(tok, Some(Token::Period));
+        assert_eq!(tok, Token::Period);
         Ok(tm)
     }
 }

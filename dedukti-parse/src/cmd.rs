@@ -162,7 +162,7 @@ impl<S, Tm> State<S, Tm> {
     pub fn parse<I, F>(self, f: &mut F, token: Token<S>, iter: &mut I) -> RState<S, Tm>
     where
         I: Iterator<Item = Token<S>>,
-        F: FnMut(Token<S>, &mut I) -> Result<(Tm, Option<Token<S>>), crate::term::Error>,
+        F: FnMut(Token<S>, &mut I) -> Result<(Tm, Token<S>), crate::term::Error>,
     {
         match (self, token) {
             // starting commands
@@ -228,10 +228,9 @@ impl<S, Tm> State<S, Tm> {
             // TODO: comma, rbrk, OR colon!
             (State::RuleCtx(_, Some((_, false))), _) => Err(Error::ExpectedCommaOrRBrk),
 
-            (cur, token) => match f(token, iter).map_err(Error::Term)? {
-                (tm, Some(tok2)) => cur.close(tm, tok2),
-                // TODO: is this correct?
-                (_tm, None) => Ok(cur),
+            (cur, token) => {
+                let (tm, tok2) = f(token, iter).map_err(Error::Term)?;
+                cur.close(tm, tok2)
             },
         }
     }
