@@ -106,7 +106,7 @@ impl<S> From<App<S>> for Term<S> {
 
 /// An application possibly preceded by an abstraction.
 #[derive(Debug)]
-struct ATerm<S> {
+pub(crate) struct ATerm<S> {
     x: Option<S>,
     app: App<S>,
 }
@@ -174,7 +174,7 @@ enum Binder {
 }
 
 #[derive(Debug)]
-enum State<S> {
+pub(crate) enum State<S> {
     /// nothing
     Init,
     /// `s`
