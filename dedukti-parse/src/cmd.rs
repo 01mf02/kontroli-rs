@@ -81,7 +81,7 @@ pub(crate) enum OfEq {
 #[derive(Debug)]
 pub struct RuleCtx<S, Tm> {
     rules: Vec<Rule<S, Tm>>,
-    vars: Vec<(S, Option<Tm>)>,
+    vars: Vec<Option<Tm>>,
 }
 
 impl<S, Tm> Default for RuleCtx<S, Tm> {
@@ -94,8 +94,9 @@ impl<S, Tm> Default for RuleCtx<S, Tm> {
 }
 
 impl<S, Tm> RuleCtx<S, Tm> {
-    fn add(mut self, lhs: Tm, rhs: Tm) -> Self {
+    fn add(mut self, bound: &mut Vec<S>, lhs: Tm, rhs: Tm) -> Self {
         let ctx = core::mem::take(&mut self.vars);
+        let ctx = bound.drain(..).zip(ctx).collect();
         self.rules.push(Rule { ctx, lhs, rhs });
         self
     }
@@ -157,7 +158,7 @@ pub(crate) enum State<S, Tm = Term<S>> {
 }
 
 impl<S, Tm> State<S, Tm> {
-    pub fn parse(self, token: Token<S>) -> RState<S, Tm> {
+    pub fn parse(self, bound: &mut Vec<S>, token: Token<S>) -> RState<S, Tm> {
         match (self, token) {
             // starting commands
             (State::Init, Token::Ident(s)) => Ok(State::Decl(s, false)),
@@ -211,12 +212,14 @@ impl<S, Tm> State<S, Tm> {
             }
             // [x1 : t1, .., x + ,
             (State::RuleCtx(mut c, Some((s, false))), Token::Comma) => {
-                c.vars.push((s, None));
+                bound.push(s);
+                c.vars.push(None);
                 Ok(State::RuleCtx(c, None))
             }
             // [x1 : t1, .., x + ]
             (State::RuleCtx(mut c, Some((s, false))), Token::RBrk) => {
-                c.vars.push((s, None));
+                bound.push(s);
+                c.vars.push(None);
                 Ok(State::RuleL(c))
             }
             // TODO: comma, rbrk, OR colon!
@@ -250,13 +253,17 @@ impl<S, Tm> State<S, Tm> {
 
             (State::RuleL(ctx), Token::LongArrow) => Ok(State::RuleR(ctx, tm)),
             (State::RuleL(..), _) => Err(Error::ExpectedLongArrow),
-            (State::RuleR(ctx, lhs), Token::LBrk) => Ok(State::RuleCtx(ctx.add(lhs, tm), None)),
+            (State::RuleR(ctx, lhs), Token::LBrk) => {
+                Ok(State::RuleCtx(ctx.add(bound, lhs, tm), None))
+            }
             (State::RuleCtx(mut ctx, Some((s, true))), Token::RBrk) => {
-                ctx.vars.push((s, Some(tm)));
+                bound.push(s);
+                ctx.vars.push(Some(tm));
                 Ok(State::RuleL(ctx))
             }
             (State::RuleCtx(mut ctx, Some((s, true))), Token::Comma) => {
-                ctx.vars.push((s, Some(tm)));
+                bound.push(s);
+                ctx.vars.push(Some(tm));
                 Ok(State::RuleCtx(ctx, None))
             }
             (State::RuleCtx(..), _) => Err(Error::ExpectedCommaOrRBrk),
@@ -292,7 +299,7 @@ impl<S, Tm> State<S, Tm> {
                 let ctx = bound.drain(..).zip(ctx).collect();
                 Ok(Command::Intro(x, ctx, it))
             }
-            State::RuleR(ctx, lhs) => Ok(Command::Rules(ctx.add(lhs, tm).rules)),
+            State::RuleR(ctx, lhs) => Ok(Command::Rules(ctx.add(bound, lhs, tm).rules)),
             _ => Err(Error::ExpectedCmd),
         }
     }

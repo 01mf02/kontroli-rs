@@ -63,7 +63,7 @@ where
                 };
             } else {
                 assert!(matches!(trms, term::State::Init));
-                match cmds.parse(iter.next().unwrap()) {
+                match cmds.parse(&mut self.bound, iter.next().unwrap()) {
                     Ok(st) => cmds = st,
                     Err(e) => return Some(Err(Error::Command(e))),
                 }
