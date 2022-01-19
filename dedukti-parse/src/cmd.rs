@@ -1,4 +1,4 @@
-use crate::{Term, Token};
+use crate::{CmdIter, Term, Token};
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
 
@@ -67,13 +67,13 @@ impl<S: Display> Display for Rule<S> {
 }
 
 #[derive(Debug)]
-pub enum DefThm {
+pub(crate) enum DefThm {
     Def,
     Thm,
 }
 
 #[derive(Debug)]
-pub enum OfEq {
+pub(crate) enum OfEq {
     Of,
     Eq,
 }
@@ -103,7 +103,6 @@ impl<S, Tm> RuleCtx<S, Tm> {
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    ExpectedInput,
     ExpectedColon,
     ExpectedColonEq,
     ExpectedColonOrColonEq,
@@ -113,7 +112,6 @@ pub enum Error {
     ExpectedRPar,
     ExpectedCmd,
     UnexpectedToken,
-    Term(crate::term::Error),
 }
 
 type RState<S, Tm> = Result<State<S, Tm>, Error>;
@@ -242,7 +240,7 @@ impl<S, Tm> State<S, Tm> {
         )
     }
 
-    fn apply(self, tm: Tm, token: Token<S>) -> RState<S, Tm> {
+    pub fn apply(self, tm: Tm, token: Token<S>) -> RState<S, Tm> {
         match (self, token) {
             (State::ArgsIn(dt, s, mut ctx, Some((x, true))), Token::RPar) => {
                 ctx.push((x, tm));
@@ -297,78 +295,15 @@ impl<S, Tm> State<S, Tm> {
     }
 }
 
-pub struct CmdIter<'s, S>
-where
-    Token<S>: logos::Logos<'s>,
-{
-    lexer: logos::Lexer<'s, Token<S>>,
-    tokens: Vec<Token<S>>,
-    stack: crate::term::Stack<S>,
-}
-
-impl<'s> CmdIter<'s, &'s str> {
-    pub fn new(s: &'s str) -> Self {
-        use logos::Logos;
-        Self {
-            lexer: Token::lexer(s),
-            tokens: Vec::new(),
-            stack: Default::default(),
-        }
-    }
-}
-
-impl<'s, S> Iterator for CmdIter<'s, S>
-where
-    Token<S>: logos::Logos<'s>,
-{
-    type Item = Result<Command<S>, Error>;
-    fn next(&mut self) -> Option<Self::Item> {
-        crate::period(&mut self.lexer, &mut self.tokens);
-        if self.tokens.is_empty() {
-            return None;
-        }
-
-        use crate::term::State as TermState;
-
-        let mut state = State::Init;
-        let mut tm = TermState::Init;
-        let mut iter = self.tokens.drain(..).peekable();
-        let stack = &mut self.stack;
-
-        while iter.peek().is_some() {
-            if state.expects_term() {
-                match tm.parse(stack, &mut iter) {
-                    Ok(TermState::Term(tmr, tok)) => match state.apply(tmr, tok) {
-                        Ok(State::Command(cmd)) => return Some(Ok(cmd)),
-                        Ok(st) => {
-                            tm = TermState::Init;
-                            state = st
-                        }
-                        Err(e) => return Some(Err(e)),
-                    },
-                    Ok(tmr) => tm = tmr,
-                    Err(e) => return Some(Err(Error::Term(e))),
-                };
-            } else {
-                assert!(matches!(tm, TermState::Init));
-                match state.parse(iter.next().unwrap()) {
-                    Ok(other) => state = other,
-                    Err(e) => return Some(Err(e)),
-                }
-            }
-        }
-        Some(Err(Error::ExpectedInput))
-    }
-}
-
 impl<'s> Command<&'s str> {
-    pub fn parse_str(s: &'s str) -> Result<Self, Error> {
-        CmdIter::new(s).next().unwrap_or(Err(Error::ExpectedInput))
+    pub fn parse_str(s: &'s str) -> Result<Self, crate::Error> {
+        let err = Err(crate::Error::ExpectedInput);
+        CmdIter::new(s).next().unwrap_or(err)
     }
 }
 
 #[test]
-fn positive() -> Result<(), Error> {
+fn positive() -> Result<(), crate::Error> {
     Command::parse_str("prop : Type.")?;
     Command::parse_str("imp: prop -> prop -> prop.")?;
     Command::parse_str("def prf: prop -> Type.")?;
@@ -380,7 +315,10 @@ fn positive() -> Result<(), Error> {
 #[test]
 fn negative() {
     use Error::*;
-    let parse_err = |s: &str| Command::parse_str(s).unwrap_err();
+    let parse_err = |s: &str| match Command::parse_str(s) {
+        Err(crate::Error::Command(e)) => e,
+        _ => panic!("command error expected"),
+    };
     assert_eq!(parse_err("."), ExpectedCmd);
     assert_eq!(parse_err("x ->"), ExpectedColon);
     assert_eq!(parse_err("def :"), ExpectedIdent);

@@ -62,8 +62,6 @@ impl<S: Display> Display for TermB<S> {
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    // TODO: eliminate this
-    ExpectedInput,
     ExpectedIdent,
     ExpectedIdentOrLPar,
     AnonymousLambda,
@@ -437,8 +435,10 @@ impl<S> Term<S> {
         I: Iterator<Item = Token<S>>,
     {
         match State::Init.parse(stack, iter)? {
+            State::Init | State::VarOf(_) => Err(Error::ExpectedIdentOrLPar),
+            // TODO: handle this case
+            State::Symb(_) | State::ATerm(_) => panic!("expected input"),
             State::Term(tm, tok) => Ok((tm, tok)),
-            _ => Err(Error::ExpectedInput),
         }
     }
 }

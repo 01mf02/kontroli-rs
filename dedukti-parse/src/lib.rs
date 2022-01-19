@@ -16,10 +16,12 @@
 extern crate alloc;
 
 pub mod cmd;
+mod cmditer;
 pub mod lex;
 pub mod term;
 
-pub use cmd::{CmdIter, Command, Error, Intro, Rule};
+pub use cmd::{Command, Intro, Rule};
+pub use cmditer::{CmdIter, Error};
 pub use lex::Token;
 pub use term::{Term, TermB};
 

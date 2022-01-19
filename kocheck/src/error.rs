@@ -10,8 +10,8 @@ pub enum Error {
     Ko(ko::Error),
 }
 
-impl From<ko::parse::cmd::Error> for Error {
-    fn from(err: ko::parse::cmd::Error) -> Self {
+impl From<ko::parse::Error> for Error {
+    fn from(err: ko::parse::Error) -> Self {
         Self::Parse(err)
     }
 }
