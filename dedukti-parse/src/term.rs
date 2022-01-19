@@ -339,7 +339,12 @@ impl<S> State<S> {
             },
             Self::Term(_, _) => return Ok(self),
         }
-        Self::init(stack, iter.next(), iter)
+        loop {
+            match Self::init(stack, iter)? {
+                Loop::Continue => (),
+                Loop::Return(ret) => return Ok(ret),
+            }
+        }
     }
 
     fn ident<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>, Error>
@@ -419,22 +424,17 @@ impl<S> State<S> {
         Ok(Loop::Continue)
     }
 
-    pub fn init<I>(stack: &mut Stack<S>, mut token: OToken<S>, iter: &mut I) -> Result<Self, Error>
+    fn init<I>(stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>, Error>
     where
         I: Iterator<Item = Token<S>>,
     {
-        while let Some(tok) = token.take() {
-            match tok {
-                Token::Ident(s1) => match Self::ident(s1, stack, iter)? {
-                    Loop::Continue => (),
-                    Loop::Return(ret) => return Ok(ret),
-                },
-                Token::LPar => stack.push(Cont::LPar(LPar { x: None, app: None })),
-                _ => return Err(Error::ExpectedIdentOrLPar),
-            }
-            token = iter.next()
+        match iter.next() {
+            None => return Ok(Loop::Return(Self::Init)),
+            Some(Token::Ident(s1)) => return Self::ident(s1, stack, iter),
+            Some(Token::LPar) => stack.push(Cont::LPar(LPar { x: None, app: None })),
+            _ => return Err(Error::ExpectedIdentOrLPar),
         }
-        Ok(Self::Init)
+        Ok(Loop::Continue)
     }
 }
 
