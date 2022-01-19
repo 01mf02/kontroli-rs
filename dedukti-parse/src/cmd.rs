@@ -130,18 +130,18 @@ pub(crate) enum State<S, Tm = Term<S>> {
     Decl(S, bool),
 
     /// `def/thm s (x1 : t1) .. (xn : tn)`
-    Args(DefThm, S, Vec<(S, Tm)>),
+    Args(DefThm, S, Vec<Tm>),
     /// `def/thm s (x1 : t1) .. (`
     /// followed by `x`   if `Some((x, false))`
     /// followed by `x :` if `Some((x,  true))`
-    ArgsIn(DefThm, S, Vec<(S, Tm)>, Option<(S, bool)>),
+    ArgsIn(DefThm, S, Vec<Tm>, Option<(S, bool)>),
     /// `def/thm s (x1 : t1) ... (xn: tn) : ty :=`
-    DefThmEq(DefThm, S, Vec<(S, Tm)>, Tm),
+    DefThmEq(DefThm, S, Vec<Tm>, Tm),
 
     /// `def s (x1 : t1) .. (xn : tn)` followed by `:` or `:=`
-    DefOfEq(S, Vec<(S, Tm)>, OfEq),
+    DefOfEq(S, Vec<Tm>, OfEq),
     /// `thm s (x1 : t1) .. (xn : tn)` followed by `:`
-    ThmOf(S, Vec<(S, Tm)>),
+    ThmOf(S, Vec<Tm>),
 
     /// `[x1 : t1, ..,`
     /// followed by `x`   if `Some((x, false))`
@@ -240,10 +240,11 @@ impl<S, Tm> State<S, Tm> {
         )
     }
 
-    pub fn apply(self, tm: Tm, token: Token<S>) -> RState<S, Tm> {
+    pub fn apply(self, bound: &mut Vec<S>, tm: Tm, token: Token<S>) -> RState<S, Tm> {
         match (self, token) {
             (State::ArgsIn(dt, s, mut ctx, Some((x, true))), Token::RPar) => {
-                ctx.push((x, tm));
+                bound.push(x);
+                ctx.push(tm);
                 Ok(State::Args(dt, s, ctx))
             }
 
@@ -267,12 +268,12 @@ impl<S, Tm> State<S, Tm> {
 
             (State::ArgsIn(_, _, _, Some((_, true))), _) => Err(Error::ExpectedRPar),
 
-            (cur, Token::Period) => Ok(State::Command(cur.close(tm)?)),
+            (cur, Token::Period) => Ok(State::Command(cur.close(bound, tm)?)),
             _ => Err(Error::UnexpectedToken),
         }
     }
 
-    fn close(self, tm: Tm) -> Result<Command<S, Tm>, Error> {
+    fn close(self, bound: &mut Vec<S>, tm: Tm) -> Result<Command<S, Tm>, Error> {
         match self {
             State::Decl(x, true) => Ok(Command::Intro(x, Vec::new(), Intro::Declaration(tm))),
             State::DefOfEq(x, ctx, ofeq) => {
@@ -280,6 +281,7 @@ impl<S, Tm> State<S, Tm> {
                     OfEq::Eq => Intro::Definition(None, Some(tm)),
                     OfEq::Of => Intro::Definition(Some(tm), None),
                 };
+                let ctx = bound.drain(..).zip(ctx).collect();
                 Ok(Command::Intro(x, ctx, it))
             }
             State::DefThmEq(dt, x, ctx, ty) => {
@@ -287,6 +289,7 @@ impl<S, Tm> State<S, Tm> {
                     DefThm::Thm => Intro::Theorem(ty, tm),
                     DefThm::Def => Intro::Definition(Some(ty), Some(tm)),
                 };
+                let ctx = bound.drain(..).zip(ctx).collect();
                 Ok(Command::Intro(x, ctx, it))
             }
             State::RuleR(ctx, lhs) => Ok(Command::Rules(ctx.add(lhs, tm).rules)),

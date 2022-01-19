@@ -15,6 +15,7 @@ where
     lexer: logos::Lexer<'s, Token<S>>,
     tokens: Vec<Token<S>>,
     stack: term::Stack<S>,
+    bound: Vec<S>,
 }
 
 impl<'s> CmdIter<'s, &'s str> {
@@ -24,6 +25,7 @@ impl<'s> CmdIter<'s, &'s str> {
             lexer: Token::lexer(s),
             tokens: Vec::new(),
             stack: Default::default(),
+            bound: Vec::new(),
         }
     }
 }
@@ -48,7 +50,7 @@ where
         while iter.peek().is_some() {
             if cmds.expects_term() {
                 match trms.parse(stack, &mut iter) {
-                    Ok(term::State::Term(tm, tok)) => match cmds.apply(tm, tok) {
+                    Ok(term::State::Term(tm, tok)) => match cmds.apply(&mut self.bound, tm, tok) {
                         Ok(cmd::State::Command(cmd)) => return Some(Ok(cmd)),
                         Ok(st) => {
                             trms = term::State::Init;
