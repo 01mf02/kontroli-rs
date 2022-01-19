@@ -319,7 +319,6 @@ enum Loop<T> {
 }
 
 impl<S> State<S> {
-    #[allow(dead_code)]
     pub fn cont<I>(self, stack: &mut Stack<S>, iter: &mut I) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<S>>,
@@ -440,15 +439,11 @@ impl<S> State<S> {
 }
 
 impl<S> Term<S> {
-    pub fn parse<I>(
-        stack: &mut Stack<S>,
-        token: OToken<S>,
-        iter: &mut I,
-    ) -> Result<(Self, Token<S>), Error>
+    pub fn parse<I>(stack: &mut Stack<S>, iter: &mut I) -> Result<(Self, Token<S>), Error>
     where
         I: Iterator<Item = Token<S>>,
     {
-        match State::init(stack, token, iter)? {
+        match State::Init.cont(stack, iter)? {
             State::Term(tm, tok) => Ok((tm, tok)),
             _ => Err(Error::ExpectedInput),
         }
@@ -459,7 +454,7 @@ impl<'s> Term<&'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         let mut stack = Stack::default();
         let mut iter = crate::lex(s).chain(core::iter::once(Token::Period));
-        let (tm, tok) = Self::parse(&mut stack, iter.next(), &mut iter)?;
+        let (tm, tok) = Self::parse(&mut stack, &mut iter)?;
         assert_eq!(iter.next(), None);
         assert_eq!(tok, Token::Period);
         Ok(tm)

@@ -329,12 +329,12 @@ where
         }
 
         let mut state = State::Init;
-        let mut iter = self.tokens.drain(..);
+        let mut iter = self.tokens.drain(..).peekable();
         let stack = &mut self.stack;
 
-        while let Some(token) = iter.next() {
+        while iter.peek().is_some() {
             if state.expects_term() {
-                match Term::parse(stack, Some(token), &mut iter)
+                match Term::parse(stack, &mut iter)
                     .map_err(Error::Term)
                     .and_then(|(tm, tok)| state.apply(tm, tok))
                 {
@@ -343,7 +343,7 @@ where
                     Err(e) => return Some(Err(e)),
                 }
             } else {
-                match state.parse(token) {
+                match state.parse(iter.next().unwrap()) {
                     Ok(other) => state = other,
                     Err(e) => return Some(Err(e)),
                 }
