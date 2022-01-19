@@ -159,11 +159,7 @@ pub enum State<S, Tm = Term<S>> {
 }
 
 impl<S, Tm> State<S, Tm> {
-    pub fn parse<I, F>(self, f: &mut F, token: Token<S>, iter: &mut I) -> RState<S, Tm>
-    where
-        I: Iterator<Item = Token<S>>,
-        F: FnMut(Token<S>, &mut I) -> Result<(Tm, Token<S>), crate::term::Error>,
-    {
+    pub fn parse(self, token: Token<S>) -> RState<S, Tm> {
         match (self, token) {
             // starting commands
             (State::Init, Token::Ident(s)) => Ok(State::Decl(s, false)),
@@ -228,14 +224,25 @@ impl<S, Tm> State<S, Tm> {
             // TODO: comma, rbrk, OR colon!
             (State::RuleCtx(_, Some((_, false))), _) => Err(Error::ExpectedCommaOrRBrk),
 
-            (cur, token) => {
-                let (tm, tok2) = f(token, iter).map_err(Error::Term)?;
-                cur.close(tm, tok2)
-            },
+            _ => Err(Error::UnexpectedToken),
         }
     }
 
-    fn close(self, tm: Tm, token: Token<S>) -> RState<S, Tm> {
+    pub fn expects_term(&self) -> bool {
+        matches!(
+            self,
+            State::Decl(_, true)
+                | State::ThmOf(..)
+                | State::DefOfEq(..)
+                | State::DefThmEq(..)
+                | State::ArgsIn(_, _, _, Some((_, true)))
+                | State::RuleCtx(_, Some((_, true)))
+                | State::RuleL(_)
+                | State::RuleR(..)
+        )
+    }
+
+    fn apply(self, tm: Tm, token: Token<S>) -> RState<S, Tm> {
         match (self, token) {
             (State::ArgsIn(dt, s, mut ctx, Some((x, true))), Token::RPar) => {
                 ctx.push((x, tm));
@@ -262,12 +269,12 @@ impl<S, Tm> State<S, Tm> {
 
             (State::ArgsIn(_, _, _, Some((_, true))), _) => Err(Error::ExpectedRPar),
 
-            (cur, Token::Period) => Ok(State::Command(cur.close_command(tm)?)),
-            (_, _) => Err(Error::UnexpectedToken),
+            (cur, Token::Period) => Ok(State::Command(cur.close(tm)?)),
+            _ => Err(Error::UnexpectedToken),
         }
     }
 
-    fn close_command(self, tm: Tm) -> Result<Command<S, Tm>, Error> {
+    fn close(self, tm: Tm) -> Result<Command<S, Tm>, Error> {
         match self {
             State::Decl(x, true) => Ok(Command::Intro(x, Vec::new(), Intro::Declaration(tm))),
             State::DefOfEq(x, ctx, ofeq) => {
@@ -326,15 +333,21 @@ where
         let stack = &mut self.stack;
 
         while let Some(token) = iter.next() {
-            match state.parse(
-                &mut |tok, iter| Term::parse(stack, Some(tok), iter),
-                token,
-                &mut iter,
-            ) {
-                Err(e) => return Some(Err(e)),
-                Ok(State::Command(cmd)) => return Some(Ok(cmd)),
-                Ok(other) => state = other,
-            };
+            if state.expects_term() {
+                match Term::parse(stack, Some(token), &mut iter)
+                    .map_err(Error::Term)
+                    .and_then(|(tm, tok)| state.apply(tm, tok))
+                {
+                    Ok(State::Command(cmd)) => return Some(Ok(cmd)),
+                    Ok(st) => state = st,
+                    Err(e) => return Some(Err(e)),
+                }
+            } else {
+                match state.parse(token) {
+                    Ok(other) => state = other,
+                    Err(e) => return Some(Err(e)),
+                }
+            }
         }
         Some(Err(Error::ExpectedInput))
     }
