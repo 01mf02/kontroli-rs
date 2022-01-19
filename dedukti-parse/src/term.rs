@@ -319,7 +319,7 @@ enum Loop<T> {
 }
 
 impl<S> State<S> {
-    pub fn cont<I>(self, stack: &mut Stack<S>, iter: &mut I) -> Result<Self, Error>
+    pub fn parse<I>(self, stack: &mut Stack<S>, iter: &mut I) -> Result<Self, Error>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -443,7 +443,7 @@ impl<S> Term<S> {
     where
         I: Iterator<Item = Token<S>>,
     {
-        match State::Init.cont(stack, iter)? {
+        match State::Init.parse(stack, iter)? {
             State::Term(tm, tok) => Ok((tm, tok)),
             _ => Err(Error::ExpectedInput),
         }
