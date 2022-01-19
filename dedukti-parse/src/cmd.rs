@@ -116,10 +116,10 @@ pub enum Error {
     Term(crate::term::Error),
 }
 
-pub type RState<S, Tm> = Result<State<S, Tm>, Error>;
+type RState<S, Tm> = Result<State<S, Tm>, Error>;
 
 #[derive(Debug)]
-pub enum State<S, Tm = Term<S>> {
+pub(crate) enum State<S, Tm = Term<S>> {
     /// nothing
     Init,
 
@@ -328,21 +328,29 @@ where
             return None;
         }
 
+        use crate::term::State as TermState;
+
         let mut state = State::Init;
+        let mut tm = TermState::Init;
         let mut iter = self.tokens.drain(..).peekable();
         let stack = &mut self.stack;
 
         while iter.peek().is_some() {
             if state.expects_term() {
-                match Term::parse(stack, &mut iter)
-                    .map_err(Error::Term)
-                    .and_then(|(tm, tok)| state.apply(tm, tok))
-                {
-                    Ok(State::Command(cmd)) => return Some(Ok(cmd)),
-                    Ok(st) => state = st,
-                    Err(e) => return Some(Err(e)),
-                }
+                match tm.parse(stack, &mut iter) {
+                    Ok(TermState::Term(tmr, tok)) => match state.apply(tmr, tok) {
+                        Ok(State::Command(cmd)) => return Some(Ok(cmd)),
+                        Ok(st) => {
+                            tm = TermState::Init;
+                            state = st
+                        }
+                        Err(e) => return Some(Err(e)),
+                    },
+                    Ok(tmr) => tm = tmr,
+                    Err(e) => return Some(Err(Error::Term(e))),
+                };
             } else {
+                assert!(matches!(tm, TermState::Init));
                 match state.parse(iter.next().unwrap()) {
                     Ok(other) => state = other,
                     Err(e) => return Some(Err(e)),
