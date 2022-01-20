@@ -7,6 +7,7 @@ use core::fmt::{self, Display};
 pub enum Term<S> {
     // Symbol name, preceded by module path
     Symb(Vec<S>, S),
+    BVar(usize),
     // Application
     Appl(Box<Term<S>>, Vec<Term<S>>),
     Bind(Box<TermB<S>>),
@@ -33,6 +34,7 @@ impl<S: Display> Display for Term<S> {
                 path.iter().try_for_each(|p| write!(f, "{}.", p))?;
                 s.fmt(f)
             }
+            Self::BVar(x) => write!(f, "β{}", x),
             Self::Appl(head, args) => {
                 if !args.is_empty() {
                     write!(f, "(")?;

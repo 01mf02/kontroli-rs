@@ -71,6 +71,7 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
                 }
                 Term::Symb(Symbol::new(path, name).map(|s| s.into()))
             }
+            Self::BVar(x) => Term::BVar(x),
             // TODO: cover case that head is Appl?
             Self::Appl(head, tail) => {
                 let tail = tail.into_iter().map(|tm| tm.scopen(bnd)).collect();
