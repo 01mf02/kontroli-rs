@@ -13,9 +13,9 @@ pub use opt::Opt;
 pub use path_read::PathRead;
 pub use stage::Stage;
 
-use kontroli::parse::Command as PCommand;
+use kontroli::parse::{Command as PCommand, Term as PTerm};
 
-pub fn log_cmd<S: core::fmt::Display>(cmd: &PCommand<S>) {
+pub fn log_cmd<S: core::fmt::Display>(cmd: &PCommand<S, PTerm<S>>) {
     match cmd {
         PCommand::Intro(id, _, _) => log::info!("Introduce symbol {}", id),
         PCommand::Rules(rules) => log::info!("Add {} rules", rules.len()),

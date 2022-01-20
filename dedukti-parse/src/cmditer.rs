@@ -1,5 +1,5 @@
-use crate::{cmd, term, Bound, Command, Term, Token};
-use alloc::{string::String, vec::Vec};
+use crate::{cmd, term, Command, Term, Token};
+use alloc::vec::Vec;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -15,7 +15,7 @@ where
     lexer: logos::Lexer<'s, Token<S>>,
     tokens: Vec<Token<S>>,
     stack: term::Stack<S>,
-    bound: Bound,
+    bound: Vec<S>,
 }
 
 impl<'s> CmdIter<'s, &'s str> {
@@ -30,11 +30,11 @@ impl<'s> CmdIter<'s, &'s str> {
     }
 }
 
-impl<'s, S: Into<String>> Iterator for CmdIter<'s, S>
+impl<'s, S: cmd::Joker> Iterator for CmdIter<'s, S>
 where
     Token<S>: logos::Logos<'s>,
 {
-    type Item = Result<Command<Term<S>>, Error>;
+    type Item = Result<Command<S, Term<S>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         crate::period(&mut self.lexer, &mut self.tokens);
         if self.tokens.is_empty() {

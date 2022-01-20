@@ -99,7 +99,7 @@ impl<'s, S: From<&'s str>> Scopen<'s, TermC<S>> for parse::TermB<&'s str> {
     }
 }
 
-impl<'s, S: From<&'s str>> Scope<Rule<S>> for parse::Rule<&'s str> {
+impl<'s, S: From<&'s str>> Scope<Rule<S>> for parse::Rule<&'s str, parse::Term<&'s str>> {
     fn scope(self) -> Rule<S> {
         let mut bnd = Bound::new();
         let mut ctx = Vec::new();
@@ -128,7 +128,7 @@ impl<Tm> From<parse::Intro<Tm>> for crate::Intro<Tm> {
     }
 }
 
-impl<'s, S: From<&'s str>> Scope<Command<S>> for parse::Command<&'s str> {
+impl<'s, S: From<&'s str>> Scope<Command<S>> for parse::Command<&'s str, parse::Term<&'s str>> {
     fn scope(self) -> Command<S> {
         match self {
             Self::Intro(id, args, it) => {

@@ -1,14 +1,13 @@
-use crate::{Bound, CmdIter, Term, Token};
-use alloc::string::{String, ToString};
+use crate::Token;
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
 
 #[derive(Clone, Debug)]
-pub enum Command<Tm> {
+pub enum Command<S, Tm> {
     // Introduce a new symbol with arguments
-    Intro(String, Vec<(String, Tm)>, Intro<Tm>),
+    Intro(S, Vec<(S, Tm)>, Intro<Tm>),
     // Add rewrite rules
-    Rules(Vec<Rule<Tm>>),
+    Rules(Vec<Rule<S, Tm>>),
 }
 
 #[derive(Clone, Debug)]
@@ -19,16 +18,16 @@ pub enum Intro<Ty, Tm = Ty> {
 }
 
 #[derive(Clone, Debug)]
-pub struct Rule<Tm> {
+pub struct Rule<S, Tm> {
     /// context (bound variables)
-    pub ctx: Vec<(String, Option<Tm>)>,
+    pub ctx: Vec<(S, Option<Tm>)>,
     /// left-hand side (pattern to match with)
     pub lhs: Tm,
     /// right-hand side (term to replace with)
     pub rhs: Tm,
 }
 
-impl<S: Display> Display for Command<S> {
+impl<S: Display, Tm: Display> Display for Command<S, Tm> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Self::Intro(x, args, it) => {
@@ -54,7 +53,7 @@ impl<S: Display> Display for Command<S> {
     }
 }
 
-impl<Tm: Display> Display for Rule<Tm> {
+impl<S: Display, Tm: Display> Display for Rule<S, Tm> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "[")?;
         let mut ctx = self.ctx.iter().peekable();
@@ -80,12 +79,12 @@ pub(crate) enum OfEq {
 }
 
 #[derive(Debug)]
-pub struct RuleCtx<Tm> {
-    rules: Vec<Rule<Tm>>,
+pub struct RuleCtx<S, Tm> {
+    rules: Vec<Rule<S, Tm>>,
     vars: Vec<Option<Tm>>,
 }
 
-impl<Tm> Default for RuleCtx<Tm> {
+impl<S, Tm> Default for RuleCtx<S, Tm> {
     fn default() -> Self {
         Self {
             rules: Default::default(),
@@ -94,10 +93,10 @@ impl<Tm> Default for RuleCtx<Tm> {
     }
 }
 
-impl<Tm> RuleCtx<Tm> {
-    fn add(mut self, bound: &mut Bound, lhs: Tm, rhs: Tm) -> Self {
+impl<S, Tm> RuleCtx<S, Tm> {
+    fn add(mut self, bound: &mut Vec<S>, lhs: Tm, rhs: Tm) -> Self {
         let ctx = core::mem::take(&mut self.vars);
-        let ctx = bound.drain(1..).zip(ctx).collect();
+        let ctx = bound.drain(..).zip(ctx).collect();
         self.rules.push(Rule { ctx, lhs, rhs });
         self
     }
@@ -119,7 +118,7 @@ pub enum Error {
 type RState<S, Tm> = Result<State<S, Tm>, Error>;
 
 #[derive(Debug)]
-pub(crate) enum State<S, Tm = Term<S>> {
+pub(crate) enum State<S, Tm> {
     /// nothing
     Init,
 
@@ -129,46 +128,53 @@ pub(crate) enum State<S, Tm = Term<S>> {
     Thm,
 
     /// `s` followed by `:` if true
-    Decl(String, bool),
+    Decl(S, bool),
 
     /// `def/thm s (x1 : t1) .. (xn : tn)`
-    Args(DefThm, String, Vec<Tm>),
+    Args(DefThm, S, Vec<Tm>),
     /// `def/thm s (x1 : t1) .. (`
     /// followed by `x`   if `Some((x, false))`
     /// followed by `x :` if `Some((x,  true))`
-    ArgsIn(DefThm, String, Vec<Tm>, Option<(S, bool)>),
+    ArgsIn(DefThm, S, Vec<Tm>, Option<(S, bool)>),
     /// `def/thm s (x1 : t1) ... (xn: tn) : ty :=`
-    DefThmEq(DefThm, String, Vec<Tm>, Tm),
+    DefThmEq(DefThm, S, Vec<Tm>, Tm),
 
     /// `def s (x1 : t1) .. (xn : tn)` followed by `:` or `:=`
-    DefOfEq(String, Vec<Tm>, OfEq),
+    DefOfEq(S, Vec<Tm>, OfEq),
     /// `thm s (x1 : t1) .. (xn : tn)` followed by `:`
-    ThmOf(String, Vec<Tm>),
+    ThmOf(S, Vec<Tm>),
 
     /// `[x1 : t1, ..,`
     /// followed by `x`   if `Some((x, false))`
     /// followed by `x :` if `Some((x,  true))`
-    RuleCtx(RuleCtx<Tm>, Option<(S, bool)>),
+    RuleCtx(RuleCtx<S, Tm>, Option<(S, bool)>),
 
     /// `[x1 : t1, .., xn : tn]`
-    RuleL(RuleCtx<Tm>),
+    RuleL(RuleCtx<S, Tm>),
     /// `[x1 : t1, .., xn : tn] tm -->`
-    RuleR(RuleCtx<Tm>, Tm),
+    RuleR(RuleCtx<S, Tm>, Tm),
 
-    Command(Command<Tm>),
+    Command(Command<S, Tm>),
 }
 
-impl<S: Into<String>, Tm> State<S, Tm> {
-    pub fn parse(self, bound: &mut Bound, token: Token<S>) -> RState<S, Tm> {
+pub trait Joker {
+    fn joker() -> Self;
+}
+
+impl<'s> Joker for &'s str {
+    fn joker() -> Self {
+        "_"
+    }
+}
+
+impl<S: Joker, Tm> State<S, Tm> {
+    pub fn parse(self, bound: &mut Vec<S>, token: Token<S>) -> RState<S, Tm> {
         match (self, token) {
             // starting commands
             (State::Init, Token::Ident(s)) => Ok(State::Decl(s.into(), false)),
             (State::Init, Token::Def) => Ok(State::Def),
             (State::Init, Token::Thm) => Ok(State::Thm),
-            (State::Init, Token::LBrk) => {
-                bound.push("_".to_string());
-                Ok(State::RuleCtx(Default::default(), None))
-            }
+            (State::Init, Token::LBrk) => Ok(State::RuleCtx(Default::default(), None)),
             (State::Init, _) => Err(Error::ExpectedCmd),
 
             // s + :
@@ -205,7 +211,7 @@ impl<S: Into<String>, Tm> State<S, Tm> {
             (State::ArgsIn(_, _, _, Some((_, false))), _) => Err(Error::ExpectedColon),
 
             // [x1 : t1, .., + ]
-            (State::RuleCtx(c, None), Token::RBrk) => Ok(State::RuleL(c)),
+            (State::RuleCtx(c, None), Token::RBrk) => Ok(Self::rulel(bound, c)),
             // [x1 : t1, .., + x
             (State::RuleCtx(c, None), Token::Ident(s)) => Ok(State::RuleCtx(c, Some((s, false)))),
             (State::RuleCtx(_, None), _) => Err(Error::ExpectedCommaOrRBrk),
@@ -224,7 +230,7 @@ impl<S: Into<String>, Tm> State<S, Tm> {
             (State::RuleCtx(mut c, Some((s, false))), Token::RBrk) => {
                 bound.push(s.into());
                 c.vars.push(None);
-                Ok(State::RuleL(c))
+                Ok(Self::rulel(bound, c))
             }
             // TODO: comma, rbrk, OR colon!
             (State::RuleCtx(_, Some((_, false))), _) => Err(Error::ExpectedCommaOrRBrk),
@@ -247,7 +253,12 @@ impl<S: Into<String>, Tm> State<S, Tm> {
         )
     }
 
-    pub fn apply(self, bound: &mut Bound, tm: Tm, token: Token<S>) -> RState<S, Tm> {
+    pub fn rulel(bound: &mut Vec<S>, ctx: RuleCtx<S, Tm>) -> Self {
+        bound.insert(0, S::joker());
+        Self::RuleL(ctx)
+    }
+
+    pub fn apply(self, bound: &mut Vec<S>, tm: Tm, token: Token<S>) -> RState<S, Tm> {
         match (self, token) {
             (State::ArgsIn(dt, s, mut ctx, Some((x, true))), Token::RPar) => {
                 bound.push(x.into());
@@ -255,7 +266,11 @@ impl<S: Into<String>, Tm> State<S, Tm> {
                 Ok(State::Args(dt, s, ctx))
             }
 
-            (State::RuleL(ctx), Token::LongArrow) => Ok(State::RuleR(ctx, tm)),
+            (State::RuleL(ctx), Token::LongArrow) => {
+                // kill the joker
+                bound.remove(0);
+                Ok(State::RuleR(ctx, tm))
+            }
             (State::RuleL(..), _) => Err(Error::ExpectedLongArrow),
             (State::RuleR(ctx, lhs), Token::LBrk) => {
                 Ok(State::RuleCtx(ctx.add(bound, lhs, tm), None))
@@ -263,7 +278,7 @@ impl<S: Into<String>, Tm> State<S, Tm> {
             (State::RuleCtx(mut ctx, Some((s, true))), Token::RBrk) => {
                 bound.push(s.into());
                 ctx.vars.push(Some(tm));
-                Ok(State::RuleL(ctx))
+                Ok(Self::rulel(bound, ctx))
             }
             (State::RuleCtx(mut ctx, Some((s, true))), Token::Comma) => {
                 bound.push(s.into());
@@ -284,7 +299,7 @@ impl<S: Into<String>, Tm> State<S, Tm> {
         }
     }
 
-    fn close(self, bound: &mut Bound, tm: Tm) -> Result<Command<Tm>, Error> {
+    fn close(self, bound: &mut Vec<S>, tm: Tm) -> Result<Command<S, Tm>, Error> {
         match self {
             State::Decl(x, true) => Ok(Command::Intro(x, Vec::new(), Intro::Declaration(tm))),
             State::DefOfEq(x, ctx, ofeq) => {
@@ -303,20 +318,16 @@ impl<S: Into<String>, Tm> State<S, Tm> {
                 let ctx = bound.drain(..).zip(ctx).collect();
                 Ok(Command::Intro(x, ctx, it))
             }
-            State::RuleR(ctx, lhs) => {
-                let rules = ctx.add(bound, lhs, tm).rules;
-                bound.pop();
-                Ok(Command::Rules(rules))
-            }
+            State::RuleR(ctx, lhs) => Ok(Command::Rules(ctx.add(bound, lhs, tm).rules)),
             _ => Err(Error::ExpectedCmd),
         }
     }
 }
 
-impl<'s> Command<Term<&'s str>> {
+impl<'s> Command<&'s str, crate::Term<&'s str>> {
     pub fn parse_str(s: &'s str) -> Result<Self, crate::Error> {
         let err = Err(crate::Error::ExpectedInput);
-        CmdIter::new(s).next().unwrap_or(err)
+        crate::CmdIter::new(s).next().unwrap_or(err)
     }
 }
 

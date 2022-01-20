@@ -47,5 +47,3 @@ pub fn period<S>(iter: &mut impl Iterator<Item = Token<S>>, tokens: &mut Vec<Tok
         }
     }
 }
-
-type Bound = Vec<alloc::string::String>;
