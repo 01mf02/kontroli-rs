@@ -9,7 +9,7 @@ pub enum Term<S> {
     Symb(Vec<S>, S),
     BVar(usize),
     // Application
-    Appl(Box<Term<S>>, Vec<Term<S>>),
+    Appl(Box<Self>, Vec<Self>),
     Bind(Box<TermB<S>>),
 }
 
