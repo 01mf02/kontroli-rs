@@ -112,21 +112,17 @@ pub(crate) struct ATerm<S> {
 }
 
 impl<S> ATerm<S> {
-    fn apply(self, binder: Option<Binder>, tm: Term<S>) -> Term<S> {
-        match (self.x, binder) {
-            (None, None) => Term::from(self.app.app(tm)),
-            (None, Some(Binder::Prod)) => {
-                Term::Bind(Box::new(TermB::Prod(None, Term::from(self.app), tm)))
-            }
-            (None, Some(Binder::Abst)) => panic!("anonymous abstract"),
-            (Some(x), Some(binder)) => {
-                let ty = Term::from(self.app);
-                Term::Bind(Box::new(match binder {
-                    Binder::Abst => TermB::Abst(x, Some(ty), tm),
-                    Binder::Prod => TermB::Prod(Some(x), ty, tm),
-                }))
-            }
-            (Some(_), None) => panic!("close abstraction without binder"),
+    fn apply(self, binder: Binder, tm: Term<S>) -> Term<S> {
+        if let Some(x) = self.x {
+            let ty = Term::from(self.app);
+            Term::bind(match binder {
+                Binder::Abst => TermB::Abst(x, Some(ty), tm),
+                Binder::Prod => TermB::Prod(Some(x), ty, tm),
+            })
+        } else if binder == Binder::Prod {
+            Term::bind(TermB::Prod(None, Term::from(self.app), tm))
+        } else {
+            panic!("anonymous abstract")
         }
     }
 }
@@ -167,7 +163,7 @@ impl<S> From<ATerm<S>> for LPar<S> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum Binder {
     Prod,
     Abst,
@@ -194,7 +190,7 @@ enum Cont<S> {
     /// possibly `x :`,
     /// followed by `t1 .. tn`,
     /// possibly followed by `=>` or `->`
-    ATerm(ATerm<S>, Option<Binder>),
+    ATerm(ATerm<S>, Binder),
     /// possibly `x :`,
     /// possibly followed by `t1 .. tn`,
     /// followed by `(`
@@ -283,9 +279,9 @@ impl<S> ATerm<S> {
                         continue;
                     }
                 },
-                Token::Arrow => return Ok(ATm::Term(Cont::ATerm(self, Some(Binder::Prod)))),
+                Token::Arrow => return Ok(ATm::Term(Cont::ATerm(self, Binder::Prod))),
                 Token::FatArrow if self.x.is_none() => return Err(Error::AnonymousLambda),
-                Token::FatArrow => return Ok(ATm::Term(Cont::ATerm(self, Some(Binder::Abst)))),
+                Token::FatArrow => return Ok(ATm::Term(Cont::ATerm(self, Binder::Abst))),
                 Token::LPar => return Ok(ATm::Term(Cont::LPar(LPar::from(self)))),
                 Token::RPar => match Term::from(App::try_from(self)?).reduce(stack) {
                     // if we found a matching left parenthesis
@@ -361,7 +357,7 @@ impl<S> State<S> {
             None => return Ok(Loop::Return(Self::Symb(s1))),
             Some(Token::Arrow) => {
                 let app = App::new(Term::Symb(Vec::new(), s1));
-                stack.push(Cont::ATerm(ATerm { x: None, app }, Some(Binder::Prod)))
+                stack.push(Cont::ATerm(ATerm { x: None, app }, Binder::Prod))
             }
             Some(Token::FatArrow) => stack.push(Cont::VarArrow(s1)),
             Some(Token::Colon) => match Self::varof(s1, stack, iter)? {
