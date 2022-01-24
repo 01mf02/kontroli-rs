@@ -189,7 +189,7 @@ enum Cont<S> {
     VarArrow(S),
     /// possibly `x :`,
     /// followed by `t1 .. tn`,
-    /// possibly followed by `=>` or `->`
+    /// followed by `=>` or `->`
     ATerm(ATerm<S>, Binder),
     /// possibly `x :`,
     /// possibly followed by `t1 .. tn`,
