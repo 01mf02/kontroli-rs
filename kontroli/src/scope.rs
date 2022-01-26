@@ -57,7 +57,7 @@ impl<'s, Target, T: Scopen<'s, Target>> Scope<Target> for T {
     }
 }
 
-impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
+impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str, &'s str> {
     fn scopen(self, bnd: &mut Bound<'s>) -> Term<S> {
         match self {
             Self::Symb(path, name) => {
@@ -83,7 +83,7 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
 }
 
 impl<'s, S: From<&'s str>> Scopen<'s, TermC<S>>
-    for parse::term::Bind<&'s str, parse::Term<&'s str>>
+    for parse::term::Bind<&'s str, parse::Term<&'s str, &'s str>>
 {
     fn scopen(self, bnd: &mut Bound<'s>) -> TermC<S> {
         match self {
@@ -102,7 +102,7 @@ impl<'s, S: From<&'s str>> Scopen<'s, TermC<S>>
     }
 }
 
-impl<'s, S: From<&'s str>> Scope<Rule<S>> for parse::Rule<&'s str, parse::Term<&'s str>> {
+impl<'s, S: From<&'s str>> Scope<Rule<S>> for parse::Rule<&'s str, parse::Term<&'s str, &'s str>> {
     fn scope(self) -> Rule<S> {
         let mut bnd = Bound::new();
         let mut ctx = Vec::new();
@@ -132,7 +132,7 @@ impl<Tm> From<parse::Intro<Tm>> for crate::Intro<Tm> {
 }
 
 impl<'s, S: From<&'s str>> Scope<Command<S>>
-    for parse::Command<&'s str, &'s str, parse::Term<&'s str>>
+    for parse::Command<&'s str, &'s str, parse::Term<&'s str, &'s str>>
 {
     fn scope(self) -> Command<S> {
         match self {
