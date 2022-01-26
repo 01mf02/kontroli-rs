@@ -50,13 +50,41 @@ pub enum Token<S> {
     Ident(S),
 
     #[regex(r"[ \t\n\f]+")]
-    #[token("(;", comment)]
     Space,
+
+    #[token("(;", comment1)]
+    Comment(usize),
 
     // Logos requires one token variant to handle errors,
     // it can be named anything you wish.
     #[error]
     Error,
+}
+
+impl<S> Token<S> {
+    pub fn map<T>(self, f: impl Fn(S) -> T) -> Token<T> {
+        use Token::*;
+        match self {
+            Def => Def,
+            Thm => Thm,
+            LBrk => LBrk,
+            RBrk => RBrk,
+            LPar => LPar,
+            RPar => RPar,
+            Colon => Colon,
+            ColonEq => ColonEq,
+            Arrow => Arrow,
+            FatArrow => FatArrow,
+            LongArrow => LongArrow,
+            Comma => Comma,
+            Dot => Dot,
+            Period => Period,
+            Ident(s) => Ident(f(s)),
+            Space => Space,
+            Comment(o) => Comment(o),
+            Error => Error,
+        }
+    }
 }
 
 impl<S: Display> Display for Token<S> {
@@ -76,7 +104,7 @@ impl<S: Display> Display for Token<S> {
             Self::Comma => ",".fmt(f),
             Self::Dot | Self::Period => ".".fmt(f),
             Self::Ident(s) => s.fmt(f),
-            Self::Space => " ".fmt(f),
+            Self::Space | Self::Comment(_) => " ".fmt(f),
             Self::Error => Err(Default::default()),
         }
     }
@@ -88,13 +116,22 @@ fn ident<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<&'s str> {
     Some(lex.slice())
 }
 
-fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<()> {
-    // number of open comments
-    let mut open = 1;
+fn comment1<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> usize {
+    comment(lex, 1)
+}
+
+/// Lex inside a comment until end of comment or input, return number of open comments.
+pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> usize {
     let prefix: &[_] = &['(', ';'];
     while open > 0 {
         // go to first occurrence of either ';' or '('
-        lex.bump(lex.remainder().find(prefix)?);
+        match lex.remainder().find(prefix) {
+            Some(offset) => lex.bump(offset),
+            None => {
+                lex.bump(lex.remainder().len());
+                break;
+            }
+        };
         if lex.remainder().starts_with("(;") {
             open += 1;
             lex.bump(2);
@@ -105,5 +142,14 @@ fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<()> {
             lex.bump(1);
         }
     }
-    Some(())
+    open
+}
+
+#[test]
+fn comment_open() {
+    let s = "opening .. (; closing .. ;) still one open ..";
+    assert_eq!(comment1(&mut Token::lexer(s)), 1);
+
+    let s = "closing .. ;) none open";
+    assert_eq!(comment1(&mut Token::lexer(s)), 0);
 }
