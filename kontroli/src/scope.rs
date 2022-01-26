@@ -82,7 +82,9 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<&'s str> {
     }
 }
 
-impl<'s, S: From<&'s str>> Scopen<'s, TermC<S>> for parse::TermB<&'s str> {
+impl<'s, S: From<&'s str>> Scopen<'s, TermC<S>>
+    for parse::term::Bind<&'s str, parse::Term<&'s str>>
+{
     fn scopen(self, bnd: &mut Bound<'s>) -> TermC<S> {
         match self {
             Self::Prod(x, ty, tm) => {
@@ -129,11 +131,13 @@ impl<Tm> From<parse::Intro<Tm>> for crate::Intro<Tm> {
     }
 }
 
-impl<'s, S: From<&'s str>> Scope<Command<S>> for parse::Command<&'s str, &'s str, parse::Term<&'s str>> {
+impl<'s, S: From<&'s str>> Scope<Command<S>>
+    for parse::Command<&'s str, &'s str, parse::Term<&'s str>>
+{
     fn scope(self) -> Command<S> {
         match self {
             Self::Intro(id, args, it) => {
-                use parse::TermB::{Abst, Prod};
+                use parse::term::Bind::{Abst, Prod};
 
                 let id = id.to_string();
                 let args = args.into_iter().rev();

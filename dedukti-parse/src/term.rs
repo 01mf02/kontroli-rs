@@ -10,19 +10,19 @@ pub enum Term<S> {
     BVar(usize),
     // Application
     Appl(Box<Self>, Vec<Self>),
-    Bind(Box<TermB<S>>),
+    Bind(Box<Bind<S, Term<S>>>),
 }
 
 #[derive(Clone, Debug)]
-pub enum TermB<S> {
+pub enum Bind<V, Tm> {
     // Abstraction (`x : A => t`)
-    Abst(S, Option<Term<S>>, Term<S>),
+    Abst(V, Option<Tm>, Tm),
     // Dependent product (`x : A -> t`)
-    Prod(Option<S>, Term<S>, Term<S>),
+    Prod(Option<V>, Tm, Tm),
 }
 
 impl<S> Term<S> {
-    pub fn bind(tm: TermB<S>) -> Self {
+    pub fn bind(tm: Bind<S, Self>) -> Self {
         Self::Bind(Box::new(tm))
     }
 }
@@ -51,8 +51,8 @@ impl<S: Display> Display for Term<S> {
     }
 }
 
-impl<S: Display> Display for TermB<S> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+impl<C: Display, Tm: Display> Display for Bind<C, Tm> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Abst(x, Some(ty), tm) => write!(f, "({} : {} => {})", x, ty, tm),
             Self::Abst(x, None, tm) => write!(f, "({} => {})", x, tm),
@@ -116,11 +116,11 @@ impl<S> ATerm<S> {
         if let Some(x) = self.x {
             let ty = Term::from(self.app);
             Term::bind(match binder {
-                Binder::Abst => TermB::Abst(x, Some(ty), tm),
-                Binder::Prod => TermB::Prod(Some(x), ty, tm),
+                Binder::Abst => Bind::Abst(x, Some(ty), tm),
+                Binder::Prod => Bind::Prod(Some(x), ty, tm),
             })
         } else if binder == Binder::Prod {
-            Term::bind(TermB::Prod(None, Term::from(self.app), tm))
+            Term::bind(Bind::Prod(None, Term::from(self.app), tm))
         } else {
             panic!("anonymous abstract")
         }
@@ -217,7 +217,7 @@ impl<S> Term<S> {
         while let Some(cur) = stack.0.pop() {
             match cur {
                 Cont::ATerm(atm, binder) => self = atm.apply(binder, self),
-                Cont::VarArrow(x) => self = Term::Bind(Box::new(TermB::Abst(x, None, self))),
+                Cont::VarArrow(x) => self = Term::bind(Bind::Abst(x, None, self)),
                 Cont::LPar(lpar) => return (Some(lpar), self),
             }
         }

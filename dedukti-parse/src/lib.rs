@@ -27,7 +27,7 @@ pub use cmditer::{CmdIter, Error};
 pub use constant::Constant;
 pub use lex::Token;
 pub use period::Period;
-pub use term::{Term, TermB};
+pub use term::Term;
 
 use alloc::vec::Vec;
 use core::borrow::Borrow;
