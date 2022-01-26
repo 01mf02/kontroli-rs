@@ -233,18 +233,13 @@ where
     Err(Error::ExpectedIdent)
 }
 
-enum ATm<S> {
-    Term(Cont<S>),
-    ATm(ATerm<S>, OToken<S>),
-}
-
 impl<S> ATerm<S> {
     fn parse<I>(
         mut self,
         stack: &mut Stack<S>,
         mut token: OToken<S>,
         iter: &mut I,
-    ) -> Result<ATm<S>>
+    ) -> Result<Loop<State<S>>>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -264,35 +259,42 @@ impl<S> ATerm<S> {
                         continue;
                     }
                 },
-                Token::Arrow => return Ok(ATm::Term(Cont::Prod(self.x, Term::from(self.app)))),
-                Token::FatArrow if self.x.is_none() => return Err(Error::AnonymousLambda),
+                Token::Arrow => {
+                    stack.push(Cont::Prod(self.x, Term::from(self.app)));
+                    return Ok(Loop::Continue);
+                }
                 Token::FatArrow => match self.x {
                     None => return Err(Error::AnonymousLambda),
-                    Some(x) => return Ok(ATm::Term(Cont::Abst(x, Some(Term::from(self.app))))),
+                    Some(x) => {
+                        stack.push(Cont::Abst(x, Some(Term::from(self.app))));
+                        return Ok(Loop::Continue);
+                    }
                 },
-                Token::LPar => return Ok(ATm::Term(Cont::LPar(LPar::from(self)))),
+                Token::LPar => {
+                    stack.push(Cont::LPar(LPar::from(self)));
+                    return Ok(Loop::Continue);
+                }
                 Token::RPar => match Term::from(App::try_from(self)?).reduce(stack) {
                     // if we found a matching left parenthesis
                     (Some(lpar), tm) => self = lpar.app(tm),
                     (None, tm) => {
                         let app = App::from(tm);
-                        return Ok(ATm::ATm(ATerm { x: None, app }, Some(Token::RPar)));
+                        return Ok(Loop::Return(
+                            ATerm { x: None, app }.finish(stack, Token::RPar)?,
+                        ));
                     }
                 },
-                other => return Ok(ATm::ATm(self, Some(other))),
+                tok => return Ok(Loop::Return(self.finish(stack, tok.map(|_| ()))?)),
             }
             token = iter.next();
         }
-        Ok(ATm::ATm(self, None))
+        Ok(Loop::Return(State::ATerm(self)))
     }
 
-    fn finish(self, stack: &mut Stack<S>, token: OToken<S>) -> Result<State<S>> {
-        match token {
-            None => Ok(State::ATerm(self)),
-            Some(token) => match Term::from(App::try_from(self)?).reduce(stack) {
-                (Some(_lpar), _) => Err(Error::UnclosedLPar),
-                (None, tm) => Ok(State::Term(tm, token.map(|_| ()))),
-            },
+    fn finish(self, stack: &mut Stack<S>, token: Token<()>) -> Result<State<S>> {
+        match Term::from(App::try_from(self)?).reduce(stack) {
+            (Some(_lpar), _) => Err(Error::UnclosedLPar),
+            (None, tm) => Ok(State::Term(tm, token)),
         }
     }
 }
@@ -318,8 +320,8 @@ impl<S> State<S> {
                 Loop::Return(ret) => return Ok(ret),
             },
             Self::ATerm(atm) => match atm.parse(stack, iter.next(), iter)? {
-                ATm::ATm(atm, token) => return atm.finish(stack, token),
-                ATm::Term(ct) => stack.push(ct),
+                Loop::Continue => (),
+                Loop::Return(ret) => return Ok(ret),
             },
             Self::Term(_, _) => return Ok(self),
         }
@@ -353,15 +355,15 @@ impl<S> State<S> {
                 let (path, name, tok) = post_dot(s1, iter)?;
                 let app = App::new(Term::Symb(path, name));
                 match (ATerm { x: None, app }).parse(stack, tok, iter)? {
-                    ATm::ATm(atm, token) => return Ok(Loop::Return(atm.finish(stack, token)?)),
-                    ATm::Term(ct) => stack.push(ct),
+                    Loop::Continue => (),
+                    Loop::Return(ret) => return Ok(Loop::Return(ret)),
                 }
             }
             Some(Token::Ident(s2)) => {
                 let app = App::new(Term::Symb(Vec::new(), s1));
                 match (ATerm { x: None, app }).parse(stack, Some(Token::Ident(s2)), iter)? {
-                    ATm::ATm(atm, token) => return Ok(Loop::Return(atm.finish(stack, token)?)),
-                    ATm::Term(ct) => stack.push(ct),
+                    Loop::Continue => (),
+                    Loop::Return(ret) => return Ok(Loop::Return(ret)),
                 }
             }
             Some(Token::LPar) => {
@@ -371,8 +373,8 @@ impl<S> State<S> {
             Some(Token::RPar) => {
                 let app = App::new(Term::Symb(Vec::new(), s1));
                 match (ATerm { x: None, app }).parse(stack, Some(Token::RPar), iter)? {
-                    ATm::ATm(atm, token) => return Ok(Loop::Return(atm.finish(stack, token)?)),
-                    ATm::Term(ct) => stack.push(ct),
+                    Loop::Continue => (),
+                    Loop::Return(ret) => return Ok(Loop::Return(ret)),
                 }
             }
             Some(other) => match Term::Symb(Vec::new(), s1).reduce(stack) {
@@ -388,7 +390,7 @@ impl<S> State<S> {
         I: Iterator<Item = Token<S>>,
     {
         match iter.next() {
-            None => return Ok(Loop::Return(Self::VarOf(s1))),
+            None => Ok(Loop::Return(Self::VarOf(s1))),
             Some(Token::Ident(s2)) => {
                 let (app, tok) = match iter.next() {
                     Some(Token::Dot) => {
@@ -397,18 +399,15 @@ impl<S> State<S> {
                     }
                     tok => (App::new(Term::Symb(Vec::new(), s2)), tok),
                 };
-                match (ATerm { x: Some(s1), app }).parse(stack, tok, iter)? {
-                    ATm::ATm(atm, token) => return Ok(Loop::Return(atm.finish(stack, token)?)),
-                    ATm::Term(ct) => stack.push(ct),
-                }
+                (ATerm { x: Some(s1), app }).parse(stack, tok, iter)
             }
-            Some(Token::LPar) => stack.push(Cont::LPar(LPar {
-                x: Some(s1),
-                app: None,
-            })),
-            Some(_) => return Err(Error::ExpectedIdentOrLPar),
+            Some(Token::LPar) => {
+                let x = Some(s1);
+                stack.push(Cont::LPar(LPar { x, app: None }));
+                Ok(Loop::Continue)
+            }
+            Some(_) => Err(Error::ExpectedIdentOrLPar),
         }
-        Ok(Loop::Continue)
     }
 }
 

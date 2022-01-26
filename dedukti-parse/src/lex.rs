@@ -88,7 +88,7 @@ impl<S> Token<S> {
 }
 
 impl<S: Display> Display for Token<S> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Def => "def".fmt(f),
             Self::Thm => "thm".fmt(f),
