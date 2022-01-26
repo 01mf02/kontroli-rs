@@ -72,20 +72,20 @@ pub enum Error {
 }
 
 #[derive(Debug)]
-struct App<S>(Term<S>, Vec<Term<S>>);
+struct App<Tm>(Tm, Vec<Tm>);
 
-impl<S> App<S> {
-    fn new(tm: Term<S>) -> Self {
+impl<Tm> App<Tm> {
+    fn new(tm: Tm) -> Self {
         Self(tm, Vec::new())
     }
 
-    fn app(mut self, tm: Term<S>) -> Self {
+    fn app(mut self, tm: Tm) -> Self {
         self.1.push(tm);
         self
     }
 }
 
-impl<S> From<Term<S>> for App<S> {
+impl<S> From<Term<S>> for App<Term<S>> {
     fn from(tm: Term<S>) -> Self {
         match tm {
             Term::Appl(head, args) => App(*head, args),
@@ -94,8 +94,8 @@ impl<S> From<Term<S>> for App<S> {
     }
 }
 
-impl<S> From<App<S>> for Term<S> {
-    fn from(app: App<S>) -> Self {
+impl<S> From<App<Term<S>>> for Term<S> {
+    fn from(app: App<Term<S>>) -> Self {
         if app.1.is_empty() {
             app.0
         } else {
@@ -108,7 +108,7 @@ impl<S> From<App<S>> for Term<S> {
 #[derive(Debug)]
 pub(crate) struct ATerm<S> {
     x: Option<S>,
-    app: App<S>,
+    app: App<Term<S>>,
 }
 
 impl<S> ATerm<S> {
@@ -127,7 +127,7 @@ impl<S> ATerm<S> {
     }
 }
 
-impl<S> TryFrom<ATerm<S>> for App<S> {
+impl<S> TryFrom<ATerm<S>> for App<Term<S>> {
     type Error = Error;
     fn try_from(atm: ATerm<S>) -> Result<Self, Self::Error> {
         match atm.x {
@@ -141,7 +141,7 @@ impl<S> TryFrom<ATerm<S>> for App<S> {
 #[derive(Debug)]
 struct LPar<S> {
     x: Option<S>,
-    app: Option<App<S>>,
+    app: Option<App<Term<S>>>,
 }
 
 impl<S> LPar<S> {
