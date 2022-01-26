@@ -14,7 +14,7 @@ where
 {
     lexer: logos::Lexer<'s, Token<S>>,
     tokens: Vec<Token<S>>,
-    stack: term::Stack<S, V>,
+    stack: term::Ctx<S, V>,
     bound: Vec<S>,
 }
 

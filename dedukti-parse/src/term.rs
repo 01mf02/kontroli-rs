@@ -183,23 +183,19 @@ enum Cont<S, V> {
 }
 
 #[derive(Debug)]
-pub struct Stack<S, V>(Vec<Cont<S, V>>);
-
-impl<S, V> Stack<S, V> {
-    fn push(&mut self, x: Cont<S, V>) {
-        self.0.push(x)
-    }
+pub struct Ctx<S, V> {
+    stack: Vec<Cont<S, V>>,
 }
 
-impl<S, V> Default for Stack<S, V> {
+impl<S, V> Default for Ctx<S, V> {
     fn default() -> Self {
-        Self(Default::default())
+        Self { stack: Vec::new() }
     }
 }
 
 impl<S, V> Term<S, V> {
-    fn reduce(mut self, stack: &mut Stack<S, V>) -> (Option<LPar<S, V>>, Self) {
-        while let Some(cur) = stack.0.pop() {
+    fn reduce(mut self, ctx: &mut Ctx<S, V>) -> (Option<LPar<S, V>>, Self) {
+        while let Some(cur) = ctx.stack.pop() {
             match cur {
                 Cont::Abst(x, ty) => self = Term::bind(Bind::Abst(x, ty, self)),
                 Cont::Prod(x, ty) => self = Term::bind(Bind::Prod(x, ty, self)),
@@ -236,7 +232,7 @@ where
 impl<S, V> ATerm<S, V> {
     fn parse<I>(
         mut self,
-        stack: &mut Stack<S, V>,
+        ctx: &mut Ctx<S, V>,
         mut token: OToken<S>,
         iter: &mut I,
     ) -> Result<Loop<State<S, V>>>
@@ -260,39 +256,38 @@ impl<S, V> ATerm<S, V> {
                     }
                 },
                 Token::Arrow => {
-                    stack.push(Cont::Prod(self.x, Term::from(self.app)));
+                    ctx.stack.push(Cont::Prod(self.x, Term::from(self.app)));
                     return Ok(Loop::Continue);
                 }
                 Token::FatArrow => match self.x {
                     None => return Err(Error::AnonymousLambda),
                     Some(x) => {
-                        stack.push(Cont::Abst(x, Some(Term::from(self.app))));
+                        ctx.stack.push(Cont::Abst(x, Some(Term::from(self.app))));
                         return Ok(Loop::Continue);
                     }
                 },
                 Token::LPar => {
-                    stack.push(Cont::LPar(LPar::from(self)));
+                    ctx.stack.push(Cont::LPar(LPar::from(self)));
                     return Ok(Loop::Continue);
                 }
-                Token::RPar => match Term::from(App::try_from(self)?).reduce(stack) {
+                Token::RPar => match Term::from(App::try_from(self)?).reduce(ctx) {
                     // if we found a matching left parenthesis
                     (Some(lpar), tm) => self = lpar.app(tm),
                     (None, tm) => {
                         let app = App::from(tm);
-                        return Ok(Loop::Return(
-                            ATerm { x: None, app }.finish(stack, Token::RPar)?,
-                        ));
+                        let atm = ATerm { x: None, app };
+                        return Ok(Loop::Return(atm.finish(ctx, Token::RPar)?));
                     }
                 },
-                tok => return Ok(Loop::Return(self.finish(stack, tok.map(|_| ()))?)),
+                tok => return Ok(Loop::Return(self.finish(ctx, tok.map(|_| ()))?)),
             }
             token = iter.next();
         }
         Ok(Loop::Return(State::ATerm(self)))
     }
 
-    fn finish(self, stack: &mut Stack<S, V>, token: Token<()>) -> Result<State<S, V>> {
-        match Term::from(App::try_from(self)?).reduce(stack) {
+    fn finish(self, ctx: &mut Ctx<S, V>, token: Token<()>) -> Result<State<S, V>> {
+        match Term::from(App::try_from(self)?).reduce(ctx) {
             (Some(_lpar), _) => Err(Error::UnclosedLPar),
             (None, tm) => Ok(State::Term(tm, token)),
         }
@@ -305,21 +300,21 @@ enum Loop<T> {
 }
 
 impl<S, V: From<S>> State<S, V> {
-    pub fn parse<I>(self, stack: &mut Stack<S, V>, iter: &mut I) -> Result<Self>
+    pub fn parse<I>(self, ctx: &mut Ctx<S, V>, iter: &mut I) -> Result<Self>
     where
         I: Iterator<Item = Token<S>>,
     {
         match self {
             Self::Init => (),
-            Self::Symb(s1) => match Self::ident(s1, stack, iter)? {
+            Self::Symb(s1) => match Self::ident(s1, ctx, iter)? {
                 Loop::Continue => (),
                 Loop::Return(ret) => return Ok(ret),
             },
-            Self::VarOf(s1) => match Self::varof(s1, stack, iter)? {
+            Self::VarOf(s1) => match Self::varof(s1, ctx, iter)? {
                 Loop::Continue => (),
                 Loop::Return(ret) => return Ok(ret),
             },
-            Self::ATerm(atm) => match atm.parse(stack, iter.next(), iter)? {
+            Self::ATerm(atm) => match atm.parse(ctx, iter.next(), iter)? {
                 Loop::Continue => (),
                 Loop::Return(ret) => return Ok(ret),
             },
@@ -328,56 +323,56 @@ impl<S, V: From<S>> State<S, V> {
 
         while let Some(token) = iter.next() {
             match token {
-                Token::Ident(s1) => match Self::ident(s1, stack, iter)? {
+                Token::Ident(s1) => match Self::ident(s1, ctx, iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(ret),
                 },
-                Token::LPar => stack.push(Cont::LPar(LPar { x: None, app: None })),
+                Token::LPar => ctx.stack.push(Cont::LPar(LPar { x: None, app: None })),
                 _ => return Err(Error::ExpectedIdentOrLPar),
             }
         }
         Ok(Self::Init)
     }
 
-    fn ident<I>(s1: S, stack: &mut Stack<S, V>, iter: &mut I) -> Result<Loop<Self>>
+    fn ident<I>(s1: S, ctx: &mut Ctx<S, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
     {
         match iter.next() {
             None => return Ok(Loop::Return(Self::Symb(s1))),
-            Some(Token::Arrow) => stack.push(Cont::Prod(None, Term::Symb(Vec::new(), s1))),
-            Some(Token::FatArrow) => stack.push(Cont::Abst(s1.into(), None)),
-            Some(Token::Colon) => match Self::varof(s1.into(), stack, iter)? {
+            Some(Token::Arrow) => ctx.stack.push(Cont::Prod(None, Term::Symb(Vec::new(), s1))),
+            Some(Token::FatArrow) => ctx.stack.push(Cont::Abst(s1.into(), None)),
+            Some(Token::Colon) => match Self::varof(s1.into(), ctx, iter)? {
                 Loop::Continue => (),
                 Loop::Return(ret) => return Ok(Loop::Return(ret)),
             },
             Some(Token::Dot) => {
                 let (path, name, tok) = post_dot(s1, iter)?;
                 let app = App::new(Term::Symb(path, name));
-                match (ATerm { x: None, app }).parse(stack, tok, iter)? {
+                match (ATerm { x: None, app }).parse(ctx, tok, iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(Loop::Return(ret)),
                 }
             }
             Some(Token::Ident(s2)) => {
                 let app = App::new(Term::Symb(Vec::new(), s1));
-                match (ATerm { x: None, app }).parse(stack, Some(Token::Ident(s2)), iter)? {
+                match (ATerm { x: None, app }).parse(ctx, Some(Token::Ident(s2)), iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(Loop::Return(ret)),
                 }
             }
             Some(Token::LPar) => {
                 let app = Some(App::new(Term::Symb(Vec::new(), s1)));
-                stack.push(Cont::LPar(LPar { x: None, app }));
+                ctx.stack.push(Cont::LPar(LPar { x: None, app }));
             }
             Some(Token::RPar) => {
                 let app = App::new(Term::Symb(Vec::new(), s1));
-                match (ATerm { x: None, app }).parse(stack, Some(Token::RPar), iter)? {
+                match (ATerm { x: None, app }).parse(ctx, Some(Token::RPar), iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(Loop::Return(ret)),
                 }
             }
-            Some(other) => match Term::Symb(Vec::new(), s1).reduce(stack) {
+            Some(other) => match Term::Symb(Vec::new(), s1).reduce(ctx) {
                 (Some(_lpar), _) => return Err(Error::UnclosedLPar),
                 (None, tm) => return Ok(Loop::Return(Self::Term(tm, other.map(|_| ())))),
             },
@@ -385,7 +380,7 @@ impl<S, V: From<S>> State<S, V> {
         Ok(Loop::Continue)
     }
 
-    fn varof<I>(s1: V, stack: &mut Stack<S, V>, iter: &mut I) -> Result<Loop<Self>>
+    fn varof<I>(s1: V, ctx: &mut Ctx<S, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -399,11 +394,11 @@ impl<S, V: From<S>> State<S, V> {
                     }
                     tok => (App::new(Term::Symb(Vec::new(), s2)), tok),
                 };
-                (ATerm { x: Some(s1), app }).parse(stack, tok, iter)
+                (ATerm { x: Some(s1), app }).parse(ctx, tok, iter)
             }
             Some(Token::LPar) => {
                 let x = Some(s1);
-                stack.push(Cont::LPar(LPar { x, app: None }));
+                ctx.stack.push(Cont::LPar(LPar { x, app: None }));
                 Ok(Loop::Continue)
             }
             Some(_) => Err(Error::ExpectedIdentOrLPar),
@@ -412,11 +407,11 @@ impl<S, V: From<S>> State<S, V> {
 }
 
 impl<S, V: From<S>> Term<S, V> {
-    pub fn parse<I>(stack: &mut Stack<S, V>, iter: &mut I) -> Result<(Self, Token<()>)>
+    pub fn parse<I>(ctx: &mut Ctx<S, V>, iter: &mut I) -> Result<(Self, Token<()>)>
     where
         I: Iterator<Item = Token<S>>,
     {
-        match State::Init.parse(stack, iter)? {
+        match State::Init.parse(ctx, iter)? {
             State::Init | State::VarOf(_) => Err(Error::ExpectedIdentOrLPar),
             // TODO: handle this case
             State::Symb(_) | State::ATerm(_) => panic!("expected input"),
@@ -427,9 +422,9 @@ impl<S, V: From<S>> Term<S, V> {
 
 impl<'s> Term<&'s str, &'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self> {
-        let mut stack = Stack::default();
+        let mut ctx = Ctx::default();
         let mut iter = crate::lex(s).chain(core::iter::once(Token::Period));
-        let (tm, tok) = Self::parse(&mut stack, &mut iter)?;
+        let (tm, tok) = Self::parse(&mut ctx, &mut iter)?;
         assert_eq!(iter.next(), None);
         assert_eq!(tok, Token::Period);
         Ok(tm)
