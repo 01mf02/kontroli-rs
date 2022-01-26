@@ -4,13 +4,13 @@ use core::convert::TryFrom;
 use core::fmt::{self, Display};
 
 #[derive(Clone, Debug)]
-pub enum Term<S> {
+pub enum Term<S, V> {
     // Symbol name, preceded by module path
     Symb(Vec<S>, S),
     BVar(usize),
     // Application
     Appl(Box<Self>, Vec<Self>),
-    Bind(Box<Bind<S, Term<S>>>),
+    Bind(Box<Bind<V, Term<S, V>>>),
 }
 
 #[derive(Clone, Debug)]
@@ -21,13 +21,13 @@ pub enum Bind<V, Tm> {
     Prod(Option<V>, Tm, Tm),
 }
 
-impl<S> Term<S> {
-    pub fn bind(tm: Bind<S, Self>) -> Self {
+impl<S, V> Term<S, V> {
+    pub fn bind(tm: Bind<V, Self>) -> Self {
         Self::Bind(Box::new(tm))
     }
 }
 
-impl<S: Display> Display for Term<S> {
+impl<S: Display, V: Display> Display for Term<S, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Symb(path, s) => {
@@ -51,7 +51,7 @@ impl<S: Display> Display for Term<S> {
     }
 }
 
-impl<C: Display, Tm: Display> Display for Bind<C, Tm> {
+impl<V: Display, Tm: Display> Display for Bind<V, Tm> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Abst(x, Some(ty), tm) => write!(f, "({} : {} => {})", x, ty, tm),
@@ -87,8 +87,8 @@ impl<Tm> App<Tm> {
     }
 }
 
-impl<S> From<Term<S>> for App<Term<S>> {
-    fn from(tm: Term<S>) -> Self {
+impl<S, V> From<Term<S, V>> for App<Term<S, V>> {
+    fn from(tm: Term<S, V>) -> Self {
         match tm {
             Term::Appl(head, args) => App(*head, args),
             _ => App(tm, Vec::new()),
@@ -96,8 +96,8 @@ impl<S> From<Term<S>> for App<Term<S>> {
     }
 }
 
-impl<S> From<App<Term<S>>> for Term<S> {
-    fn from(app: App<Term<S>>) -> Self {
+impl<S, V> From<App<Term<S, V>>> for Term<S, V> {
+    fn from(app: App<Term<S, V>>) -> Self {
         if app.1.is_empty() {
             app.0
         } else {
@@ -108,14 +108,14 @@ impl<S> From<App<Term<S>>> for Term<S> {
 
 /// An application possibly preceded by an abstraction.
 #[derive(Debug)]
-pub(crate) struct ATerm<S> {
-    x: Option<S>,
-    app: App<Term<S>>,
+pub(crate) struct ATerm<S, V> {
+    x: Option<V>,
+    app: App<Term<S, V>>,
 }
 
-impl<S> TryFrom<ATerm<S>> for App<Term<S>> {
+impl<S, V> TryFrom<ATerm<S, V>> for App<Term<S, V>> {
     type Error = Error;
-    fn try_from(atm: ATerm<S>) -> Result<Self> {
+    fn try_from(atm: ATerm<S, V>) -> Result<Self> {
         match atm.x {
             None => Ok(atm.app),
             Some(_) => Err(Error::AbstractionWithoutRhs),
@@ -125,13 +125,13 @@ impl<S> TryFrom<ATerm<S>> for App<Term<S>> {
 
 /// A left parenthesis possibly preceded by an abstraction and/or an application.
 #[derive(Debug)]
-struct LPar<S> {
-    x: Option<S>,
-    app: Option<App<Term<S>>>,
+struct LPar<S, V> {
+    x: Option<V>,
+    app: Option<App<Term<S, V>>>,
 }
 
-impl<S> LPar<S> {
-    fn app(self, tm: Term<S>) -> ATerm<S> {
+impl<S, V> LPar<S, V> {
+    fn app(self, tm: Term<S, V>) -> ATerm<S, V> {
         let app = match self.app {
             None => App::from(tm),
             Some(app) => app.app(tm),
@@ -140,8 +140,8 @@ impl<S> LPar<S> {
     }
 }
 
-impl<S> From<ATerm<S>> for LPar<S> {
-    fn from(at: ATerm<S>) -> Self {
+impl<S, V> From<ATerm<S, V>> for LPar<S, V> {
+    fn from(at: ATerm<S, V>) -> Self {
         Self {
             x: at.x,
             app: Some(at.app),
@@ -150,55 +150,55 @@ impl<S> From<ATerm<S>> for LPar<S> {
 }
 
 #[derive(Debug)]
-pub(crate) enum State<S> {
+pub(crate) enum State<S, V> {
     /// nothing
     Init,
     /// `s`
     Symb(S),
     /// `s :`
-    VarOf(S),
+    VarOf(V),
 
-    ATerm(ATerm<S>),
+    ATerm(ATerm<S, V>),
 
-    Term(Term<S>, Token<()>),
+    Term(Term<S, V>, Token<()>),
 }
 
-impl<S> Default for State<S> {
+impl<S, V> Default for State<S, V> {
     fn default() -> Self {
         Self::Init
     }
 }
 
 #[derive(Debug)]
-enum Cont<S> {
+enum Cont<S, V> {
     /// `x`, possibly followed by `: ty`, followed by `=>`,
-    Abst(S, Option<Term<S>>),
+    Abst(V, Option<Term<S, V>>),
     /// possibly `x :`, followed by `ty ->`,
-    Prod(Option<S>, Term<S>),
+    Prod(Option<V>, Term<S, V>),
 
     /// possibly `x :`,
     /// possibly followed by `t1 .. tn`,
     /// followed by `(`
-    LPar(LPar<S>),
+    LPar(LPar<S, V>),
 }
 
 #[derive(Debug)]
-pub struct Stack<S>(Vec<Cont<S>>);
+pub struct Stack<S, V>(Vec<Cont<S, V>>);
 
-impl<S> Stack<S> {
-    fn push(&mut self, x: Cont<S>) {
+impl<S, V> Stack<S, V> {
+    fn push(&mut self, x: Cont<S, V>) {
         self.0.push(x)
     }
 }
 
-impl<S> Default for Stack<S> {
+impl<S, V> Default for Stack<S, V> {
     fn default() -> Self {
         Self(Default::default())
     }
 }
 
-impl<S> Term<S> {
-    fn reduce(mut self, stack: &mut Stack<S>) -> (Option<LPar<S>>, Self) {
+impl<S, V> Term<S, V> {
+    fn reduce(mut self, stack: &mut Stack<S, V>) -> (Option<LPar<S, V>>, Self) {
         while let Some(cur) = stack.0.pop() {
             match cur {
                 Cont::Abst(x, ty) => self = Term::bind(Bind::Abst(x, ty, self)),
@@ -233,13 +233,13 @@ where
     Err(Error::ExpectedIdent)
 }
 
-impl<S> ATerm<S> {
+impl<S, V> ATerm<S, V> {
     fn parse<I>(
         mut self,
-        stack: &mut Stack<S>,
+        stack: &mut Stack<S, V>,
         mut token: OToken<S>,
         iter: &mut I,
-    ) -> Result<Loop<State<S>>>
+    ) -> Result<Loop<State<S, V>>>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -291,7 +291,7 @@ impl<S> ATerm<S> {
         Ok(Loop::Return(State::ATerm(self)))
     }
 
-    fn finish(self, stack: &mut Stack<S>, token: Token<()>) -> Result<State<S>> {
+    fn finish(self, stack: &mut Stack<S, V>, token: Token<()>) -> Result<State<S, V>> {
         match Term::from(App::try_from(self)?).reduce(stack) {
             (Some(_lpar), _) => Err(Error::UnclosedLPar),
             (None, tm) => Ok(State::Term(tm, token)),
@@ -304,8 +304,8 @@ enum Loop<T> {
     Continue,
 }
 
-impl<S> State<S> {
-    pub fn parse<I>(self, stack: &mut Stack<S>, iter: &mut I) -> Result<Self>
+impl<S, V: From<S>> State<S, V> {
+    pub fn parse<I>(self, stack: &mut Stack<S, V>, iter: &mut I) -> Result<Self>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -339,15 +339,15 @@ impl<S> State<S> {
         Ok(Self::Init)
     }
 
-    fn ident<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>>
+    fn ident<I>(s1: S, stack: &mut Stack<S, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
     {
         match iter.next() {
             None => return Ok(Loop::Return(Self::Symb(s1))),
             Some(Token::Arrow) => stack.push(Cont::Prod(None, Term::Symb(Vec::new(), s1))),
-            Some(Token::FatArrow) => stack.push(Cont::Abst(s1, None)),
-            Some(Token::Colon) => match Self::varof(s1, stack, iter)? {
+            Some(Token::FatArrow) => stack.push(Cont::Abst(s1.into(), None)),
+            Some(Token::Colon) => match Self::varof(s1.into(), stack, iter)? {
                 Loop::Continue => (),
                 Loop::Return(ret) => return Ok(Loop::Return(ret)),
             },
@@ -385,7 +385,7 @@ impl<S> State<S> {
         Ok(Loop::Continue)
     }
 
-    fn varof<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>>
+    fn varof<I>(s1: V, stack: &mut Stack<S, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -411,8 +411,8 @@ impl<S> State<S> {
     }
 }
 
-impl<S> Term<S> {
-    pub fn parse<I>(stack: &mut Stack<S>, iter: &mut I) -> Result<(Self, Token<()>)>
+impl<S, V: From<S>> Term<S, V> {
+    pub fn parse<I>(stack: &mut Stack<S, V>, iter: &mut I) -> Result<(Self, Token<()>)>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -425,7 +425,7 @@ impl<S> Term<S> {
     }
 }
 
-impl<'s> Term<&'s str> {
+impl<'s> Term<&'s str, &'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self> {
         let mut stack = Stack::default();
         let mut iter = crate::lex(s).chain(core::iter::once(Token::Period));

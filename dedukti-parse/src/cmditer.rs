@@ -8,17 +8,17 @@ pub enum Error {
     ExpectedInput,
 }
 
-pub struct CmdIter<'s, S>
+pub struct CmdIter<'s, S, V>
 where
     Token<S>: logos::Logos<'s>,
 {
     lexer: logos::Lexer<'s, Token<S>>,
     tokens: Vec<Token<S>>,
-    stack: term::Stack<S>,
+    stack: term::Stack<S, V>,
     bound: Vec<S>,
 }
 
-impl<'s> CmdIter<'s, &'s str> {
+impl<'s, V> CmdIter<'s, &'s str, V> {
     pub fn new(s: &'s str) -> Self {
         use logos::Logos;
         Self {
@@ -30,11 +30,11 @@ impl<'s> CmdIter<'s, &'s str> {
     }
 }
 
-impl<'s, S: cmd::Joker> Iterator for CmdIter<'s, S>
+impl<'s, S: cmd::Joker> Iterator for CmdIter<'s, S, S>
 where
     Token<S>: logos::Logos<'s>,
 {
-    type Item = Result<Command<S, S, Term<S>>, Error>;
+    type Item = Result<Command<S, S, Term<S, S>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         crate::period(&mut self.lexer, &mut self.tokens);
         if self.tokens.is_empty() {
@@ -73,7 +73,7 @@ where
     }
 }
 
-impl<'s> Command<&'s str, &'s str, Term<&'s str>> {
+impl<'s> Command<&'s str, &'s str, Term<&'s str, &'s str>> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         let err = Err(Error::ExpectedInput);
         CmdIter::new(s).next().unwrap_or(err)
