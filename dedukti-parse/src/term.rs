@@ -1,6 +1,5 @@
 use crate::Token;
 use alloc::{boxed::Box, vec::Vec};
-use core::convert::TryFrom;
 use core::fmt::{self, Display};
 
 #[derive(Clone, Debug)]
@@ -74,7 +73,7 @@ pub enum Error {
 type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug)]
-struct App<Tm>(Tm, Vec<Tm>);
+pub struct App<Tm>(Tm, Vec<Tm>);
 
 impl<Tm> App<Tm> {
     fn new(tm: Tm) -> Self {
@@ -106,23 +105,6 @@ impl<C, V> From<App<Term<C, V>>> for Term<C, V> {
     }
 }
 
-/// An application possibly preceded by an abstraction.
-#[derive(Debug)]
-pub(crate) struct ATerm<C, V> {
-    x: Option<V>,
-    app: App<Term<C, V>>,
-}
-
-impl<C, V> TryFrom<ATerm<C, V>> for App<Term<C, V>> {
-    type Error = Error;
-    fn try_from(atm: ATerm<C, V>) -> Result<Self> {
-        match atm.x {
-            None => Ok(atm.app),
-            Some(_) => Err(Error::AbstractionWithoutRhs),
-        }
-    }
-}
-
 /// A left parenthesis possibly preceded by an abstraction and/or an application.
 #[derive(Debug)]
 struct LPar<C, V> {
@@ -130,35 +112,16 @@ struct LPar<C, V> {
     app: Option<App<Term<C, V>>>,
 }
 
-impl<C, V> LPar<C, V> {
-    fn app(self, tm: Term<C, V>) -> ATerm<C, V> {
-        let app = match self.app {
-            None => App::from(tm),
-            Some(app) => app.app(tm),
-        };
-        ATerm { x: self.x, app }
-    }
-}
-
-impl<C, V> From<ATerm<C, V>> for LPar<C, V> {
-    fn from(at: ATerm<C, V>) -> Self {
-        Self {
-            x: at.x,
-            app: Some(at.app),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub(crate) enum State<S, C, V> {
     /// nothing
     Init,
-    /// `s`
+    /// `s` (we do not know at this point whether it is a variable or a constant)
     Symb(S),
     /// `s :`
     VarOf(V),
-
-    ATerm(ATerm<C, V>),
+    /// possibly `x :`, followed by `t1 ... tn`.
+    ATerm(Option<V>, App<Term<C, V>>),
 
     Term(Term<C, V>, Token<()>),
 }
@@ -229,71 +192,6 @@ where
     Err(Error::ExpectedIdent)
 }
 
-impl<C, V> ATerm<C, V> {
-    fn parse<S: Into<C>, I>(
-        mut self,
-        ctx: &mut Ctx<C, V>,
-        mut token: OToken<S>,
-        iter: &mut I,
-    ) -> Result<Loop<State<S, C, V>>>
-    where
-        I: Iterator<Item = Token<S>>,
-    {
-        while let Some(tok) = token.take() {
-            match tok {
-                Token::Ident(s) => match iter.next() {
-                    None => self.app.1.push(Term::Symb(Vec::new(), s.into())),
-                    Some(Token::Dot) => {
-                        let (path, name, tok) = post_dot(s, iter)?;
-                        self.app.1.push(Term::Symb(path, name));
-                        token = tok;
-                        continue;
-                    }
-                    Some(other) => {
-                        self.app.1.push(Term::Symb(Vec::new(), s.into()));
-                        token = Some(other);
-                        continue;
-                    }
-                },
-                Token::Arrow => {
-                    ctx.stack.push(Cont::Prod(self.x, Term::from(self.app)));
-                    return Ok(Loop::Continue);
-                }
-                Token::FatArrow => match self.x {
-                    None => return Err(Error::AnonymousLambda),
-                    Some(x) => {
-                        ctx.stack.push(Cont::Abst(x, Some(Term::from(self.app))));
-                        return Ok(Loop::Continue);
-                    }
-                },
-                Token::LPar => {
-                    ctx.stack.push(Cont::LPar(LPar::from(self)));
-                    return Ok(Loop::Continue);
-                }
-                Token::RPar => match Term::from(App::try_from(self)?).reduce(ctx) {
-                    // if we found a matching left parenthesis
-                    (Some(lpar), tm) => self = lpar.app(tm),
-                    (None, tm) => {
-                        let app = App::from(tm);
-                        let atm = ATerm { x: None, app };
-                        return Ok(Loop::Return(atm.finish(ctx, Token::RPar)?));
-                    }
-                },
-                tok => return Ok(Loop::Return(self.finish(ctx, tok.map(|_| ()))?)),
-            }
-            token = iter.next();
-        }
-        Ok(Loop::Return(State::ATerm(self)))
-    }
-
-    fn finish<S>(self, ctx: &mut Ctx<C, V>, token: Token<()>) -> Result<State<S, C, V>> {
-        match Term::from(App::try_from(self)?).reduce(ctx) {
-            (Some(_lpar), _) => Err(Error::UnclosedLPar),
-            (None, tm) => Ok(State::Term(tm, token)),
-        }
-    }
-}
-
 enum Loop<T> {
     Return(T),
     Continue,
@@ -314,7 +212,7 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
                 Loop::Continue => (),
                 Loop::Return(ret) => return Ok(ret),
             },
-            Self::ATerm(atm) => match atm.parse(ctx, iter.next(), iter)? {
+            Self::ATerm(x, app) => match Self::aterm(x, app, ctx, iter.next(), iter)? {
                 Loop::Continue => (),
                 Loop::Return(ret) => return Ok(ret),
             },
@@ -351,14 +249,14 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
             Some(Token::Dot) => {
                 let (path, name, tok) = post_dot(s1, iter)?;
                 let app = App::new(Term::Symb(path, name));
-                match (ATerm { x: None, app }).parse(ctx, tok, iter)? {
+                match Self::aterm(None, app, ctx, tok, iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(Loop::Return(ret)),
                 }
             }
             Some(Token::Ident(s2)) => {
                 let app = App::new(Term::Symb(Vec::new(), s1.into()));
-                match (ATerm { x: None, app }).parse(ctx, Some(Token::Ident(s2)), iter)? {
+                match Self::aterm(None, app, ctx, Some(Token::Ident(s2)), iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(Loop::Return(ret)),
                 }
@@ -369,7 +267,7 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
             }
             Some(Token::RPar) => {
                 let app = App::new(Term::Symb(Vec::new(), s1.into()));
-                match (ATerm { x: None, app }).parse(ctx, Some(Token::RPar), iter)? {
+                match Self::aterm(None, app, ctx, Some(Token::RPar), iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(Loop::Return(ret)),
                 }
@@ -396,7 +294,7 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
                     }
                     tok => (App::new(Term::Symb(Vec::new(), s2.into())), tok),
                 };
-                (ATerm { x: Some(s1), app }).parse(ctx, tok, iter)
+                Self::aterm(Some(s1), app, ctx, tok, iter)
             }
             Some(Token::LPar) => {
                 let x = Some(s1);
@@ -405,6 +303,66 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
             }
             Some(_) => Err(Error::ExpectedIdentOrLPar),
         }
+    }
+
+    fn aterm(
+        mut x: Option<V>,
+        mut app: App<Term<C, V>>,
+        ctx: &mut Ctx<C, V>,
+        mut token: OToken<S>,
+        iter: &mut impl Iterator<Item = Token<S>>,
+    ) -> Result<Loop<State<S, C, V>>> {
+        while let Some(tok) = token.take() {
+            match tok {
+                Token::Ident(s) => match iter.next() {
+                    None => app.1.push(Term::Symb(Vec::new(), s.into())),
+                    Some(Token::Dot) => {
+                        let (path, name, tok) = post_dot(s, iter)?;
+                        app.1.push(Term::Symb(path, name));
+                        token = tok;
+                        continue;
+                    }
+                    Some(other) => {
+                        app.1.push(Term::Symb(Vec::new(), s.into()));
+                        token = Some(other);
+                        continue;
+                    }
+                },
+                Token::Arrow => {
+                    ctx.stack.push(Cont::Prod(x, Term::from(app)));
+                    return Ok(Loop::Continue);
+                }
+                Token::FatArrow => match x {
+                    None => return Err(Error::AnonymousLambda),
+                    Some(x) => {
+                        ctx.stack.push(Cont::Abst(x, Some(Term::from(app))));
+                        return Ok(Loop::Continue);
+                    }
+                },
+                Token::LPar => {
+                    ctx.stack.push(Cont::LPar(LPar { x, app: Some(app) }));
+                    return Ok(Loop::Continue);
+                }
+                _tok if x.is_some() => return Err(Error::AbstractionWithoutRhs),
+                Token::RPar => match Term::from(app).reduce(ctx) {
+                    // if we found a matching left parenthesis
+                    (Some(lpar), tm) => {
+                        x = lpar.x;
+                        app = match lpar.app {
+                            None => App::from(tm),
+                            Some(app) => app.app(tm),
+                        }
+                    }
+                    (None, tm) => return Ok(Loop::Return(State::Term(tm, Token::RPar))),
+                },
+                tok => match Term::from(app).reduce(ctx) {
+                    (Some(_lpar), _) => return Err(Error::UnclosedLPar),
+                    (None, tm) => return Ok(Loop::Return(State::Term(tm, tok.map(|_| ())))),
+                },
+            }
+            token = iter.next();
+        }
+        Ok(Loop::Return(State::ATerm(x, app)))
     }
 }
 
@@ -419,7 +377,7 @@ impl<C, V> Term<C, V> {
         match State::Init.parse(ctx, iter)? {
             State::Init | State::VarOf(_) => Err(Error::ExpectedIdentOrLPar),
             // TODO: handle this case
-            State::Symb(_) | State::ATerm(_) => panic!("expected input"),
+            State::Symb(_) | State::ATerm(..) => panic!("expected input"),
             State::Term(tm, tok) => Ok((tm, tok)),
         }
     }
