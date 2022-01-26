@@ -28,7 +28,7 @@ impl<S> Term<S> {
 }
 
 impl<S: Display> Display for Term<S> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Symb(path, s) => {
                 path.iter().try_for_each(|p| write!(f, "{}.", p))?;
@@ -52,7 +52,7 @@ impl<S: Display> Display for Term<S> {
 }
 
 impl<C: Display, Tm: Display> Display for Bind<C, Tm> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Abst(x, Some(ty), tm) => write!(f, "({} : {} => {})", x, ty, tm),
             Self::Abst(x, None, tm) => write!(f, "({} => {})", x, tm),
@@ -70,6 +70,8 @@ pub enum Error {
     AbstractionWithoutRhs,
     UnclosedLPar,
 }
+
+type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug)]
 struct App<Tm>(Tm, Vec<Tm>);
@@ -113,7 +115,7 @@ pub(crate) struct ATerm<S> {
 
 impl<S> TryFrom<ATerm<S>> for App<Term<S>> {
     type Error = Error;
-    fn try_from(atm: ATerm<S>) -> Result<Self, Self::Error> {
+    fn try_from(atm: ATerm<S>) -> Result<Self> {
         match atm.x {
             None => Ok(atm.app),
             Some(_) => Err(Error::AbstractionWithoutRhs),
@@ -210,7 +212,7 @@ impl<S> Term<S> {
 
 type OToken<S> = Option<Token<S>>;
 
-fn post_dot<S, I>(mut s: S, iter: &mut I) -> Result<(Vec<S>, S, OToken<S>), Error>
+fn post_dot<S, I>(mut s: S, iter: &mut I) -> Result<(Vec<S>, S, OToken<S>)>
 where
     I: Iterator<Item = Token<S>>,
 {
@@ -242,7 +244,7 @@ impl<S> ATerm<S> {
         stack: &mut Stack<S>,
         mut token: OToken<S>,
         iter: &mut I,
-    ) -> Result<ATm<S>, Error>
+    ) -> Result<ATm<S>>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -284,7 +286,7 @@ impl<S> ATerm<S> {
         Ok(ATm::ATm(self, None))
     }
 
-    fn finish(self, stack: &mut Stack<S>, token: OToken<S>) -> Result<State<S>, Error> {
+    fn finish(self, stack: &mut Stack<S>, token: OToken<S>) -> Result<State<S>> {
         match token {
             None => Ok(State::ATerm(self)),
             Some(token) => match Term::from(App::try_from(self)?).reduce(stack) {
@@ -301,7 +303,7 @@ enum Loop<T> {
 }
 
 impl<S> State<S> {
-    pub fn parse<I>(self, stack: &mut Stack<S>, iter: &mut I) -> Result<Self, Error>
+    pub fn parse<I>(self, stack: &mut Stack<S>, iter: &mut I) -> Result<Self>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -335,7 +337,7 @@ impl<S> State<S> {
         Ok(Self::Init)
     }
 
-    fn ident<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>, Error>
+    fn ident<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -381,7 +383,7 @@ impl<S> State<S> {
         Ok(Loop::Continue)
     }
 
-    fn varof<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>, Error>
+    fn varof<I>(s1: S, stack: &mut Stack<S>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -411,7 +413,7 @@ impl<S> State<S> {
 }
 
 impl<S> Term<S> {
-    pub fn parse<I>(stack: &mut Stack<S>, iter: &mut I) -> Result<(Self, Token<()>), Error>
+    pub fn parse<I>(stack: &mut Stack<S>, iter: &mut I) -> Result<(Self, Token<()>)>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -425,7 +427,7 @@ impl<S> Term<S> {
 }
 
 impl<'s> Term<&'s str> {
-    pub fn parse_str(s: &'s str) -> Result<Self, Error> {
+    pub fn parse_str(s: &'s str) -> Result<Self> {
         let mut stack = Stack::default();
         let mut iter = crate::lex(s).chain(core::iter::once(Token::Period));
         let (tm, tok) = Self::parse(&mut stack, &mut iter)?;
@@ -436,7 +438,7 @@ impl<'s> Term<&'s str> {
 }
 
 #[test]
-fn positive() -> Result<(), Error> {
+fn positive() -> Result<()> {
     Term::parse_str("x => y : a => z")?;
     Term::parse_str("a -> x : b -> c")?;
     Term::parse_str("(a b) (c d) e")?;
