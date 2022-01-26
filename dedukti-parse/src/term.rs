@@ -161,6 +161,12 @@ pub(crate) enum State<S> {
     Term(Term<S>, Token<()>),
 }
 
+impl<S> Default for State<S> {
+    fn default() -> Self {
+        Self::Init
+    }
+}
+
 #[derive(Debug)]
 enum Cont<S> {
     /// `x`, possibly followed by `: ty`, followed by `=>`,
