@@ -129,7 +129,7 @@ impl<Tm> From<parse::Intro<Tm>> for crate::Intro<Tm> {
     }
 }
 
-impl<'s, S: From<&'s str>> Scope<Command<S>> for parse::Command<&'s str, parse::Term<&'s str>> {
+impl<'s, S: From<&'s str>> Scope<Command<S>> for parse::Command<&'s str, &'s str, parse::Term<&'s str>> {
     fn scope(self) -> Command<S> {
         match self {
             Self::Intro(id, args, it) => {
