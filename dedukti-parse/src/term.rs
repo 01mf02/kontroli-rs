@@ -180,7 +180,7 @@ pub(crate) enum State<S> {
 
     ATerm(ATerm<S>),
 
-    Term(Term<S>, Token<S>),
+    Term(Term<S>, Token<()>),
 }
 
 #[derive(Debug)]
@@ -303,7 +303,7 @@ impl<S> ATerm<S> {
             None => Ok(State::ATerm(self)),
             Some(token) => match Term::from(App::try_from(self)?).reduce(stack) {
                 (Some(_lpar), _) => Err(Error::UnclosedLPar),
-                (None, tm) => Ok(State::Term(tm, token)),
+                (None, tm) => Ok(State::Term(tm, token.map(|_| ()))),
             },
         }
     }
@@ -392,7 +392,7 @@ impl<S> State<S> {
             }
             Some(other) => match Term::Symb(Vec::new(), s1).reduce(stack) {
                 (Some(_lpar), _) => return Err(Error::UnclosedLPar),
-                (None, tm) => return Ok(Loop::Return(Self::Term(tm, other))),
+                (None, tm) => return Ok(Loop::Return(Self::Term(tm, other.map(|_| ())))),
             },
         }
         Ok(Loop::Continue)
@@ -428,7 +428,7 @@ impl<S> State<S> {
 }
 
 impl<S> Term<S> {
-    pub fn parse<I>(stack: &mut Stack<S>, iter: &mut I) -> Result<(Self, Token<S>), Error>
+    pub fn parse<I>(stack: &mut Stack<S>, iter: &mut I) -> Result<(Self, Token<()>), Error>
     where
         I: Iterator<Item = Token<S>>,
     {
