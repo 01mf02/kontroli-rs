@@ -1,5 +1,6 @@
 use crate::Token;
 use alloc::{boxed::Box, vec::Vec};
+use core::borrow::Borrow;
 use core::fmt::{self, Display};
 
 #[derive(Clone, Debug)]
@@ -147,12 +148,50 @@ enum Cont<C, V> {
 
 #[derive(Debug)]
 pub struct Ctx<C, V> {
+    bound: Vec<V>,
     stack: Vec<Cont<C, V>>,
+}
+
+impl<C, V> Ctx<C, V> {
+    pub fn bound_mut(&mut self) -> &mut Vec<V> {
+        &mut self.bound
+    }
+
+    fn find<S: Eq>(&self, s: &S) -> Option<usize>
+    where
+        V: Borrow<S>,
+    {
+        let mut i = 0;
+        for cont in &self.stack {
+            match cont {
+                Cont::Abst(x, _) | Cont::Prod(Some(x), _) => {
+                    if x.borrow() == s {
+                        return Some(i);
+                    } else {
+                        i = i + 1;
+                    }
+                }
+                Cont::Prod(None, _) => i = i + 1,
+                Cont::LPar(_) => (),
+            }
+        }
+        for x in &self.bound {
+            if x.borrow() == s {
+                return Some(i);
+            } else {
+                i = i + 1
+            }
+        }
+        None
+    }
 }
 
 impl<C, V> Default for Ctx<C, V> {
     fn default() -> Self {
-        Self { stack: Vec::new() }
+        Self {
+            bound: Vec::new(),
+            stack: Vec::new(),
+        }
     }
 }
 

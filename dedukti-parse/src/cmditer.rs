@@ -14,8 +14,7 @@ where
 {
     lexer: logos::Lexer<'s, Token<S>>,
     tokens: Vec<Token<S>>,
-    stack: term::Ctx<S, V>,
-    bound: Vec<S>,
+    ctx: term::Ctx<S, V>,
 }
 
 impl<'s, V> CmdIter<'s, &'s str, V> {
@@ -24,8 +23,7 @@ impl<'s, V> CmdIter<'s, &'s str, V> {
         Self {
             lexer: Token::lexer(s),
             tokens: Vec::new(),
-            stack: Default::default(),
-            bound: Vec::new(),
+            ctx: Default::default(),
         }
     }
 }
@@ -41,19 +39,21 @@ where
             return None;
         }
 
-        let mut cmds = cmd::State::Init;
-        let mut trms = term::State::Init;
+        use cmd::State as CState;
+        use term::State as TState;
+
+        let mut cmds = CState::Init;
+        let mut trms = TState::Init;
 
         let mut iter = self.tokens.drain(..).peekable();
-        let stack = &mut self.stack;
 
         while iter.peek().is_some() {
             if cmds.expects_term() {
-                match trms.parse(stack, &mut iter) {
-                    Ok(term::State::Term(tm, tok)) => match cmds.apply(&mut self.bound, tm, tok) {
-                        Ok(cmd::State::Command(cmd)) => return Some(Ok(cmd)),
+                match trms.parse(&mut self.ctx, &mut iter) {
+                    Ok(TState::Term(tm, tok)) => match cmds.apply(self.ctx.bound_mut(), tm, tok) {
+                        Ok(CState::Command(cmd)) => return Some(Ok(cmd)),
                         Ok(st) => {
-                            trms = term::State::Init;
+                            trms = TState::Init;
                             cmds = st
                         }
                         Err(e) => return Some(Err(Error::Command(e))),
@@ -62,8 +62,8 @@ where
                     Err(e) => return Some(Err(Error::Term(e))),
                 };
             } else {
-                assert!(matches!(trms, term::State::Init));
-                match cmds.parse(&mut self.bound, iter.next().unwrap()) {
+                assert!(matches!(trms, TState::Init));
+                match cmds.parse(self.ctx.bound_mut(), iter.next().unwrap()) {
                     Ok(st) => cmds = st,
                     Err(e) => return Some(Err(Error::Command(e))),
                 }
