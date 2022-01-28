@@ -2,7 +2,7 @@
 
 use crate::parse;
 use crate::{Arg, Stack};
-use alloc::{boxed::Box, string::String, string::ToString, vec::Vec};
+use alloc::{string::String, string::ToString, vec::Vec};
 use core::fmt::{self, Display};
 
 /// Symbol consisting of a relative module path and a symbol name.
@@ -142,10 +142,8 @@ impl<'s, S: From<&'s str>> Scope<Command<S>>
                 let id = id.to_string();
                 let args = args.into_iter().rev();
                 let it = args.fold(crate::Intro::from(it), |it, (name, arg_ty)| {
-                    it.map_type(|ty| {
-                        App::new(Prod(Some(name), Box::new(arg_ty.clone()), Box::new(ty)))
-                    })
-                    .map_term(|tm| App::new(Abst(name, Some(Box::new(arg_ty)), Box::new(tm))))
+                    it.map_type(|ty| App::new(Prod(Some(name), arg_ty.clone().into(), ty.into())))
+                        .map_term(|tm| App::new(Abst(name, Some(arg_ty.into()), tm.into())))
                 });
                 Command::Intro(id, it.map_type(|tm| tm.scope()).map_term(|tm| tm.scope()))
             }

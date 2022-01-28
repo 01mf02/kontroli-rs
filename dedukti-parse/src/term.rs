@@ -159,10 +159,8 @@ impl<C, V> Term<C, V> {
     fn reduce(mut self, ctx: &mut Ctx<C, V>) -> (Option<LPar<C, V>>, Self) {
         while let Some(cur) = ctx.stack.pop() {
             match cur {
-                Cont::Abst(x, ty) => {
-                    self = App::new(Term1::Abst(x, ty.map(Box::new), Box::new(self)))
-                }
-                Cont::Prod(x, ty) => self = App::new(Term1::Prod(x, Box::new(ty), Box::new(self))),
+                Cont::Abst(x, ty) => self = App::new(Term1::Abst(x, ty.map(Box::new), self.into())),
+                Cont::Prod(x, ty) => self = App::new(Term1::Prod(x, Box::new(ty), self.into())),
                 Cont::LPar(lpar) => return (Some(lpar), self),
             }
         }
