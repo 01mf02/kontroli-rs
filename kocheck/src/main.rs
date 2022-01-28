@@ -23,7 +23,7 @@ where
 
         // sending fails prematurely if consumption fails
         // in that case, handle the error after this function exits
-        if head.chain(tail).try_for_each(|event| send(event)).is_err() {
+        if head.chain(tail).try_for_each(&send).is_err() {
             return Ok(());
         }
     }
