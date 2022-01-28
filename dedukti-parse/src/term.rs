@@ -162,7 +162,7 @@ impl<C, V> Ctx<C, V> {
         V: Borrow<S>,
     {
         let mut i = 0;
-        for cont in &self.stack {
+        for cont in self.stack.iter().rev() {
             match cont {
                 Cont::Abst(x, _) | Cont::Prod(Some(x), _) => {
                     if x.borrow() == s {
@@ -175,7 +175,7 @@ impl<C, V> Ctx<C, V> {
                 Cont::LPar(_) => (),
             }
         }
-        for x in &self.bound {
+        for x in self.bound.iter().rev() {
             if x.borrow() == s {
                 return Some(i);
             } else {
