@@ -201,17 +201,29 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
     where
         I: Iterator<Item = Token<S>>,
     {
-        match match self {
-            Self::Init => Loop::Continue,
-            Self::Symb(s1) => Self::ident(s1, ctx, iter)?,
-            Self::VarOf(s1) => Self::varof(s1, ctx, iter)?,
-            Self::ATerm(x, app) => Self::aterm(x, app, ctx, iter.next(), iter)?,
-            Self::Term(_, _) => Loop::Return(self),
-        } {
-            Loop::Continue => (),
-            Loop::Return(ret) => return Ok(ret),
+        match self.resume(ctx, iter)? {
+            Loop::Continue => Self::init(ctx, iter),
+            Loop::Return(ret) => Ok(ret),
         }
+    }
 
+    fn resume<I>(self, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
+    where
+        I: Iterator<Item = Token<S>>,
+    {
+        match self {
+            Self::Init => Ok(Loop::Continue),
+            Self::Symb(s1) => Self::ident(s1, ctx, iter),
+            Self::VarOf(s1) => Self::varof(s1, ctx, iter),
+            Self::ATerm(x, app) => Self::aterm(x, app, ctx, iter.next(), iter),
+            Self::Term(_, _) => Ok(Loop::Return(self)),
+        }
+    }
+
+    pub fn init<I>(ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
+    where
+        I: Iterator<Item = Token<S>>,
+    {
         while let Some(token) = iter.next() {
             match token {
                 Token::Ident(s1) => match Self::ident(s1, ctx, iter)? {
@@ -371,7 +383,7 @@ impl<C, V> Term<C, V> {
     where
         I: Iterator<Item = Token<S>>,
     {
-        match State::Init.parse(ctx, iter)? {
+        match State::init(ctx, iter)? {
             State::Init | State::VarOf(_) => Err(Error::ExpectedIdentOrLPar),
             // TODO: handle this case
             State::Symb(_) | State::ATerm(..) => panic!("expected input"),
