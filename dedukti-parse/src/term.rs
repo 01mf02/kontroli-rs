@@ -201,21 +201,15 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
     where
         I: Iterator<Item = Token<S>>,
     {
-        match self {
-            Self::Init => (),
-            Self::Symb(s1) => match Self::ident(s1, ctx, iter)? {
-                Loop::Continue => (),
-                Loop::Return(ret) => return Ok(ret),
-            },
-            Self::VarOf(s1) => match Self::varof(s1, ctx, iter)? {
-                Loop::Continue => (),
-                Loop::Return(ret) => return Ok(ret),
-            },
-            Self::ATerm(x, app) => match Self::aterm(x, app, ctx, iter.next(), iter)? {
-                Loop::Continue => (),
-                Loop::Return(ret) => return Ok(ret),
-            },
-            Self::Term(_, _) => return Ok(self),
+        match match self {
+            Self::Init => Loop::Continue,
+            Self::Symb(s1) => Self::ident(s1, ctx, iter)?,
+            Self::VarOf(s1) => Self::varof(s1, ctx, iter)?,
+            Self::ATerm(x, app) => Self::aterm(x, app, ctx, iter.next(), iter)?,
+            Self::Term(_, _) => Loop::Return(self),
+        } {
+            Loop::Continue => (),
+            Loop::Return(ret) => return Ok(ret),
         }
 
         while let Some(token) = iter.next() {
