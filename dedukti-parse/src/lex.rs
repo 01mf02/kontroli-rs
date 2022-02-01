@@ -1,5 +1,5 @@
 use core::fmt::{self, Display};
-use logos::{Lexer, Logos};
+use logos::{Filter, Lexer, Logos};
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(type S = &str)]
@@ -116,12 +116,12 @@ fn ident<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<&'s str> {
     Some(lex.slice())
 }
 
-fn comment1<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> usize {
+fn comment1<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Filter<usize> {
     comment(lex, 1)
 }
 
 /// Lex inside a comment until end of comment or input, return number of open comments.
-pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> usize {
+pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> Filter<usize> {
     let prefix: &[_] = &['(', ';'];
     while open > 0 {
         // go to first occurrence of either ';' or '('
@@ -129,7 +129,7 @@ pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> usiz
             Some(offset) => lex.bump(offset),
             None => {
                 lex.bump(lex.remainder().len());
-                break;
+                return Filter::Emit(open);
             }
         };
         if lex.remainder().starts_with("(;") {
@@ -142,7 +142,7 @@ pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> usiz
             lex.bump(1);
         }
     }
-    open
+    Filter::Skip
 }
 
 #[test]
