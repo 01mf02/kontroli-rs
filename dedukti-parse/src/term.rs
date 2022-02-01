@@ -50,7 +50,7 @@ impl<C: Display, V: Display> Display for Term1<C, V> {
 pub enum Error {
     ExpectedIdentOrLPar,
     AnonymousLambda,
-    AbstractionWithoutRhs,
+    AbstWithoutRhs,
     UnclosedLPar,
 }
 
@@ -274,7 +274,7 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
                     ctx.stack.push(Cont::LPar(LPar { x, app: Some(app) }));
                     return Ok(Loop::Continue);
                 }
-                _tok if x.is_some() => return Err(Error::AbstractionWithoutRhs),
+                _tok if x.is_some() => return Err(Error::AbstWithoutRhs),
                 Token::RPar => match app.reduce(ctx) {
                     // if we found a matching left parenthesis
                     (Some(lpar), tm) => {
@@ -350,6 +350,6 @@ fn negative() {
     assert_eq!(Term::parse_str("(a ").unwrap_err(), UnclosedLPar);
     assert_eq!(Term::parse_str("(a b ").unwrap_err(), UnclosedLPar);
     assert_eq!(Term::parse_str("a b => c").unwrap_err(), AnonymousLambda);
-    assert_eq!(Term::parse_str("(a : b)").unwrap_err(), AbstractionWithoutRhs);
-    assert_eq!(Term::parse_str("a : b.").unwrap_err(), AbstractionWithoutRhs);
+    assert_eq!(Term::parse_str("(a : b)").unwrap_err(), AbstWithoutRhs);
+    assert_eq!(Term::parse_str("a : b.").unwrap_err(), AbstWithoutRhs);
 }
