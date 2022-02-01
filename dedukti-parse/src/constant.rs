@@ -4,7 +4,7 @@ use core::borrow::Borrow;
 use core::fmt::{self, Display};
 
 /// Constant consisting of a relative module path and a symbol name.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constant<S> {
     pub path: Vec<S>,
     pub name: S,
@@ -25,6 +25,13 @@ impl<S> Constant<S> {
 
     pub fn push(&mut self, name: S) {
         self.path.push(core::mem::replace(&mut self.name, name));
+    }
+
+    pub fn into<T>(self) -> Constant<T>
+    where
+        S: Into<T>,
+    {
+        self.map(|s| s.into())
     }
 }
 
