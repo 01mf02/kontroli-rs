@@ -1,5 +1,6 @@
 use crate::{cmd, term, Command, Term, Token};
-use alloc::vec::Vec;
+use core::iter::Peekable;
+use logos::Logos;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -10,19 +11,16 @@ pub enum Error {
 
 pub struct CmdIter<'s, S, V>
 where
-    Token<S>: logos::Logos<'s>,
+    Token<S>: Logos<'s>,
 {
-    lexer: logos::Lexer<'s, Token<S>>,
-    tokens: Vec<Token<S>>,
+    lexer: Peekable<logos::Lexer<'s, Token<S>>>,
     ctx: term::Ctx<S, V>,
 }
 
 impl<'s, V> CmdIter<'s, &'s str, V> {
     pub fn new(s: &'s str) -> Self {
-        use logos::Logos;
         Self {
-            lexer: Token::lexer(s),
-            tokens: Vec::new(),
+            lexer: Token::lexer(s).peekable(),
             ctx: Default::default(),
         }
     }
@@ -30,12 +28,11 @@ impl<'s, V> CmdIter<'s, &'s str, V> {
 
 impl<'s, S: cmd::Joker> Iterator for CmdIter<'s, S, S>
 where
-    Token<S>: logos::Logos<'s>,
+    Token<S>: Logos<'s>,
 {
     type Item = Result<Command<S, S, Term<S, S>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
-        crate::period(&mut self.lexer, &mut self.tokens);
-        if self.tokens.is_empty() {
+        if self.lexer.peek().is_none() {
             return None;
         }
 
@@ -45,11 +42,9 @@ where
         let mut cmds = CState::Init;
         let mut trms = TState::Init;
 
-        let mut iter = self.tokens.drain(..).peekable();
-
-        while iter.peek().is_some() {
+        while self.lexer.peek().is_some() {
             if cmds.expects_term() {
-                match trms.parse(&mut self.ctx, &mut iter) {
+                match trms.parse(&mut self.ctx, &mut self.lexer) {
                     Ok(TState::Term(tm, tok)) => match cmds.apply(self.ctx.bound_mut(), tm, tok) {
                         Ok(CState::Command(cmd)) => return Some(Ok(cmd)),
                         Ok(st) => {
@@ -63,7 +58,7 @@ where
                 };
             } else {
                 assert!(matches!(trms, TState::Init));
-                match cmds.parse(self.ctx.bound_mut(), iter.next().unwrap()) {
+                match cmds.parse(self.ctx.bound_mut(), self.lexer.next().unwrap()) {
                     Ok(st) => cmds = st,
                     Err(e) => return Some(Err(Error::Command(e))),
                 }

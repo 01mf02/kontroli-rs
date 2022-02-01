@@ -112,6 +112,7 @@ pub enum Error {
     ExpectedCommaOrRBrk,
     ExpectedRPar,
     ExpectedCmd,
+    UnexpectedPath,
     UnexpectedToken,
 }
 
@@ -185,8 +186,10 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
         S: Into<C> + Into<V>,
     {
         match (self, token) {
+            (state, Token::Symb(s)) if s.path.is_empty() => state.apply_name(s.name),
+            (_, Token::Symb(_)) => return Err(Error::UnexpectedPath),
+
             // starting commands
-            (State::Init, Token::Ident(s)) => Ok(State::Decl(s.into(), false)),
             (State::Init, Token::Def) => Ok(State::Def),
             (State::Init, Token::Thm) => Ok(State::Thm),
             (State::Init, Token::LBrk) => Ok(State::RuleCtx(Default::default(), None)),
@@ -196,9 +199,6 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
             (State::Decl(s, false), Token::Colon) => Ok(State::Decl(s, true)),
             (State::Decl(_, false), _) => Err(Error::ExpectedColon),
 
-            // def/thm + s
-            (State::Def, Token::Ident(s)) => Ok(State::Args(DefThm::Def, s.into(), Vec::new())),
-            (State::Thm, Token::Ident(s)) => Ok(State::Args(DefThm::Thm, s.into(), Vec::new())),
             (State::Def | State::Thm, _) => Err(Error::ExpectedIdent),
 
             // def/thm s + (
@@ -213,10 +213,6 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
             (State::Args(DefThm::Thm, _, _), _) => Err(Error::ExpectedColon),
             (State::Args(DefThm::Def, _, _), _) => Err(Error::ExpectedColonOrColonEq),
 
-            // def/thm s ( + x
-            (State::ArgsIn(dt, s, c, None), Token::Ident(x)) => {
-                Ok(State::ArgsIn(dt, s, c, Some((x.into(), false))))
-            }
             (State::ArgsIn(_, _, _, None), _) => Err(Error::ExpectedIdent),
 
             // def s (x + :
@@ -227,10 +223,6 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
 
             // [x1 : t1, .., + ]
             (State::RuleCtx(c, None), Token::RBrk) => Ok(Self::rulel(bound, c)),
-            // [x1 : t1, .., + x
-            (State::RuleCtx(c, None), Token::Ident(s)) => {
-                Ok(State::RuleCtx(c, Some((s.into(), false))))
-            }
             (State::RuleCtx(_, None), _) => Err(Error::ExpectedCommaOrRBrk),
 
             // [x1 : t1, .., x + :
@@ -252,6 +244,22 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
             // TODO: comma, rbrk, OR colon!
             (State::RuleCtx(_, Some((_, false))), _) => Err(Error::ExpectedCommaOrRBrk),
 
+            _ => Err(Error::UnexpectedToken),
+        }
+    }
+
+    pub fn apply_name(self, name: impl Into<C> + Into<V>) -> Result<State<C, V, Tm>> {
+        match self {
+            State::Init => Ok(State::Decl(name.into(), false)),
+            // def/thm + s
+            State::Def => Ok(State::Args(DefThm::Def, name.into(), Vec::new())),
+            State::Thm => Ok(State::Args(DefThm::Thm, name.into(), Vec::new())),
+            // def/thm s ( + x
+            State::ArgsIn(dt, s, c, None) => {
+                Ok(State::ArgsIn(dt, s, c, Some((name.into(), false))))
+            }
+            // [x1 : t1, .., + x
+            State::RuleCtx(c, None) => Ok(State::RuleCtx(c, Some((name.into(), false)))),
             _ => Err(Error::UnexpectedToken),
         }
     }
@@ -311,7 +319,7 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
 
             (State::ArgsIn(_, _, _, Some((_, true))), _) => Err(Error::ExpectedRPar),
 
-            (cur, Token::Period) => Ok(State::Command(cur.close(bound, tm)?)),
+            (cur, Token::Dot) => Ok(State::Command(cur.close(bound, tm)?)),
             _ => Err(Error::UnexpectedToken),
         }
     }

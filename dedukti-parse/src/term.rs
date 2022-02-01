@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::{Constant, Token};
 use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
 use core::fmt::{self, Display};
@@ -9,7 +9,7 @@ pub struct App<Tm>(pub Tm, pub Vec<Self>);
 #[derive(Clone, Debug)]
 pub enum Term1<C, V> {
     // Symbol name, preceded by module path
-    Const(Vec<C>, C),
+    Const(Constant<C>),
     Var(usize),
     // Abstraction (`x : A => t`)
     Abst(V, Option<Box<App<Self>>>, Box<App<Self>>),
@@ -36,10 +36,7 @@ impl<Tm: Display> Display for App<Tm> {
 impl<C: Display, V: Display> Display for Term1<C, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Const(path, name) => {
-                path.iter().try_for_each(|p| write!(f, "{}.", p))?;
-                name.fmt(f)
-            }
+            Self::Const(c) => c.fmt(f),
             Self::Var(v) => v.fmt(f),
             Self::Abst(x, Some(ty), tm) => write!(f, "({} : {} => {})", x, ty, tm),
             Self::Abst(x, None, tm) => write!(f, "({} => {})", x, tm),
@@ -51,7 +48,6 @@ impl<C: Display, V: Display> Display for Term1<C, V> {
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    ExpectedIdent,
     ExpectedIdentOrLPar,
     AnonymousLambda,
     AbstractionWithoutRhs,
@@ -168,29 +164,6 @@ impl<C, V> Term<C, V> {
     }
 }
 
-type OToken<S> = Option<Token<S>>;
-
-fn post_dot<S: Into<C>, C, I>(mut s: S, iter: &mut I) -> Result<(Vec<C>, C, OToken<S>)>
-where
-    I: Iterator<Item = Token<S>>,
-{
-    let mut path = Vec::new();
-    while let Some(tok) = iter.next() {
-        match tok {
-            Token::Ident(s2) => {
-                path.push(s.into());
-                s = s2;
-                match iter.next() {
-                    Some(Token::Dot) => continue,
-                    tok => return Ok((path, s.into(), tok)),
-                }
-            }
-            _ => break,
-        }
-    }
-    Err(Error::ExpectedIdent)
-}
-
 enum Loop<T> {
     Return(T),
     Continue,
@@ -213,7 +186,7 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
     {
         match self {
             Self::Init => Ok(Loop::Continue),
-            Self::Symb(s1) => Self::ident(s1, ctx, iter),
+            Self::Symb(s1) => Self::symb(Constant::new(s1), ctx, iter),
             Self::VarOf(s1) => Self::varof(s1, ctx, iter),
             Self::ATerm(x, app) => Self::aterm(x, app, ctx, iter.next(), iter),
             Self::Term(_, _) => Ok(Loop::Return(self)),
@@ -226,7 +199,7 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
     {
         while let Some(token) = iter.next() {
             match token {
-                Token::Ident(s1) => match Self::ident(s1, ctx, iter)? {
+                Token::Symb(s) => match Self::symb(s, ctx, iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(ret),
                 },
@@ -237,51 +210,22 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
         Ok(Self::Init)
     }
 
-    fn ident<I>(s1: S, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
+    fn symb<I>(s1: Constant<S>, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
     {
+        if !s1.path.is_empty() {
+            let app = App::new(Term1::Const(s1.into()));
+            return Self::aterm(None, app, ctx, iter.next(), iter);
+        }
         match iter.next() {
-            None => return Ok(Loop::Return(Self::Symb(s1))),
-            Some(Token::Arrow) => ctx.stack.push(Cont::Prod(
-                None,
-                App::new(Term1::Const(Vec::new(), s1.into())),
-            )),
-            Some(Token::FatArrow) => ctx.stack.push(Cont::Abst(s1.into(), None)),
-            Some(Token::Colon) => match Self::varof(s1.into(), ctx, iter)? {
-                Loop::Continue => (),
-                Loop::Return(ret) => return Ok(Loop::Return(ret)),
-            },
-            Some(Token::Dot) => {
-                let (path, name, tok) = post_dot(s1, iter)?;
-                let app = App::new(Term1::Const(path, name));
-                match Self::aterm(None, app, ctx, tok, iter)? {
-                    Loop::Continue => (),
-                    Loop::Return(ret) => return Ok(Loop::Return(ret)),
-                }
+            None => return Ok(Loop::Return(Self::Symb(s1.name))),
+            Some(Token::FatArrow) => ctx.stack.push(Cont::Abst(s1.name.into(), None)),
+            Some(Token::Colon) => return Self::varof(s1.name.into(), ctx, iter),
+            Some(tok) => {
+                let app = App::new(Term1::Const(s1.into()));
+                return Self::aterm(None, app, ctx, Some(tok), iter);
             }
-            Some(Token::Ident(s2)) => {
-                let app = App::new(Term1::Const(Vec::new(), s1.into()));
-                match Self::aterm(None, app, ctx, Some(Token::Ident(s2)), iter)? {
-                    Loop::Continue => (),
-                    Loop::Return(ret) => return Ok(Loop::Return(ret)),
-                }
-            }
-            Some(Token::LPar) => {
-                let app = Some(App::new(Term1::Const(Vec::new(), s1.into())));
-                ctx.stack.push(Cont::LPar(LPar { x: None, app }));
-            }
-            Some(Token::RPar) => {
-                let app = App::new(Term1::Const(Vec::new(), s1.into()));
-                match Self::aterm(None, app, ctx, Some(Token::RPar), iter)? {
-                    Loop::Continue => (),
-                    Loop::Return(ret) => return Ok(Loop::Return(ret)),
-                }
-            }
-            Some(other) => match App::new(Term1::Const(Vec::new(), s1.into())).reduce(ctx) {
-                (Some(_lpar), _) => return Err(Error::UnclosedLPar),
-                (None, tm) => return Ok(Loop::Return(Self::Term(tm, other.map(|_| ())))),
-            },
         }
         Ok(Loop::Continue)
     }
@@ -292,15 +236,9 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
     {
         match iter.next() {
             None => Ok(Loop::Return(Self::VarOf(s1))),
-            Some(Token::Ident(s2)) => {
-                let (app, tok) = match iter.next() {
-                    Some(Token::Dot) => {
-                        let (path, name, tok) = post_dot(s2, iter)?;
-                        (Term1::Const(path, name), tok)
-                    }
-                    tok => (Term1::Const(Vec::new(), s2.into()), tok),
-                };
-                Self::aterm(Some(s1), App::new(app), ctx, tok, iter)
+            Some(Token::Symb(s2)) => {
+                let app = App::new(Term1::Const(s2.into()));
+                Self::aterm(Some(s1), app, ctx, iter.next(), iter)
             }
             Some(Token::LPar) => {
                 let x = Some(s1);
@@ -315,25 +253,12 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
         mut x: Option<V>,
         mut app: Term<C, V>,
         ctx: &mut Ctx<C, V>,
-        mut token: OToken<S>,
+        mut token: Option<Token<S>>,
         iter: &mut impl Iterator<Item = Token<S>>,
     ) -> Result<Loop<State<S, C, V>>> {
         while let Some(tok) = token.take() {
             match tok {
-                Token::Ident(s) => match iter.next() {
-                    None => app.1.push(App::new(Term1::Const(Vec::new(), s.into()))),
-                    Some(Token::Dot) => {
-                        let (path, name, tok) = post_dot(s, iter)?;
-                        app.1.push(App::new(Term1::Const(path, name)));
-                        token = tok;
-                        continue;
-                    }
-                    Some(other) => {
-                        app.1.push(App::new(Term1::Const(Vec::new(), s.into())));
-                        token = Some(other);
-                        continue;
-                    }
-                },
+                Token::Symb(s) => app.1.push(App::new(Term1::Const(s.into()))),
                 Token::Arrow => {
                     ctx.stack.push(Cont::Prod(x, app));
                     return Ok(Loop::Continue);
@@ -394,11 +319,12 @@ impl<C, V> Term<C, V> {
 
 impl<'s> Term<&'s str, &'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self> {
+        use crate::Lex;
         let mut ctx = Ctx::default();
-        let mut iter = crate::lex(s).chain(core::iter::once(Token::Period));
+        let mut iter = Token::lexer(s).chain(core::iter::once(Token::Dot));
         let (tm, tok) = Self::parse(&mut ctx, &mut iter)?;
         assert_eq!(iter.next(), None);
-        assert_eq!(tok, Token::Period);
+        assert_eq!(tok, Token::Dot);
         Ok(tm)
     }
 }
@@ -407,6 +333,8 @@ impl<'s> Term<&'s str, &'s str> {
 fn positive() -> Result<()> {
     Term::parse_str("x => y : a => z")?;
     Term::parse_str("a -> x : b -> c")?;
+    Term::parse_str("(a)")?;
+    Term::parse_str("(a b)")?;
     Term::parse_str("(a b) (c d) e")?;
     Term::parse_str("a (b c) (d e)")?;
     Term::parse_str("((a (((b)))))")?;
@@ -422,5 +350,4 @@ fn negative() {
     assert_eq!(Term::parse_str("(a ").unwrap_err(), UnclosedLPar);
     assert_eq!(Term::parse_str("(a b ").unwrap_err(), UnclosedLPar);
     assert_eq!(Term::parse_str("a b => c").unwrap_err(), AnonymousLambda);
-    assert_eq!(Term::parse_str("m1.m2. -> x").unwrap_err(), ExpectedIdent);
 }

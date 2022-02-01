@@ -1,6 +1,6 @@
 //! Print commands in a Dedukti file, one command per line.
 
-use dedukti_parse::{period, Token};
+use dedukti_parse::Token;
 use std::fmt::Display;
 use std::io::{self, Read};
 
@@ -9,13 +9,10 @@ fn no_space_after<S>(token: &Token<S>) -> bool {
 }
 
 fn no_space_before<S>(token: &Token<S>) -> bool {
-    matches!(
-        token,
-        Token::RBrk | Token::RPar | Token::Comma | Token::Dot | Token::Period
-    )
+    matches!(token, Token::RBrk | Token::RPar | Token::Comma | Token::Dot)
 }
 
-fn print_cmd<S: Display>(cmd: impl Iterator<Item = Token<S>>) {
+fn print<S: Display>(cmd: impl Iterator<Item = Token<S>>) {
     let mut space = false;
 
     for token in cmd {
@@ -24,8 +21,11 @@ fn print_cmd<S: Display>(cmd: impl Iterator<Item = Token<S>>) {
         }
         print!("{}", token);
         space = !no_space_after(&token);
+
+        if matches!(token, Token::Dot) {
+            println!("");
+        }
     }
-    println!("");
 }
 
 fn main() -> io::Result<()> {
@@ -34,15 +34,7 @@ fn main() -> io::Result<()> {
     stdin.read_to_string(&mut buffer)?;
 
     use logos::Logos;
-    let mut lexer = Token::lexer(&buffer);
-    let mut tokens = Vec::new();
-    loop {
-        period(&mut lexer, &mut tokens);
-        if tokens.is_empty() {
-            break;
-        }
-        print_cmd(tokens.drain(..))
-    }
+    print(Token::lexer(&buffer));
 
     Ok(())
 }

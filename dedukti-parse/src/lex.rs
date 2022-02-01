@@ -1,7 +1,8 @@
+use crate::Constant;
 use core::fmt::{self, Display};
 use logos::{Filter, Lexer, Logos};
 
-#[derive(Logos, Debug, PartialEq)]
+#[derive(Logos, Debug, PartialEq, Eq)]
 #[logos(type S = &str)]
 pub enum Token<S> {
     #[token("def")]
@@ -43,20 +44,16 @@ pub enum Token<S> {
     #[token(".")]
     Dot,
 
-    Period,
-
-    #[regex("[a-zA-Z0-9_!?][a-zA-Z0-9_!?']*")]
-    #[token("{|", ident)]
-    Ident(S),
-
-    #[regex(r"[ \t\n\f]+")]
-    Space,
+    #[regex("[a-zA-Z0-9_!?][a-zA-Z0-9_!?']*", symb)]
+    #[token("{|", moustache)]
+    Symb(Constant<S>),
 
     #[token("(;", comment1)]
     Comment(usize),
 
     // Logos requires one token variant to handle errors,
     // it can be named anything you wish.
+    #[regex(r"[ \t\n\f]+", logos::skip)]
     #[error]
     Error,
 }
@@ -78,9 +75,7 @@ impl<S> Token<S> {
             LongArrow => LongArrow,
             Comma => Comma,
             Dot => Dot,
-            Period => Period,
-            Ident(s) => Ident(f(s)),
-            Space => Space,
+            Symb(s) => Symb(s.map(f)),
             Comment(o) => Comment(o),
             Error => Error,
         }
@@ -102,18 +97,41 @@ impl<S: Display> Display for Token<S> {
             Self::FatArrow => "=>".fmt(f),
             Self::LongArrow => "-->".fmt(f),
             Self::Comma => ",".fmt(f),
-            Self::Dot | Self::Period => ".".fmt(f),
-            Self::Ident(s) => s.fmt(f),
-            Self::Space | Self::Comment(_) => " ".fmt(f),
+            Self::Dot => ".".fmt(f),
+            Self::Symb(s) => s.fmt(f),
+            Self::Comment(_) => " ".fmt(f),
             Self::Error => Err(Default::default()),
         }
     }
 }
 
-fn ident<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<&'s str> {
+fn symb<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Constant<&'s str>> {
+    let mut symb = Constant::new(lex.slice());
+
+    // regular expressions for head and tail of identifiers
+    let ih = |c| matches!(c, 'a' ..= 'z' | 'A' ..= 'Z' | '0' ..= '9' | '_' | '!' | '?');
+    let it = |c| matches!(c, 'a' ..= 'z' | 'A' ..= 'Z' | '0' ..= '9' | '_' | '!' | '?' | '\'');
+
+    while let Some(after_dot) = lex.remainder().strip_prefix('.') {
+        let len = if let Some(tail) = after_dot.strip_prefix(ih) {
+            1 + tail.find(|c| !it(c)).unwrap_or_else(|| tail.len())
+        } else if let Some(after_moustache) = after_dot.strip_prefix("{|") {
+            2 + after_moustache.find("|}")? + 2
+        } else {
+            break;
+        };
+
+        symb.push(&after_dot[..len]);
+        lex.bump(1 + len); // eat the dot
+    }
+
+    Some(symb)
+}
+
+fn moustache<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Constant<&'s str>> {
     let len = lex.remainder().find("|}")?;
     lex.bump(len + 2); // include len of `|}`
-    Some(lex.slice())
+    symb(lex)
 }
 
 fn comment1<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Filter<usize> {
@@ -148,8 +166,8 @@ pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> Filt
 #[test]
 fn comment_open() {
     let s = "opening .. (; closing .. ;) still one open ..";
-    assert_eq!(comment1(&mut Token::lexer(s)), 1);
+    assert!(matches!(comment1(&mut Token::lexer(s)), Filter::Emit(1)));
 
     let s = "closing .. ;) none open";
-    assert_eq!(comment1(&mut Token::lexer(s)), 0);
+    assert!(matches!(comment1(&mut Token::lexer(s)), Filter::Skip));
 }
