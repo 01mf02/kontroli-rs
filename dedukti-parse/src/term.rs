@@ -350,4 +350,6 @@ fn negative() {
     assert_eq!(Term::parse_str("(a ").unwrap_err(), UnclosedLPar);
     assert_eq!(Term::parse_str("(a b ").unwrap_err(), UnclosedLPar);
     assert_eq!(Term::parse_str("a b => c").unwrap_err(), AnonymousLambda);
+    assert_eq!(Term::parse_str("(a : b)").unwrap_err(), AbstractionWithoutRhs);
+    assert_eq!(Term::parse_str("a : b.").unwrap_err(), AbstractionWithoutRhs);
 }
