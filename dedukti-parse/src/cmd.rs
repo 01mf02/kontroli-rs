@@ -263,7 +263,7 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
                 | State::ThmOf(..)
                 | State::DefOfEq(..)
                 | State::DefThmEq(..)
-                | State::ArgsIn(_, _, _, Some((_, true)))
+                | State::ArgsIn(.., Some((_, true)))
                 | State::RuleCtx(_, Some((_, true)))
                 | State::RuleL(_)
                 | State::RuleR(..)
