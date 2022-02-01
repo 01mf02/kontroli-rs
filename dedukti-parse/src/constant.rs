@@ -11,8 +11,20 @@ pub struct Constant<S> {
 }
 
 impl<S> Constant<S> {
-    pub fn new(path: Vec<S>, name: S) -> Self {
+    pub fn new(name: S) -> Self {
+        let path = Vec::new();
         Self { path, name }
+    }
+
+    pub fn map<T>(self, f: impl Fn(S) -> T) -> Constant<T> {
+        Constant {
+            path: self.path.into_iter().map(&f).collect(),
+            name: f(self.name),
+        }
+    }
+
+    pub fn push(&mut self, name: S) {
+        self.path.push(core::mem::replace(&mut self.name, name));
     }
 }
 
@@ -27,9 +39,9 @@ pub struct Map;
 
 impl<T: for<'a> From<&'a str>> Consts<Constant<T>> for Map {
     fn get<S: Borrow<str>>(&self, path: &[S], name: &S) -> Option<Constant<T>> {
-        Some(Constant::new(
-            path.iter().map(|p| p.borrow().into()).collect(),
-            name.borrow().into(),
-        ))
+        Some(Constant {
+            path: path.iter().map(|p| p.borrow().into()).collect(),
+            name: name.borrow().into(),
+        })
     }
 }
