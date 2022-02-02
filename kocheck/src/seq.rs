@@ -3,7 +3,7 @@ use colosseum::unsync::Arena;
 use core::{borrow::Borrow, convert::TryFrom};
 use kontroli::error::Error as KoError;
 use kontroli::rc::{GCtx, Intro, Rule, Typing};
-use kontroli::{Scope, Share, Symbol, Symbols};
+use kontroli::{Share, Symbol, Symbols};
 
 type Command<'s> = kontroli::Command<Symbol<'s>, Intro<'s>, Rule<'s>>;
 
@@ -81,7 +81,7 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
         let mut cmds = CmdIter::new(&file.read, scope_var)
             .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
             .filter(|cmd| !opt.omits(Scope) || cmd.is_err())
-            .map(|cmd| Ok::<_, Error>(cmd?.scope() as SCommand<&str>))
+            .map(|cmd| Ok::<_, Error>(Into::<SCommand<&str>>::into(cmd?)))
             .filter(|cmd| !opt.omits(Share) || cmd.is_err())
             .map(|cmd| share(cmd?, &mut syms, &arena).map_err(Error::Ko))
             .filter(|cmd| !opt.omits(Infer) || cmd.is_err());

@@ -1,7 +1,7 @@
 //! Scoping of parse structures, distinguishing variables from constants.
 
 use crate::parse;
-use crate::{Arg, Stack};
+use crate::Arg;
 use alloc::{string::String, string::ToString, vec::Vec};
 
 pub use crate::parse::Symb as Symbol;
@@ -14,25 +14,8 @@ pub type Intro<S> = crate::Intro<Term<S>>;
 pub type Rule<S> = crate::Rule<Arg<String, Option<Term<S>>>, Term<S>>;
 pub type Command<S> = crate::Command<String, Intro<S>, Rule<S>>;
 
-type Bound<'s> = Stack<&'s str>;
-
-pub trait Scope<Target> {
-    fn scope(self) -> Target;
-}
-
-pub trait Scopen<'s, Target> {
-    /// Scope an open structure using supplied bound variables.
-    fn scopen(self, bnd: &mut Bound<'s>) -> Target;
-}
-
-impl<'s, Target, T: Scopen<'s, Target>> Scope<Target> for T {
-    fn scope(self) -> Target {
-        self.scopen(&mut Stack::new())
-    }
-}
-
-impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::term::Term1<Symbol<&'s str>, &'s str> {
-    fn scopen(self, bnd: &mut Bound<'s>) -> Term<S> {
+impl<'s, S: From<&'s str>> Into<Term<S>> for parse::term::Term1<Symbol<&'s str>, &'s str> {
+    fn into(self) -> Term<S> {
         match self {
             Self::Const(Symbol { path, name }) => {
                 Term::Symb(Symbol { path, name }.map(|s| s.into()))
@@ -42,46 +25,45 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::term::Term1<Symbol<&'s
             Self::Prod(x, ty, tm) => {
                 let x = x.unwrap_or("$");
                 let id = x.to_string();
-                let ty = ty.scopen(bnd);
-                let prod = TermC::Prod(Arg { id, ty }, tm.scopen(bnd));
+                let ty = (*ty).into();
+                let prod = TermC::Prod(Arg { id, ty }, (*tm).into());
                 Term::Comb(BTerm::new(prod))
             }
             Self::Abst(x, ty, tm) => {
                 let id = x.to_string();
-                let ty = ty.map(|ty| ty.scopen(bnd));
-                let abst = TermC::Abst(Arg { id, ty }, tm.scopen(bnd));
+                let ty = ty.map(|ty| (*ty).into());
+                let abst = TermC::Abst(Arg { id, ty }, (*tm).into());
                 Term::Comb(BTerm::new(abst))
             }
         }
     }
 }
 
-impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::Term<Symbol<&'s str>, &'s str> {
-    fn scopen(self, bnd: &mut Bound<'s>) -> Term<S> {
-        let head = self.0.scopen(bnd);
+impl<'s, S: From<&'s str>> Into<Term<S>> for parse::Term<Symbol<&'s str>, &'s str> {
+    fn into(self) -> Term<S> {
+        let head = self.0.into();
         if self.1.is_empty() {
             head
         } else {
-            let tail = self.1.into_iter().map(|tm| tm.scopen(bnd)).collect();
+            let tail = self.1.into_iter().map(|tm| tm.into()).collect();
             Term::Comb(BTerm::new(TermC::Appl(head, tail)))
         }
     }
 }
 
-impl<'s, S: From<&'s str>> Scope<Rule<S>>
+impl<'s, S: From<&'s str>> Into<Rule<S>>
     for parse::Rule<&'s str, parse::Term<Symbol<&'s str>, &'s str>>
 {
-    fn scope(self) -> Rule<S> {
-        let mut bnd = Bound::new();
+    fn into(self) -> Rule<S> {
         let mut ctx = Vec::new();
         for (id, ty) in self.ctx {
-            let ty = ty.map(|ty| ty.scopen(&mut bnd));
+            let ty = ty.map(|ty| ty.into());
             let id = id.to_string();
             ctx.push(Arg { id, ty });
         }
 
-        let lhs = self.lhs.scopen(&mut bnd);
-        let rhs = self.rhs.scopen(&mut bnd);
+        let lhs = self.lhs.into();
+        let rhs = self.rhs.into();
 
         Rule { ctx, lhs, rhs }
     }
@@ -98,10 +80,10 @@ impl<Tm> From<parse::Intro<Tm>> for crate::Intro<Tm> {
     }
 }
 
-impl<'s, S: From<&'s str>> Scope<Command<S>>
+impl<'s, S: From<&'s str>> Into<Command<S>>
     for parse::Command<&'s str, &'s str, parse::Term<Symbol<&'s str>, &'s str>>
 {
-    fn scope(self) -> Command<S> {
+    fn into(self) -> Command<S> {
         match self {
             Self::Intro(id, args, it) => {
                 use parse::term::App;
@@ -113,9 +95,9 @@ impl<'s, S: From<&'s str>> Scope<Command<S>>
                     it.map_type(|ty| App::new(Prod(Some(name), arg_ty.clone().into(), ty.into())))
                         .map_term(|tm| App::new(Abst(name, Some(arg_ty.into()), tm.into())))
                 });
-                Command::Intro(id, it.map_type(|tm| tm.scope()).map_term(|tm| tm.scope()))
+                Command::Intro(id, it.map_type(|tm| tm.into()).map_term(|tm| tm.into()))
             }
-            Self::Rules(rules) => Command::Rules(rules.into_iter().map(|r| r.scope()).collect()),
+            Self::Rules(rules) => Command::Rules(rules.into_iter().map(|r| r.into()).collect()),
         }
     }
 }
@@ -125,14 +107,14 @@ impl<'s, S: From<&'s str>> Scope<Command<S>>
 impl<'s> Command<&'s str> {
     /// Parse a command and scope it. Used for testing.
     pub fn parse(i: &'s str) -> Self {
-        parse::Command::parse_str(i).unwrap().scope()
+        parse::Command::parse_str(i).unwrap().into()
     }
 }
 
 impl<'s> Term<&'s str> {
     /// Parse a term and scope it. Used for testing.
     pub fn parse(i: &'s str) -> Self {
-        parse::Term::parse_str(i).unwrap().scope()
+        parse::Term::parse_str(i).unwrap().into()
     }
 }
 
@@ -140,7 +122,7 @@ impl<'s> Rule<&'s str> {
     /// Parse a rule and scope it. Used for testing.
     pub fn parse(i: &'s str) -> Self {
         match parse::Command::parse_str(i).unwrap() {
-            parse::Command::Rules(mut rules) => rules.pop().unwrap().scope(),
+            parse::Command::Rules(mut rules) => rules.pop().unwrap().into(),
             _ => panic!("command is not a rule"),
         }
     }

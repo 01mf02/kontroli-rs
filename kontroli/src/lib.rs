@@ -161,7 +161,6 @@ pub use gctx::GCtx;
 pub use intro::Intro;
 pub use pattern::Pattern;
 pub use rule::Rule;
-pub use scope::Scope;
 pub use share::Share;
 pub use stack::Stack;
 pub use symbol::Symbol;

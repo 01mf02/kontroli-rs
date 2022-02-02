@@ -11,13 +11,13 @@ where
     for file in opt.files.iter() {
         let file = PathRead::try_from(file)?;
 
-        use kontroli::scope::{Command as SCommand, Scope};
+        use kontroli::scope::Command as SCommand;
 
         use kontroli::parse::{term::scope_var, CmdIter};
         let cmds = CmdIter::new(&file.read, scope_var)
             .inspect(|cmd| cmd.iter().for_each(kocheck::log_cmd))
             .filter(|cmd| !opt.omits(kocheck::Stage::Scope) || cmd.is_err())
-            .map(|cmd| Ok::<_, Error>(cmd?.scope() as SCommand<String>));
+            .map(|cmd| Ok::<_, Error>(Into::<SCommand<String>>::into(cmd?)));
 
         let head = core::iter::once(Ok(Event::Module(file.path)));
         let tail = cmds.map(|cmd| cmd.map(Event::Command));
