@@ -9,15 +9,15 @@ pub enum Error {
     ExpectedInput,
 }
 
-pub struct CmdIter<'s, S, V>
+pub struct CmdIter<'s, S, C, V>
 where
     Token<S>: Logos<'s>,
 {
     lexer: Peekable<logos::Lexer<'s, Token<S>>>,
-    ctx: term::Ctx<Symb<S>, V>,
+    ctx: term::Ctx<Symb<C>, V>,
 }
 
-impl<'s, V> CmdIter<'s, &'s str, V> {
+impl<'s, C, V> CmdIter<'s, &'s str, C, V> {
     pub fn new(s: &'s str) -> Self {
         Self {
             lexer: Token::lexer(s).peekable(),
@@ -26,7 +26,7 @@ impl<'s, V> CmdIter<'s, &'s str, V> {
     }
 }
 
-impl<'s, S: cmd::Joker> Iterator for CmdIter<'s, S, S>
+impl<'s, S: cmd::Joker> Iterator for CmdIter<'s, S, S, S>
 where
     Token<S>: Logos<'s>,
 {
