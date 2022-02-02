@@ -1,21 +1,21 @@
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
 
-/// Constant consisting of a relative module path and a symbol name.
+/// Symbol consisting of a relative module path and a symbol name.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Constant<S> {
+pub struct Symb<S> {
     pub path: Vec<S>,
     pub name: S,
 }
 
-impl<S> Constant<S> {
+impl<S> Symb<S> {
     pub fn new(name: S) -> Self {
         let path = Vec::new();
         Self { path, name }
     }
 
-    pub fn map<T>(self, f: impl Fn(S) -> T) -> Constant<T> {
-        Constant {
+    pub fn map<T>(self, f: impl Fn(S) -> T) -> Symb<T> {
+        Symb {
             path: self.path.into_iter().map(&f).collect(),
             name: f(self.name),
         }
@@ -26,7 +26,7 @@ impl<S> Constant<S> {
     }
 }
 
-impl<S: Display> Display for Constant<S> {
+impl<S: Display> Display for Symb<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.path.iter().try_for_each(|p| write!(f, "{}.", p))?;
         self.name.fmt(f)

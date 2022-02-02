@@ -60,7 +60,7 @@ impl<'s, Target, T: Scopen<'s, Target>> Scope<Target> for T {
 impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::term::Term1<&'s str, &'s str> {
     fn scopen(self, bnd: &mut Bound<'s>) -> Term<S> {
         match self {
-            Self::Const(parse::Constant { path, name }) => {
+            Self::Const(parse::Symb { path, name }) => {
                 if path.is_empty() {
                     if name == "Type" {
                         return Term::Type;

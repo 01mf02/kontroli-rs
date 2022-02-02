@@ -1,4 +1,4 @@
-use crate::{Constant, Token};
+use crate::{Symb, Token};
 use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
 use core::fmt::{self, Display};
@@ -22,15 +22,13 @@ where
     scope_id(symb, ctx)
 }
 
-type Symb<S> = Constant<S>;
-
 #[derive(Clone, Debug)]
 pub struct App<Tm>(pub Tm, pub Vec<Self>);
 
 #[derive(Clone, Debug)]
 pub enum Term1<C, V> {
     // Symbol name, preceded by module path
-    Const(Constant<C>),
+    Const(Symb<C>),
     Var(usize),
     // Abstraction (`x : A => t`)
     Abst(V, Option<Box<App<Self>>>, Box<App<Self>>),
@@ -209,7 +207,7 @@ impl<S: Into<V>, C, V> State<S, C, V> {
     {
         match self {
             Self::Init => Ok(Loop::Continue),
-            Self::Symb(s1) => Self::symb(Constant::new(s1), scope, ctx, iter),
+            Self::Symb(s1) => Self::symb(Symb::new(s1), scope, ctx, iter),
             Self::VarOf(v) => Self::varof(v, scope, ctx, iter),
             Self::ATerm(x, app) => Self::aterm(x, app, scope, ctx, iter.next(), iter),
             Self::Term(_, _) => Ok(Loop::Return(self)),

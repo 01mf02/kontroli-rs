@@ -17,13 +17,13 @@ extern crate alloc;
 
 pub mod cmd;
 mod cmditer;
-pub mod constant;
+pub mod symb;
 pub mod lex;
 pub mod term;
 
 pub use cmd::{Command, Intro, Rule};
 pub use cmditer::{CmdIter, Error};
-pub use constant::Constant;
+pub use symb::Symb;
 pub use lex::Token;
 pub use term::Term;
 

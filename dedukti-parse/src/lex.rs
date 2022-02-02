@@ -1,4 +1,4 @@
-use crate::Constant;
+use crate::Symb;
 use core::fmt::{self, Display};
 use logos::{Filter, Lexer, Logos};
 
@@ -46,7 +46,7 @@ pub enum Token<S> {
 
     #[regex("[a-zA-Z0-9_!?][a-zA-Z0-9_!?']*", symb)]
     #[token("{|", moustache)]
-    Symb(Constant<S>),
+    Symb(Symb<S>),
 
     #[token("(;", comment1)]
     Comment(usize),
@@ -105,8 +105,8 @@ impl<S: Display> Display for Token<S> {
     }
 }
 
-fn symb<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Constant<&'s str>> {
-    let mut symb = Constant::new(lex.slice());
+fn symb<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Symb<&'s str>> {
+    let mut symb = Symb::new(lex.slice());
 
     // regular expressions for head and tail of identifiers
     let ih = |c| matches!(c, 'a' ..= 'z' | 'A' ..= 'Z' | '0' ..= '9' | '_' | '!' | '?');
@@ -128,7 +128,7 @@ fn symb<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Constant<&'s str>> {
     Some(symb)
 }
 
-fn moustache<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Constant<&'s str>> {
+fn moustache<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Symb<&'s str>> {
     let len = lex.remainder().find("|}")?;
     lex.bump(len + 2); // include len of `|}`
     symb(lex)
