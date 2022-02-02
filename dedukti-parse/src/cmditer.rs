@@ -1,4 +1,4 @@
-use crate::{cmd, term, Command, Term, Token};
+use crate::{cmd, term, Command, Symb, Term, Token};
 use core::iter::Peekable;
 use logos::Logos;
 
@@ -14,7 +14,7 @@ where
     Token<S>: Logos<'s>,
 {
     lexer: Peekable<logos::Lexer<'s, Token<S>>>,
-    ctx: term::Ctx<S, V>,
+    ctx: term::Ctx<Symb<S>, V>,
 }
 
 impl<'s, V> CmdIter<'s, &'s str, V> {
@@ -30,7 +30,7 @@ impl<'s, S: cmd::Joker> Iterator for CmdIter<'s, S, S>
 where
     Token<S>: Logos<'s>,
 {
-    type Item = Result<Command<S, S, Term<S, S>>, Error>;
+    type Item = Result<Command<S, S, Term<Symb<S>, S>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.lexer.peek().is_none() {
             return None;
@@ -68,7 +68,7 @@ where
     }
 }
 
-impl<'s> Command<&'s str, &'s str, Term<&'s str, &'s str>> {
+impl<'s> Command<&'s str, &'s str, Term<Symb<&'s str>, &'s str>> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         let err = Err(Error::ExpectedInput);
         CmdIter::new(s).next().unwrap_or(err)

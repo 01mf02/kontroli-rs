@@ -6,12 +6,13 @@ use core::fmt::{self, Display};
 pub trait Scope<S, C, V>: Fn(Symb<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
 impl<S, C, V, F> Scope<S, C, V> for F where F: Fn(Symb<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
 
-pub fn scope_id<S: Into<C>, C, V>(symb: Symb<S>, _ctx: &Ctx<C, V>) -> Result<Term<C, V>> {
+pub fn scope_id<S: Into<C>, C, V>(symb: Symb<S>, _: &Ctx<Symb<C>, V>) -> Result<Term<Symb<C>, V>> {
     Ok(App::new(Term1::Const(symb.map(|s| s.into()))))
 }
 
-pub fn scope_var<S: Into<C> + Eq, C, V>(symb: Symb<S>, ctx: &Ctx<C, V>) -> Result<Term<C, V>>
+pub fn scope_var<S, C, V>(symb: Symb<S>, ctx: &Ctx<Symb<C>, V>) -> Result<Term<Symb<C>, V>>
 where
+    S: Into<C> + Eq,
     V: Borrow<S>,
 {
     if symb.path.is_empty() {
@@ -27,8 +28,7 @@ pub struct App<Tm>(pub Tm, pub Vec<Self>);
 
 #[derive(Clone, Debug)]
 pub enum Term1<C, V> {
-    // Symbol name, preceded by module path
-    Const(Symb<C>),
+    Const(C),
     Var(usize),
     // Abstraction (`x : A => t`)
     Abst(V, Option<Box<App<Self>>>, Box<App<Self>>),
@@ -320,9 +320,9 @@ impl<S: Into<V>, C, V> State<S, C, V> {
     }
 }
 
-impl<C, V> Term<C, V> {
+impl<C, V> Term<Symb<C>, V> {
     pub fn parse<S: Into<C> + Into<V>, I>(
-        ctx: &mut Ctx<C, V>,
+        ctx: &mut Ctx<Symb<C>, V>,
         iter: &mut I,
     ) -> Result<(Self, Token<()>)>
     where
@@ -337,7 +337,7 @@ impl<C, V> Term<C, V> {
     }
 }
 
-impl<'s> Term<&'s str, &'s str> {
+impl<'s> Term<Symb<&'s str>, &'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self> {
         use crate::Lex;
         let mut ctx = Ctx::default();
