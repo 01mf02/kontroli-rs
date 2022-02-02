@@ -3,11 +3,11 @@ use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
 use core::fmt::{self, Display};
 
-pub trait Scope<S, C, V>: Fn(Constant<S>, &Ctx<C, V>) -> Term<C, V> {}
-impl<S, C, V, F> Scope<S, C, V> for F where F: Fn(Constant<S>, &Ctx<C, V>) -> Term<C, V> {}
+pub trait Scope<S, C, V>: Fn(Constant<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
+impl<S, C, V, F> Scope<S, C, V> for F where F: Fn(Constant<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
 
-pub fn scope_id<S: Into<C>, C, V>(symb: Constant<S>, _ctx: &Ctx<C, V>) -> Term<C, V> {
-    App::new(Term1::Const(symb.into()))
+pub fn scope_id<S: Into<C>, C, V>(symb: Constant<S>, _ctx: &Ctx<C, V>) -> Result<Term<C, V>> {
+    Ok(App::new(Term1::Const(symb.into())))
 }
 
 type Symb<S> = Constant<S>;
@@ -228,14 +228,14 @@ impl<S: Into<V>, C, V> State<S, C, V> {
         SC: Scope<S, C, V>,
     {
         match iter.next() {
-            next if !s.path.is_empty() => Self::aterm(None, scope(s, ctx), scope, ctx, next, iter),
+            next if !s.path.is_empty() => Self::aterm(None, scope(s, ctx)?, scope, ctx, next, iter),
             None => Ok(Loop::Return(Self::Symb(s.name))),
             Some(Token::FatArrow) => {
                 ctx.stack.push(Cont::Abst(s.name.into(), None));
                 Ok(Loop::Continue)
             }
             Some(Token::Colon) => Self::varof(s.name.into(), scope, ctx, iter),
-            Some(tok) => Self::aterm(None, scope(s, ctx), scope, ctx, Some(tok), iter),
+            Some(tok) => Self::aterm(None, scope(s, ctx)?, scope, ctx, Some(tok), iter),
         }
     }
 
@@ -247,7 +247,7 @@ impl<S: Into<V>, C, V> State<S, C, V> {
         match iter.next() {
             None => Ok(Loop::Return(Self::VarOf(v))),
             Some(Token::Symb(s)) => {
-                Self::aterm(Some(v), scope(s, ctx), scope, ctx, iter.next(), iter)
+                Self::aterm(Some(v), scope(s, ctx)?, scope, ctx, iter.next(), iter)
             }
             Some(Token::LPar) => {
                 let x = Some(v);
@@ -268,7 +268,7 @@ impl<S: Into<V>, C, V> State<S, C, V> {
     ) -> Result<Loop<State<S, C, V>>> {
         while let Some(tok) = token.take() {
             match tok {
-                Token::Symb(s) => app.1.push(scope(s, ctx)),
+                Token::Symb(s) => app.1.push(scope(s, ctx)?),
                 Token::Arrow => {
                     ctx.stack.push(Cont::Prod(x, app));
                     return Ok(Loop::Continue);
