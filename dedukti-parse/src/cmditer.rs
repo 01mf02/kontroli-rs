@@ -44,7 +44,7 @@ where
 
         while self.lexer.peek().is_some() {
             if cmds.expects_term() {
-                match trms.parse(&mut self.ctx, &mut self.lexer) {
+                match trms.parse(term::scope_id, &mut self.ctx, &mut self.lexer) {
                     Ok(TState::Term(tm, tok)) => match cmds.apply(self.ctx.bound_mut(), tm, tok) {
                         Ok(CState::Command(cmd)) => return Some(Ok(cmd)),
                         Ok(st) => {

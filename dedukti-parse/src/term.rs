@@ -3,6 +3,15 @@ use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
 use core::fmt::{self, Display};
 
+pub trait Scope<S, C, V>: Fn(Constant<S>, &Ctx<C, V>) -> Term<C, V> {}
+impl<S, C, V, F> Scope<S, C, V> for F where F: Fn(Constant<S>, &Ctx<C, V>) -> Term<C, V> {}
+
+pub fn scope_id<S: Into<C>, C, V>(symb: Constant<S>, _ctx: &Ctx<C, V>) -> Term<C, V> {
+    App::new(Term1::Const(symb.into()))
+}
+
+type Symb<S> = Constant<S>;
+
 #[derive(Clone, Debug)]
 pub struct App<Tm>(pub Tm, pub Vec<Self>);
 
@@ -169,37 +178,40 @@ enum Loop<T> {
     Continue,
 }
 
-impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
-    pub fn parse<I>(self, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
+impl<S: Into<V>, C, V> State<S, C, V> {
+    pub fn parse<I, SC>(self, scope: SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
     where
         I: Iterator<Item = Token<S>>,
+        SC: Scope<S, C, V>,
     {
-        match self.resume(ctx, iter)? {
-            Loop::Continue => Self::init(ctx, iter),
+        match self.resume(&scope, ctx, iter)? {
+            Loop::Continue => Self::init(scope, ctx, iter),
             Loop::Return(ret) => Ok(ret),
         }
     }
 
-    fn resume<I>(self, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
+    fn resume<I, SC>(self, scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
+        SC: Scope<S, C, V>,
     {
         match self {
             Self::Init => Ok(Loop::Continue),
-            Self::Symb(s1) => Self::symb(Constant::new(s1), ctx, iter),
-            Self::VarOf(s1) => Self::varof(s1, ctx, iter),
-            Self::ATerm(x, app) => Self::aterm(x, app, ctx, iter.next(), iter),
+            Self::Symb(s1) => Self::symb(Constant::new(s1), scope, ctx, iter),
+            Self::VarOf(v) => Self::varof(v, scope, ctx, iter),
+            Self::ATerm(x, app) => Self::aterm(x, app, scope, ctx, iter.next(), iter),
             Self::Term(_, _) => Ok(Loop::Return(self)),
         }
     }
 
-    pub fn init<I>(ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
+    pub fn init<I, SC>(scope: SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
     where
         I: Iterator<Item = Token<S>>,
+        SC: Scope<S, C, V>,
     {
         while let Some(token) = iter.next() {
             match token {
-                Token::Symb(s) => match Self::symb(s, ctx, iter)? {
+                Token::Symb(s) => match Self::symb(s, &scope, ctx, iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(ret),
                 },
@@ -210,38 +222,35 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
         Ok(Self::Init)
     }
 
-    fn symb<I>(s1: Constant<S>, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
+    fn symb<I, SC>(s: Symb<S>, scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
+        SC: Scope<S, C, V>,
     {
-        if !s1.path.is_empty() {
-            let app = App::new(Term1::Const(s1.into()));
-            return Self::aterm(None, app, ctx, iter.next(), iter);
-        }
         match iter.next() {
-            None => return Ok(Loop::Return(Self::Symb(s1.name))),
-            Some(Token::FatArrow) => ctx.stack.push(Cont::Abst(s1.name.into(), None)),
-            Some(Token::Colon) => return Self::varof(s1.name.into(), ctx, iter),
-            Some(tok) => {
-                let app = App::new(Term1::Const(s1.into()));
-                return Self::aterm(None, app, ctx, Some(tok), iter);
+            next if !s.path.is_empty() => Self::aterm(None, scope(s, ctx), scope, ctx, next, iter),
+            None => Ok(Loop::Return(Self::Symb(s.name))),
+            Some(Token::FatArrow) => {
+                ctx.stack.push(Cont::Abst(s.name.into(), None));
+                Ok(Loop::Continue)
             }
+            Some(Token::Colon) => Self::varof(s.name.into(), scope, ctx, iter),
+            Some(tok) => Self::aterm(None, scope(s, ctx), scope, ctx, Some(tok), iter),
         }
-        Ok(Loop::Continue)
     }
 
-    fn varof<I>(s1: V, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
+    fn varof<I, SC>(v: V, scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
+        SC: Scope<S, C, V>,
     {
         match iter.next() {
-            None => Ok(Loop::Return(Self::VarOf(s1))),
-            Some(Token::Symb(s2)) => {
-                let app = App::new(Term1::Const(s2.into()));
-                Self::aterm(Some(s1), app, ctx, iter.next(), iter)
+            None => Ok(Loop::Return(Self::VarOf(v))),
+            Some(Token::Symb(s)) => {
+                Self::aterm(Some(v), scope(s, ctx), scope, ctx, iter.next(), iter)
             }
             Some(Token::LPar) => {
-                let x = Some(s1);
+                let x = Some(v);
                 ctx.stack.push(Cont::LPar(LPar { x, app: None }));
                 Ok(Loop::Continue)
             }
@@ -252,13 +261,14 @@ impl<S: Into<C> + Into<V>, C, V> State<S, C, V> {
     fn aterm(
         mut x: Option<V>,
         mut app: Term<C, V>,
+        scope: &impl Scope<S, C, V>,
         ctx: &mut Ctx<C, V>,
         mut token: Option<Token<S>>,
         iter: &mut impl Iterator<Item = Token<S>>,
     ) -> Result<Loop<State<S, C, V>>> {
         while let Some(tok) = token.take() {
             match tok {
-                Token::Symb(s) => app.1.push(App::new(Term1::Const(s.into()))),
+                Token::Symb(s) => app.1.push(scope(s, ctx)),
                 Token::Arrow => {
                     ctx.stack.push(Cont::Prod(x, app));
                     return Ok(Loop::Continue);
@@ -308,7 +318,7 @@ impl<C, V> Term<C, V> {
     where
         I: Iterator<Item = Token<S>>,
     {
-        match State::init(ctx, iter)? {
+        match State::init(scope_id, ctx, iter)? {
             State::Init | State::VarOf(_) => Err(Error::ExpectedIdentOrLPar),
             // TODO: handle this case
             State::Symb(_) | State::ATerm(..) => panic!("expected input"),
