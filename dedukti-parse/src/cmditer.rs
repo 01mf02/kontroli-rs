@@ -1,3 +1,4 @@
+use crate::term::Scope;
 use crate::{cmd, term, Command, Symb, Term, Token};
 use core::iter::Peekable;
 use logos::Logos;
@@ -9,28 +10,30 @@ pub enum Error {
     ExpectedInput,
 }
 
-pub struct CmdIter<'s, S, C, V>
+pub struct CmdIter<'s, S, C, V, SC>
 where
     Token<S>: Logos<'s>,
 {
     lexer: Peekable<logos::Lexer<'s, Token<S>>>,
-    ctx: term::Ctx<Symb<C>, V>,
+    scope: SC,
+    ctx: term::Ctx<C, V>,
 }
 
-impl<'s, C, V> CmdIter<'s, &'s str, C, V> {
-    pub fn new(s: &'s str) -> Self {
+impl<'s, C, V, SC> CmdIter<'s, &'s str, C, V, SC> {
+    pub fn new(s: &'s str, scope: SC) -> Self {
         Self {
             lexer: Token::lexer(s).peekable(),
+            scope,
             ctx: Default::default(),
         }
     }
 }
 
-impl<'s, S: Into<C> + Into<V>, C, V: cmd::Joker> Iterator for CmdIter<'s, S, C, V>
+impl<'s, S: Into<V>, C, V: cmd::Joker, SC: Scope<S, C, V>> Iterator for CmdIter<'s, S, C, V, SC>
 where
     Token<S>: Logos<'s>,
 {
-    type Item = Result<Command<S, V, Term<Symb<C>, V>>, Error>;
+    type Item = Result<Command<S, V, Term<C, V>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.lexer.peek().is_none() {
             return None;
@@ -44,7 +47,7 @@ where
 
         while self.lexer.peek().is_some() {
             if cmds.expects_term() {
-                match trms.parse(term::scope_id, &mut self.ctx, &mut self.lexer) {
+                match trms.parse(&self.scope, &mut self.ctx, &mut self.lexer) {
                     Ok(TState::Term(tm, tok)) => match cmds.apply(self.ctx.bound_mut(), tm, tok) {
                         Ok(CState::Command(cmd)) => return Some(Ok(cmd)),
                         Ok(st) => {
@@ -71,7 +74,7 @@ where
 impl<'s> Command<&'s str, &'s str, Term<Symb<&'s str>, &'s str>> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         let err = Err(Error::ExpectedInput);
-        CmdIter::new(s).next().unwrap_or(err)
+        CmdIter::new(s, term::scope_id).next().unwrap_or(err)
     }
 }
 
