@@ -35,9 +35,7 @@ where
 {
     type Item = Result<Command<S, V, Term<C, V>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.lexer.peek().is_none() {
-            return None;
-        }
+        self.lexer.peek()?;
 
         use cmd::State as CState;
         use term::State as TState;

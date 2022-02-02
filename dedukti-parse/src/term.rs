@@ -283,7 +283,7 @@ impl<S: Into<V>, C, V> State<S, C, V> {
         ctx: &mut Ctx<C, V>,
         iter: &mut impl Iterator<Item = Token<S>>,
     ) -> Result<Loop<Self>> {
-        while let Some(tok) = iter.next() {
+        for tok in iter {
             match tok {
                 Token::Symb(s) => app.1.push(scope(s, ctx)?),
                 Token::Type => app.1.push(App::new(Term1::Type)),

@@ -187,7 +187,7 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
     {
         match (self, token) {
             (state, Token::Symb(s)) if s.path.is_empty() => state.apply_name(s.name),
-            (_, Token::Symb(_)) => return Err(Error::UnexpectedPath),
+            (_, Token::Symb(_)) => Err(Error::UnexpectedPath),
 
             // starting commands
             (State::Init, Token::Def) => Ok(State::Def),
