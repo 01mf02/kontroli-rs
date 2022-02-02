@@ -28,9 +28,3 @@ pub use lex::Token;
 pub use term::Term;
 
 pub use logos::Logos as Lex;
-
-use core::borrow::Borrow;
-
-pub trait Consts<C> {
-    fn get<S: Borrow<str>>(&self, path: &[S], name: &S) -> Option<C>;
-}
