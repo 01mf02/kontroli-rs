@@ -3,11 +3,23 @@ use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
 use core::fmt::{self, Display};
 
-pub trait Scope<S, C, V>: Fn(Constant<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
-impl<S, C, V, F> Scope<S, C, V> for F where F: Fn(Constant<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
+pub trait Scope<S, C, V>: Fn(Symb<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
+impl<S, C, V, F> Scope<S, C, V> for F where F: Fn(Symb<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
 
-pub fn scope_id<S: Into<C>, C, V>(symb: Constant<S>, _ctx: &Ctx<C, V>) -> Result<Term<C, V>> {
-    Ok(App::new(Term1::Const(symb.into())))
+pub fn scope_id<S: Into<C>, C, V>(symb: Symb<S>, _ctx: &Ctx<C, V>) -> Result<Term<C, V>> {
+    Ok(App::new(Term1::Const(symb.map(|s| s.into()))))
+}
+
+pub fn scope_var<S: Into<C> + Eq, C, V>(symb: Symb<S>, ctx: &Ctx<C, V>) -> Result<Term<C, V>>
+where
+    V: Borrow<S>,
+{
+    if symb.path.is_empty() {
+        if let Some(v) = ctx.find(&symb.name) {
+            return Ok(App::new(Term1::Var(v)));
+        }
+    }
+    scope_id(symb, ctx)
 }
 
 type Symb<S> = Constant<S>;

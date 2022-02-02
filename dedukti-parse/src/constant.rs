@@ -24,13 +24,6 @@ impl<S> Constant<S> {
     pub fn push(&mut self, name: S) {
         self.path.push(core::mem::replace(&mut self.name, name));
     }
-
-    pub fn into<T>(self) -> Constant<T>
-    where
-        S: Into<T>,
-    {
-        self.map(|s| s.into())
-    }
 }
 
 impl<S: Display> Display for Constant<S> {
