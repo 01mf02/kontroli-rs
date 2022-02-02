@@ -74,7 +74,7 @@ where
 impl<'s> Command<&'s str, &'s str, Term<Symb<&'s str>, &'s str>> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         let err = Err(Error::ExpectedInput);
-        CmdIter::new(s, term::scope_id).next().unwrap_or(err)
+        CmdIter::new(s, term::scope_var).next().unwrap_or(err)
     }
 }
 

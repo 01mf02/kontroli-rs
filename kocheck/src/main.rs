@@ -13,8 +13,8 @@ where
 
         use kontroli::scope::{Command as SCommand, Scope};
 
-        use kontroli::parse::{term::scope_id, CmdIter};
-        let cmds = CmdIter::new(&file.read, scope_id)
+        use kontroli::parse::{term::scope_var, CmdIter};
+        let cmds = CmdIter::new(&file.read, scope_var)
             .inspect(|cmd| cmd.iter().for_each(kocheck::log_cmd))
             .filter(|cmd| !opt.omits(kocheck::Stage::Scope) || cmd.is_err())
             .map(|cmd| Ok::<_, Error>(cmd?.scope() as SCommand<String>));

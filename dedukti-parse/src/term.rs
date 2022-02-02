@@ -328,14 +328,15 @@ impl<S: Into<V>, C, V> State<S, C, V> {
 }
 
 impl<C, V> Term<Symb<C>, V> {
-    pub fn parse<S: Into<C> + Into<V>, I>(
+    pub fn parse<S: Into<C> + Into<V> + Eq, I>(
         ctx: &mut Ctx<Symb<C>, V>,
         iter: &mut I,
     ) -> Result<(Self, Token<()>)>
     where
         I: Iterator<Item = Token<S>>,
+        V: Borrow<S>,
     {
-        match State::init(scope_id, ctx, iter)? {
+        match State::init(scope_var, ctx, iter)? {
             State::Init | State::VarOf(_) => Err(Error::ExpectedIdentOrLPar),
             // TODO: handle this case
             State::Symb(_) | State::ATerm(..) => panic!("expected input"),

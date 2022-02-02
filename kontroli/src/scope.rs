@@ -35,11 +35,6 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::term::Term1<Symbol<&'s
     fn scopen(self, bnd: &mut Bound<'s>) -> Term<S> {
         match self {
             Self::Const(Symbol { path, name }) => {
-                if path.is_empty() {
-                    if let Some(idx) = bnd.iter().position(|id| *id == name) {
-                        return Term::BVar(idx);
-                    }
-                }
                 Term::Symb(Symbol { path, name }.map(|s| s.into()))
             }
             Self::Var(x) => Term::BVar(x),
@@ -48,13 +43,13 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::term::Term1<Symbol<&'s
                 let x = x.unwrap_or("$");
                 let id = x.to_string();
                 let ty = ty.scopen(bnd);
-                let prod = TermC::Prod(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)));
+                let prod = TermC::Prod(Arg { id, ty }, tm.scopen(bnd));
                 Term::Comb(BTerm::new(prod))
             }
             Self::Abst(x, ty, tm) => {
                 let id = x.to_string();
                 let ty = ty.map(|ty| ty.scopen(bnd));
-                let abst = TermC::Abst(Arg { id, ty }, bnd.with_pushed(x, |bnd| tm.scopen(bnd)));
+                let abst = TermC::Abst(Arg { id, ty }, tm.scopen(bnd));
                 Term::Comb(BTerm::new(abst))
             }
         }
@@ -81,7 +76,6 @@ impl<'s, S: From<&'s str>> Scope<Rule<S>>
         let mut ctx = Vec::new();
         for (id, ty) in self.ctx {
             let ty = ty.map(|ty| ty.scopen(&mut bnd));
-            bnd.push(id);
             let id = id.to_string();
             ctx.push(Arg { id, ty });
         }
