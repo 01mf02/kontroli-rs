@@ -26,11 +26,11 @@ impl<'s, C, V> CmdIter<'s, &'s str, C, V> {
     }
 }
 
-impl<'s, S: cmd::Joker> Iterator for CmdIter<'s, S, S, S>
+impl<'s, S: Into<C> + Into<V>, C, V: cmd::Joker> Iterator for CmdIter<'s, S, C, V>
 where
     Token<S>: Logos<'s>,
 {
-    type Item = Result<Command<S, S, Term<Symb<S>, S>>, Error>;
+    type Item = Result<Command<S, V, Term<Symb<C>, V>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.lexer.peek().is_none() {
             return None;
