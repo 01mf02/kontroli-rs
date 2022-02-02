@@ -30,6 +30,7 @@ pub struct App<Tm>(pub Tm, pub Vec<Self>);
 pub enum Term1<C, V> {
     Const(C),
     Var(usize),
+    Type,
     // Abstraction (`x : A => t`)
     Abst(V, Option<Box<App<Self>>>, Box<App<Self>>),
     // Dependent product (`x : A -> t`)
@@ -57,6 +58,7 @@ impl<C: Display, V: Display> Display for Term1<C, V> {
         match self {
             Self::Const(c) => c.fmt(f),
             Self::Var(v) => v.fmt(f),
+            Self::Type => "Type".fmt(f),
             Self::Abst(x, Some(ty), tm) => write!(f, "({} : {} => {})", x, ty, tm),
             Self::Abst(x, None, tm) => write!(f, "({} => {})", x, tm),
             Self::Prod(None, ty, tm) => write!(f, "({} -> {})", ty, tm),
@@ -209,7 +211,7 @@ impl<S: Into<V>, C, V> State<S, C, V> {
             Self::Init => Ok(Loop::Continue),
             Self::Symb(s1) => Self::symb(Symb::new(s1), scope, ctx, iter),
             Self::VarOf(v) => Self::varof(v, scope, ctx, iter),
-            Self::ATerm(x, app) => Self::aterm(x, app, scope, ctx, iter.next(), iter),
+            Self::ATerm(x, app) => Self::aterm(x, app, scope, ctx, iter),
             Self::Term(_, _) => Ok(Loop::Return(self)),
         }
     }
@@ -225,6 +227,10 @@ impl<S: Into<V>, C, V> State<S, C, V> {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(ret),
                 },
+                Token::Type => match Self::aterm(None, App::new(Term1::Type), &scope, ctx, iter)? {
+                    Loop::Continue => (),
+                    Loop::Return(ret) => return Ok(ret),
+                },
                 Token::LPar => ctx.stack.push(Cont::LPar(LPar { x: None, app: None })),
                 _ => return Err(Error::ExpectedIdentOrLPar),
             }
@@ -237,15 +243,18 @@ impl<S: Into<V>, C, V> State<S, C, V> {
         I: Iterator<Item = Token<S>>,
         SC: Scope<S, C, V>,
     {
+        if !s.path.is_empty() {
+            return Self::aterm(None, scope(s, ctx)?, scope, ctx, iter);
+        }
+        use core::iter::once;
         match iter.next() {
-            next if !s.path.is_empty() => Self::aterm(None, scope(s, ctx)?, scope, ctx, next, iter),
             None => Ok(Loop::Return(Self::Symb(s.name))),
             Some(Token::FatArrow) => {
                 ctx.stack.push(Cont::Abst(s.name.into(), None));
                 Ok(Loop::Continue)
             }
             Some(Token::Colon) => Self::varof(s.name.into(), scope, ctx, iter),
-            Some(tok) => Self::aterm(None, scope(s, ctx)?, scope, ctx, Some(tok), iter),
+            Some(tok) => Self::aterm(None, scope(s, ctx)?, scope, ctx, &mut once(tok).chain(iter)),
         }
     }
 
@@ -256,9 +265,8 @@ impl<S: Into<V>, C, V> State<S, C, V> {
     {
         match iter.next() {
             None => Ok(Loop::Return(Self::VarOf(v))),
-            Some(Token::Symb(s)) => {
-                Self::aterm(Some(v), scope(s, ctx)?, scope, ctx, iter.next(), iter)
-            }
+            Some(Token::Symb(s)) => Self::aterm(Some(v), scope(s, ctx)?, scope, ctx, iter),
+            Some(Token::Type) => Self::aterm(Some(v), App::new(Term1::Type), scope, ctx, iter),
             Some(Token::LPar) => {
                 let x = Some(v);
                 ctx.stack.push(Cont::LPar(LPar { x, app: None }));
@@ -273,12 +281,12 @@ impl<S: Into<V>, C, V> State<S, C, V> {
         mut app: Term<C, V>,
         scope: &impl Scope<S, C, V>,
         ctx: &mut Ctx<C, V>,
-        mut token: Option<Token<S>>,
         iter: &mut impl Iterator<Item = Token<S>>,
-    ) -> Result<Loop<State<S, C, V>>> {
-        while let Some(tok) = token.take() {
+    ) -> Result<Loop<Self>> {
+        while let Some(tok) = iter.next() {
             match tok {
                 Token::Symb(s) => app.1.push(scope(s, ctx)?),
+                Token::Type => app.1.push(App::new(Term1::Type)),
                 Token::Arrow => {
                     ctx.stack.push(Cont::Prod(x, app));
                     return Ok(Loop::Continue);
@@ -314,7 +322,6 @@ impl<S: Into<V>, C, V> State<S, C, V> {
                     (None, tm) => return Ok(Loop::Return(State::Term(tm, tok.map(|_| ())))),
                 },
             }
-            token = iter.next();
         }
         Ok(Loop::Return(State::ATerm(x, app)))
     }

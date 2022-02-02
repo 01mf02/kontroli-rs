@@ -44,6 +44,9 @@ pub enum Token<S> {
     #[token(".")]
     Dot,
 
+    #[token("Type")]
+    Type,
+
     #[regex("[a-zA-Z0-9_!?][a-zA-Z0-9_!?']*", symb)]
     #[token("{|", moustache)]
     Symb(Symb<S>),
@@ -75,6 +78,7 @@ impl<S> Token<S> {
             LongArrow => LongArrow,
             Comma => Comma,
             Dot => Dot,
+            Type => Type,
             Symb(s) => Symb(s.map(f)),
             Comment(o) => Comment(o),
             Error => Error,
@@ -98,6 +102,7 @@ impl<S: Display> Display for Token<S> {
             Self::LongArrow => "-->".fmt(f),
             Self::Comma => ",".fmt(f),
             Self::Dot => ".".fmt(f),
+            Self::Type => "Type".fmt(f),
             Self::Symb(s) => s.fmt(f),
             Self::Comment(_) => " ".fmt(f),
             Self::Error => Err(Default::default()),

@@ -36,9 +36,6 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::term::Term1<Symbol<&'s
         match self {
             Self::Const(Symbol { path, name }) => {
                 if path.is_empty() {
-                    if name == "Type" {
-                        return Term::Type;
-                    }
                     if let Some(idx) = bnd.iter().position(|id| *id == name) {
                         return Term::BVar(idx);
                     }
@@ -46,6 +43,7 @@ impl<'s, S: From<&'s str>> Scopen<'s, Term<S>> for parse::term::Term1<Symbol<&'s
                 Term::Symb(Symbol { path, name }.map(|s| s.into()))
             }
             Self::Var(x) => Term::BVar(x),
+            Self::Type => Term::Type,
             Self::Prod(x, ty, tm) => {
                 let x = x.unwrap_or("$");
                 let id = x.to_string();
