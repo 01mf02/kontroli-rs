@@ -5,8 +5,9 @@
 //! ~~~
 //! use dedukti_parse::{CmdIter, Command, Error};
 //!
+//! let scope = dedukti_parse::term::scope_id::<_, &str, &str>;
 //! let cmds = "prop: Type. def proof : prop -> Type.";
-//! let cmds = CmdIter::new(&cmds);
+//! let cmds = CmdIter::new(&cmds, scope);
 //! let cmds: Result<Vec<_>, _> = cmds.collect();
 //! assert_eq!(cmds?.len(), 2);
 //! # Ok::<_, Error>(())
