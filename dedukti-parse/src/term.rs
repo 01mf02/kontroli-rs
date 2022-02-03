@@ -73,9 +73,10 @@ pub enum Error {
     AnonymousLambda,
     AbstWithoutRhs,
     UnclosedLPar,
+    UndeclaredSymbol(alloc::string::String),
 }
 
-type Result<T> = core::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;
 
 impl<Tm> App<Tm> {
     pub fn new(tm: Tm) -> Self {
@@ -134,7 +135,7 @@ impl<C, V> Ctx<C, V> {
         &mut self.bound
     }
 
-    fn find<S: Eq>(&self, s: &S) -> Option<usize>
+    pub fn find<S: Eq + ?Sized>(&self, s: &S) -> Option<usize>
     where
         V: Borrow<S>,
     {
