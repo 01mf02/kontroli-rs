@@ -1,6 +1,5 @@
 use crate::term::Scope;
 use crate::{cmd, term, Command, Symb, Term, Token};
-use core::iter::Peekable;
 use logos::Logos;
 
 #[derive(Debug, PartialEq)]
@@ -14,7 +13,7 @@ pub struct CmdIter<'s, S, C, V, SC>
 where
     Token<S>: Logos<'s>,
 {
-    lexer: Peekable<logos::Lexer<'s, Token<S>>>,
+    lexer: logos::Lexer<'s, Token<S>>,
     scope: SC,
     ctx: term::Ctx<C, V>,
 }
@@ -22,7 +21,7 @@ where
 impl<'s, C, V, SC> CmdIter<'s, &'s str, C, V, SC> {
     pub fn new(s: &'s str, scope: SC) -> Self {
         Self {
-            lexer: Token::lexer(s).peekable(),
+            lexer: Token::lexer(s),
             scope,
             ctx: Default::default(),
         }
@@ -35,17 +34,19 @@ where
 {
     type Item = Result<Command<S, V, Term<C, V>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
-        self.lexer.peek()?;
-
         use cmd::State as CState;
         use term::State as TState;
 
         let mut cmds = CState::Init;
         let mut trms = TState::Init;
 
-        while self.lexer.peek().is_some() {
+        let mut token_seen = false;
+
+        while let Some(next) = self.lexer.next() {
+            token_seen = true;
             if cmds.expects_term() {
-                match trms.parse(&self.scope, &mut self.ctx, &mut self.lexer) {
+                let iter = &mut core::iter::once(next).chain(&mut self.lexer);
+                match trms.parse(&self.scope, &mut self.ctx, iter) {
                     Ok(TState::Term(tm, tok)) => match cmds.apply(self.ctx.bound_mut(), tm, tok) {
                         Ok(CState::Command(cmd)) => return Some(Ok(cmd)),
                         Ok(st) => {
@@ -59,13 +60,13 @@ where
                 };
             } else {
                 assert!(matches!(trms, TState::Init));
-                match cmds.parse(self.ctx.bound_mut(), self.lexer.next().unwrap()) {
+                match cmds.parse(self.ctx.bound_mut(), next) {
                     Ok(st) => cmds = st,
                     Err(e) => return Some(Err(Error::Command(e))),
                 }
             }
         }
-        Some(Err(Error::ExpectedInput))
+        token_seen.then(|| Err(Error::ExpectedInput))
     }
 }
 
