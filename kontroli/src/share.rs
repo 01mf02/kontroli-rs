@@ -8,7 +8,7 @@ pub trait Share<'s, Target> {
 }
 
 impl<'s> Share<'s, Symbol<'s>> for Symbol<'s> {
-    fn share(self, syms: &Symbols<'s>) -> Result<Symbol<'s>, ScopeError> {
+    fn share(self, _: &Symbols<'s>) -> Result<Symbol<'s>, ScopeError> {
         Ok(self)
     }
 }
