@@ -3,11 +3,10 @@
 //! Example usage:
 //!
 //! ~~~
-//! use dedukti_parse::{CmdIter, Command, Error};
+//! use dedukti_parse::{scope, CmdIter, Command, Error, Symb};
 //!
-//! let scope = dedukti_parse::term::scope_id::<_, &str, &str>;
 //! let cmds = "prop: Type. def proof : prop -> Type.";
-//! let cmds = CmdIter::new(&cmds, scope);
+//! let cmds = CmdIter::<_, Symb<&str>, &str, _>::new(&cmds, scope::ToConst);
 //! let cmds: Result<Vec<_>, _> = cmds.collect();
 //! assert_eq!(cmds?.len(), 2);
 //! # Ok::<_, Error>(())
@@ -26,6 +25,7 @@ pub use cmd::{Command, Intro, Rule};
 pub use cmditer::{CmdIter, Error};
 pub use lex::Token;
 pub use symb::Symb;
+pub use term::scope::{self, Scope};
 pub use term::Term;
 
 pub use logos::Logos as Lex;

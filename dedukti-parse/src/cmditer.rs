@@ -1,5 +1,4 @@
-use crate::term::Scope;
-use crate::{cmd, term, Command, Symb, Term, Token};
+use crate::{cmd, scope, term, Command, Scope, Symb, Term, Token};
 use logos::Logos;
 
 #[derive(Debug, PartialEq)]
@@ -73,7 +72,7 @@ where
 impl<'s> Command<&'s str, &'s str, Term<Symb<&'s str>, &'s str>> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         let err = Err(Error::ExpectedInput);
-        CmdIter::new(s, term::scope_var).next().unwrap_or(err)
+        CmdIter::new(s, scope::ToVarOrConst).next().unwrap_or(err)
     }
 }
 

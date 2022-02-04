@@ -3,25 +3,55 @@ use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
 use core::fmt::{self, Display};
 
-pub trait Scope<S, C, V>: Fn(Symb<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
-impl<S, C, V, F> Scope<S, C, V> for F where F: Fn(Symb<S>, &Ctx<C, V>) -> Result<Term<C, V>> {}
+pub mod scope {
+    use super::{Borrow, Ctx, Symb, Term1};
 
-pub fn scope_id<S: Into<C>, C, V>(symb: Symb<S>, _: &Ctx<Symb<C>, V>) -> Result<Term<Symb<C>, V>> {
-    Ok(App::new(Term1::Const(symb.map(|s| s.into()))))
-}
+    pub type Unknown = alloc::string::String;
+    pub type Result<C, V> = core::result::Result<Term1<C, V>, Unknown>;
 
-pub fn scope_var<S, C, V>(symb: Symb<S>, ctx: &Ctx<Symb<C>, V>) -> Result<Term<Symb<C>, V>>
-where
-    S: Into<C> + Eq,
-    V: Borrow<S>,
-{
-    if symb.path.is_empty() {
-        if let Some(v) = ctx.find(&symb.name) {
-            return Ok(App::new(Term1::Var(v)));
+    pub fn var<S, C, V>(symb: &Symb<S>, ctx: &Ctx<C, V>) -> Option<Term1<C, V>>
+    where
+        S: Eq,
+        V: Borrow<S>,
+    {
+        if symb.path.is_empty() {
+            if let Some(v) = ctx.find(&symb.name) {
+                return Some(Term1::Var(v));
+            }
+        }
+        None
+    }
+
+    pub trait Scope<S, C, V> {
+        fn scope(&self, symb: Symb<S>, ctx: &Ctx<C, V>) -> Result<C, V>;
+    }
+
+    /// Maps any symbol to a constant, never failing.
+    pub struct ToConst;
+    impl<S: Into<C>, C, V> Scope<S, Symb<C>, V> for ToConst {
+        fn scope(&self, symb: Symb<S>, _: &Ctx<Symb<C>, V>) -> Result<Symb<C>, V> {
+            Ok(Term1::Const(symb.map(|s| s.into())))
         }
     }
-    scope_id(symb, ctx)
+
+    /// Maps bound variables to variables and everything else to constants, never failing.
+    pub struct ToVarOrConst;
+    impl<S: Into<C> + Eq, C, V: Borrow<S>> Scope<S, Symb<C>, V> for ToVarOrConst {
+        fn scope(&self, symb: Symb<S>, ctx: &Ctx<Symb<C>, V>) -> Result<Symb<C>, V> {
+            Ok(var(&symb, ctx).unwrap_or_else(|| Term1::Const(symb.map(|s| s.into()))))
+        }
+    }
 }
+
+use scope::Scope;
+
+trait ScopeExt<S, C, V>: Scope<S, C, V> {
+    fn go(&self, symb: Symb<S>, ctx: &Ctx<C, V>) -> Result<Term<C, V>> {
+        let head = self.scope(symb, ctx).map_err(Error::UnknownSymbol)?;
+        Ok(App::new(head))
+    }
+}
+impl<S, C, V, T> ScopeExt<S, C, V> for T where T: Scope<S, C, V> {}
 
 #[derive(Clone, Debug)]
 pub struct App<Tm>(pub Tm, pub Vec<Self>);
@@ -73,7 +103,7 @@ pub enum Error {
     AnonymousLambda,
     AbstWithoutRhs,
     UnclosedLPar,
-    UndeclaredSymbol(alloc::string::String),
+    UnknownSymbol(scope::Unknown),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
@@ -192,12 +222,12 @@ enum Loop<T> {
 }
 
 impl<S: Into<V>, C, V> State<S, C, V> {
-    pub fn parse<I, SC>(self, scope: SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
+    pub fn parse<I, SC>(self, scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
     where
         I: Iterator<Item = Token<S>>,
         SC: Scope<S, C, V>,
     {
-        match self.resume(&scope, ctx, iter)? {
+        match self.resume(scope, ctx, iter)? {
             Loop::Continue => Self::init(scope, ctx, iter),
             Loop::Return(ret) => Ok(ret),
         }
@@ -217,18 +247,18 @@ impl<S: Into<V>, C, V> State<S, C, V> {
         }
     }
 
-    pub fn init<I, SC>(scope: SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
+    pub fn init<I, SC>(scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
     where
         I: Iterator<Item = Token<S>>,
         SC: Scope<S, C, V>,
     {
         while let Some(token) = iter.next() {
             match token {
-                Token::Symb(s) => match Self::symb(s, &scope, ctx, iter)? {
+                Token::Symb(s) => match Self::symb(s, scope, ctx, iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(ret),
                 },
-                Token::Type => match Self::aterm(None, App::new(Term1::Type), &scope, ctx, iter)? {
+                Token::Type => match Self::aterm(None, App::new(Term1::Type), scope, ctx, iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(ret),
                 },
@@ -245,9 +275,8 @@ impl<S: Into<V>, C, V> State<S, C, V> {
         SC: Scope<S, C, V>,
     {
         if !s.path.is_empty() {
-            return Self::aterm(None, scope(s, ctx)?, scope, ctx, iter);
+            return Self::aterm(None, scope.go(s, ctx)?, scope, ctx, iter);
         }
-        use core::iter::once;
         match iter.next() {
             None => Ok(Loop::Return(Self::Symb(s.name))),
             Some(Token::FatArrow) => {
@@ -255,7 +284,10 @@ impl<S: Into<V>, C, V> State<S, C, V> {
                 Ok(Loop::Continue)
             }
             Some(Token::Colon) => Self::varof(s.name.into(), scope, ctx, iter),
-            Some(tok) => Self::aterm(None, scope(s, ctx)?, scope, ctx, &mut once(tok).chain(iter)),
+            Some(tok) => {
+                let iter = &mut core::iter::once(tok).chain(iter);
+                Self::aterm(None, scope.go(s, ctx)?, scope, ctx, iter)
+            }
         }
     }
 
@@ -266,7 +298,7 @@ impl<S: Into<V>, C, V> State<S, C, V> {
     {
         match iter.next() {
             None => Ok(Loop::Return(Self::VarOf(v))),
-            Some(Token::Symb(s)) => Self::aterm(Some(v), scope(s, ctx)?, scope, ctx, iter),
+            Some(Token::Symb(s)) => Self::aterm(Some(v), scope.go(s, ctx)?, scope, ctx, iter),
             Some(Token::Type) => Self::aterm(Some(v), App::new(Term1::Type), scope, ctx, iter),
             Some(Token::LPar) => {
                 let x = Some(v);
@@ -286,7 +318,7 @@ impl<S: Into<V>, C, V> State<S, C, V> {
     ) -> Result<Loop<Self>> {
         for tok in iter {
             match tok {
-                Token::Symb(s) => app.1.push(scope(s, ctx)?),
+                Token::Symb(s) => app.1.push(scope.go(s, ctx)?),
                 Token::Type => app.1.push(App::new(Term1::Type)),
                 Token::Arrow => {
                     ctx.stack.push(Cont::Prod(x, app));
@@ -337,7 +369,7 @@ impl<C, V> Term<Symb<C>, V> {
         I: Iterator<Item = Token<S>>,
         V: Borrow<S>,
     {
-        match State::init(scope_var, ctx, iter)? {
+        match State::init(&scope::ToVarOrConst, ctx, iter)? {
             State::Init | State::VarOf(_) => Err(Error::ExpectedIdentOrLPar),
             // TODO: handle this case
             State::Symb(_) | State::ATerm(..) => panic!("expected input"),
