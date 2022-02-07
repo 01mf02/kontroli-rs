@@ -4,6 +4,7 @@ use crate::parse;
 use crate::Arg;
 use alloc::{string::String, string::ToString, vec::Vec};
 
+use crate::parse::term::Atom;
 pub use crate::parse::Symb as Symbol;
 
 pub type Term<S> = crate::Term<Symbol<S>, BTerm<S>>;
@@ -14,14 +15,14 @@ pub type Intro<S> = crate::Intro<Term<S>>;
 pub type Rule<S> = crate::Rule<Arg<String, Option<Term<S>>>, Term<S>>;
 pub type Command<S> = crate::Command<String, Intro<S>, Rule<S>>;
 
-impl<'s, S: From<&'s str>> Into<Term<S>> for parse::term::Term1<Symbol<&'s str>, &'s str> {
+impl<'s, S: From<&'s str>> Into<Term<S>> for parse::term::Term1<Atom<Symbol<&'s str>>, &'s str> {
     fn into(self) -> Term<S> {
         match self {
-            Self::Const(Symbol { path, name }) => {
+            Self::Atom(Atom::Const(Symbol { path, name })) => {
                 Term::Symb(Symbol { path, name }.map(|s| s.into()))
             }
-            Self::Var(x) => Term::BVar(x),
-            Self::Type => Term::Type,
+            Self::Atom(Atom::Var(x)) => Term::BVar(x),
+            Self::Atom(Atom::Type) => Term::Type,
             Self::Prod(x, ty, tm) => {
                 let x = x.unwrap_or("$");
                 let id = x.to_string();
@@ -39,7 +40,7 @@ impl<'s, S: From<&'s str>> Into<Term<S>> for parse::term::Term1<Symbol<&'s str>,
     }
 }
 
-impl<'s, S: From<&'s str>> Into<Term<S>> for parse::Term<Symbol<&'s str>, &'s str> {
+impl<'s, S: From<&'s str>> Into<Term<S>> for parse::Term<Atom<Symbol<&'s str>>, &'s str> {
     fn into(self) -> Term<S> {
         let head = self.0.into();
         if self.1.is_empty() {
@@ -52,7 +53,7 @@ impl<'s, S: From<&'s str>> Into<Term<S>> for parse::Term<Symbol<&'s str>, &'s st
 }
 
 impl<'s, S: From<&'s str>> Into<Rule<S>>
-    for parse::Rule<&'s str, parse::Term<Symbol<&'s str>, &'s str>>
+    for parse::Rule<&'s str, parse::Term<Atom<Symbol<&'s str>>, &'s str>>
 {
     fn into(self) -> Rule<S> {
         let mut ctx = Vec::new();
@@ -81,7 +82,7 @@ impl<Tm> From<parse::Intro<Tm>> for crate::Intro<Tm> {
 }
 
 impl<'s, S: From<&'s str>> Into<Command<S>>
-    for parse::Command<&'s str, &'s str, parse::Term<Symbol<&'s str>, &'s str>>
+    for parse::Command<&'s str, &'s str, parse::Term<Atom<Symbol<&'s str>>, &'s str>>
 {
     fn into(self) -> Command<S> {
         match self {

@@ -1,4 +1,4 @@
-use crate::{cmd, scope, term, Command, Scope, Symb, Term, Token};
+use crate::{cmd, term, Command, Scope, Symb, Term, Token};
 use logos::Logos;
 
 #[derive(Debug, PartialEq)]
@@ -8,30 +8,28 @@ pub enum Error {
     ExpectedInput,
 }
 
-pub struct CmdIter<'s, S, C, V, SC>
+pub struct CmdIter<'s, S, A, V>
 where
     Token<S>: Logos<'s>,
 {
     lexer: logos::Lexer<'s, Token<S>>,
-    scope: SC,
-    ctx: term::Ctx<C, V>,
+    ctx: term::Ctx<A, V>,
 }
 
-impl<'s, C, V, SC> CmdIter<'s, &'s str, C, V, SC> {
-    pub fn new(s: &'s str, scope: SC) -> Self {
+impl<'s, A, V> CmdIter<'s, &'s str, A, V> {
+    pub fn new(s: &'s str) -> Self {
         Self {
             lexer: Token::lexer(s),
-            scope,
             ctx: Default::default(),
         }
     }
 }
 
-impl<'s, S: Into<V>, C, V: cmd::Joker, SC: Scope<S, C, V>> Iterator for CmdIter<'s, S, C, V, SC>
+impl<'s, S: Into<V>, A: Scope<S, V>, V: cmd::Joker> Iterator for CmdIter<'s, S, A, V>
 where
     Token<S>: Logos<'s>,
 {
-    type Item = Result<Command<S, V, Term<C, V>>, Error>;
+    type Item = Result<Command<S, V, Term<A, V>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         use cmd::State as CState;
         use term::State as TState;
@@ -45,7 +43,7 @@ where
             token_seen = true;
             if cmds.expects_term() {
                 let iter = &mut core::iter::once(next).chain(&mut self.lexer);
-                match trms.parse(&self.scope, &mut self.ctx, iter) {
+                match trms.parse(&mut self.ctx, iter) {
                     Ok(TState::Term(tm, tok)) => match cmds.apply(self.ctx.bound_mut(), tm, tok) {
                         Ok(CState::Command(cmd)) => return Some(Ok(cmd)),
                         Ok(st) => {
@@ -69,10 +67,10 @@ where
     }
 }
 
-impl<'s> Command<&'s str, &'s str, Term<Symb<&'s str>, &'s str>> {
+impl<'s> Command<&'s str, &'s str, Term<term::Atom<Symb<&'s str>>, &'s str>> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         let err = Err(Error::ExpectedInput);
-        CmdIter::new(s, scope::ToVarOrConst).next().unwrap_or(err)
+        CmdIter::new(s).next().unwrap_or(err)
     }
 }
 

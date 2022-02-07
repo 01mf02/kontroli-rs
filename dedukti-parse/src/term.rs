@@ -3,71 +3,26 @@ use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
 use core::fmt::{self, Display};
 
-pub mod scope {
-    use super::{Borrow, Ctx, Symb, Term1};
-
-    pub type Unknown = alloc::string::String;
-    pub type Result<C, V> = core::result::Result<Term1<C, V>, Unknown>;
-
-    pub fn var<S, C, V>(symb: &Symb<S>, ctx: &Ctx<C, V>) -> Option<Term1<C, V>>
-    where
-        S: Eq,
-        V: Borrow<S>,
-    {
-        if symb.path.is_empty() {
-            if let Some(v) = ctx.find(&symb.name) {
-                return Some(Term1::Var(v));
-            }
-        }
-        None
-    }
-
-    pub trait Scope<S, C, V> {
-        fn scope(&self, symb: Symb<S>, ctx: &Ctx<C, V>) -> Result<C, V>;
-    }
-
-    /// Maps any symbol to a constant, never failing.
-    pub struct ToConst;
-    impl<S: Into<C>, C, V> Scope<S, Symb<C>, V> for ToConst {
-        fn scope(&self, symb: Symb<S>, _: &Ctx<Symb<C>, V>) -> Result<Symb<C>, V> {
-            Ok(Term1::Const(symb.map(|s| s.into())))
-        }
-    }
-
-    /// Maps bound variables to variables and everything else to constants, never failing.
-    pub struct ToVarOrConst;
-    impl<S: Into<C> + Eq, C, V: Borrow<S>> Scope<S, Symb<C>, V> for ToVarOrConst {
-        fn scope(&self, symb: Symb<S>, ctx: &Ctx<Symb<C>, V>) -> Result<Symb<C>, V> {
-            Ok(var(&symb, ctx).unwrap_or_else(|| Term1::Const(symb.map(|s| s.into()))))
-        }
-    }
-}
-
-use scope::Scope;
-
-trait ScopeExt<S, C, V>: Scope<S, C, V> {
-    fn go(&self, symb: Symb<S>, ctx: &Ctx<C, V>) -> Result<Term<C, V>> {
-        let head = self.scope(symb, ctx).map_err(Error::UnknownSymbol)?;
-        Ok(App::new(head))
-    }
-}
-impl<S, C, V, T> ScopeExt<S, C, V> for T where T: Scope<S, C, V> {}
+pub type Term<A, V> = App<Term1<A, V>>;
 
 #[derive(Clone, Debug)]
 pub struct App<Tm>(pub Tm, pub Vec<Self>);
 
 #[derive(Clone, Debug)]
-pub enum Term1<C, V> {
-    Const(C),
-    Var(usize),
-    Type,
+pub enum Term1<A, V> {
+    Atom(A),
     // Abstraction (`x : A => t`)
     Abst(V, Option<Box<App<Self>>>, Box<App<Self>>),
     // Dependent product (`x : A -> t`)
     Prod(Option<V>, Box<App<Self>>, Box<App<Self>>),
 }
 
-pub type Term<C, V> = App<Term1<C, V>>;
+#[derive(Clone, Debug)]
+pub enum Atom<C> {
+    Const(C),
+    Var(usize),
+    Type,
+}
 
 impl<Tm: Display> Display for App<Tm> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -83,12 +38,20 @@ impl<Tm: Display> Display for App<Tm> {
     }
 }
 
-impl<C: Display, V: Display> Display for Term1<C, V> {
+impl<C: Display> Display for Atom<C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Const(c) => c.fmt(f),
             Self::Var(v) => v.fmt(f),
             Self::Type => "Type".fmt(f),
+        }
+    }
+}
+
+impl<A: Display, V: Display> Display for Term1<A, V> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Atom(a) => a.fmt(f),
             Self::Abst(x, Some(ty), tm) => write!(f, "({} : {} => {})", x, ty, tm),
             Self::Abst(x, None, tm) => write!(f, "({} => {})", x, tm),
             Self::Prod(None, ty, tm) => write!(f, "({} -> {})", ty, tm),
@@ -103,7 +66,6 @@ pub enum Error {
     AnonymousLambda,
     AbstWithoutRhs,
     UnclosedLPar,
-    UnknownSymbol(scope::Unknown),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
@@ -116,13 +78,13 @@ impl<Tm> App<Tm> {
 
 /// A left parenthesis possibly preceded by an abstraction and/or an application.
 #[derive(Debug)]
-struct LPar<C, V> {
+struct LPar<A, V> {
     x: Option<V>,
-    app: Option<Term<C, V>>,
+    app: Option<Term<A, V>>,
 }
 
 #[derive(Debug)]
-pub(crate) enum State<S, C, V> {
+pub(crate) enum State<S, A, V> {
     /// nothing
     Init,
     /// `s` (we do not know at this point whether it is a variable or a constant)
@@ -130,37 +92,37 @@ pub(crate) enum State<S, C, V> {
     /// `s :`
     VarOf(V),
     /// possibly `x :`, followed by `t1 ... tn`.
-    ATerm(Option<V>, Term<C, V>),
+    ATerm(Option<V>, Term<A, V>),
 
-    Term(Term<C, V>, Token<()>),
+    Term(Term<A, V>, Token<()>),
 }
 
-impl<S, C, V> Default for State<S, C, V> {
+impl<S, A, V> Default for State<S, A, V> {
     fn default() -> Self {
         Self::Init
     }
 }
 
 #[derive(Debug)]
-enum Cont<C, V> {
+enum Cont<A, V> {
     /// `x`, possibly followed by `: ty`, followed by `=>`,
-    Abst(V, Option<Term<C, V>>),
+    Abst(V, Option<Term<A, V>>),
     /// possibly `x :`, followed by `ty ->`,
-    Prod(Option<V>, Term<C, V>),
+    Prod(Option<V>, Term<A, V>),
 
     /// possibly `x :`,
     /// possibly followed by `t1 .. tn`,
     /// followed by `(`
-    LPar(LPar<C, V>),
+    LPar(LPar<A, V>),
 }
 
 #[derive(Debug)]
-pub struct Ctx<C, V> {
+pub struct Ctx<A, V> {
     bound: Vec<V>,
-    stack: Vec<Cont<C, V>>,
+    stack: Vec<Cont<A, V>>,
 }
 
-impl<C, V> Ctx<C, V> {
+impl<A, V> Ctx<A, V> {
     pub fn bound_mut(&mut self) -> &mut Vec<V> {
         &mut self.bound
     }
@@ -194,7 +156,7 @@ impl<C, V> Ctx<C, V> {
     }
 }
 
-impl<C, V> Default for Ctx<C, V> {
+impl<A, V> Default for Ctx<A, V> {
     fn default() -> Self {
         Self {
             bound: Vec::new(),
@@ -203,8 +165,38 @@ impl<C, V> Default for Ctx<C, V> {
     }
 }
 
-impl<C, V> Term<C, V> {
-    fn reduce(mut self, ctx: &mut Ctx<C, V>) -> (Option<LPar<C, V>>, Self) {
+pub trait Scope<S, V>
+where
+    Self: Sized,
+{
+    fn scope(symb: Symb<S>, ctx: &Ctx<Self, V>) -> Self;
+
+    fn go(symb: Symb<S>, ctx: &Ctx<Self, V>) -> Term<Self, V> {
+        Term::new(Term1::Atom(Self::scope(symb, ctx)))
+    }
+}
+
+impl<S, V> Scope<S, V> for Symb<S> {
+    fn scope(symb: Symb<S>, _: &Ctx<Self, V>) -> Self {
+        symb
+    }
+}
+
+impl<S: Borrow<str> + Into<C> + Eq, C, V: Borrow<S>> Scope<S, V> for Atom<Symb<C>> {
+    fn scope(symb: Symb<S>, ctx: &Ctx<Self, V>) -> Self {
+        if symb.path.is_empty() {
+            if let Some(v) = ctx.find(&symb.name) {
+                return Atom::Var(v);
+            } else if symb.name.borrow() == "Type" {
+                return Atom::Type;
+            }
+        }
+        Atom::Const(symb.map(|s| s.into()))
+    }
+}
+
+impl<A, V> Term<A, V> {
+    fn reduce(mut self, ctx: &mut Ctx<A, V>) -> (Option<LPar<A, V>>, Self) {
         while let Some(cur) = ctx.stack.pop() {
             match cur {
                 Cont::Abst(x, ty) => self = App::new(Term1::Abst(x, ty.map(Box::new), self.into())),
@@ -221,44 +213,37 @@ enum Loop<T> {
     Continue,
 }
 
-impl<S: Into<V>, C, V> State<S, C, V> {
-    pub fn parse<I, SC>(self, scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
+impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
+    pub fn parse<I>(self, ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<Self>
     where
         I: Iterator<Item = Token<S>>,
-        SC: Scope<S, C, V>,
     {
-        match self.resume(scope, ctx, iter)? {
-            Loop::Continue => Self::init(scope, ctx, iter),
+        match self.resume(ctx, iter)? {
+            Loop::Continue => Self::init(ctx, iter),
             Loop::Return(ret) => Ok(ret),
         }
     }
 
-    fn resume<I, SC>(self, scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
+    fn resume<I>(self, ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
-        SC: Scope<S, C, V>,
     {
         match self {
             Self::Init => Ok(Loop::Continue),
-            Self::Symb(s1) => Self::symb(Symb::new(s1), scope, ctx, iter),
-            Self::VarOf(v) => Self::varof(v, scope, ctx, iter),
-            Self::ATerm(x, app) => Self::aterm(x, app, scope, ctx, iter),
+            Self::Symb(s1) => Self::symb(Symb::new(s1), ctx, iter),
+            Self::VarOf(v) => Self::varof(v, ctx, iter),
+            Self::ATerm(x, app) => Self::aterm(x, app, ctx, iter),
             Self::Term(_, _) => Ok(Loop::Return(self)),
         }
     }
 
-    pub fn init<I, SC>(scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Self>
+    pub fn init<I>(ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<Self>
     where
         I: Iterator<Item = Token<S>>,
-        SC: Scope<S, C, V>,
     {
         while let Some(token) = iter.next() {
             match token {
-                Token::Symb(s) => match Self::symb(s, scope, ctx, iter)? {
-                    Loop::Continue => (),
-                    Loop::Return(ret) => return Ok(ret),
-                },
-                Token::Type => match Self::aterm(None, App::new(Term1::Type), scope, ctx, iter)? {
+                Token::Symb(s) => match Self::symb(s, ctx, iter)? {
                     Loop::Continue => (),
                     Loop::Return(ret) => return Ok(ret),
                 },
@@ -269,13 +254,12 @@ impl<S: Into<V>, C, V> State<S, C, V> {
         Ok(Self::Init)
     }
 
-    fn symb<I, SC>(s: Symb<S>, scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
+    fn symb<I>(s: Symb<S>, ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
-        SC: Scope<S, C, V>,
     {
         if !s.path.is_empty() {
-            return Self::aterm(None, scope.go(s, ctx)?, scope, ctx, iter);
+            return Self::aterm(None, A::go(s, ctx), ctx, iter);
         }
         match iter.next() {
             None => Ok(Loop::Return(Self::Symb(s.name))),
@@ -283,23 +267,21 @@ impl<S: Into<V>, C, V> State<S, C, V> {
                 ctx.stack.push(Cont::Abst(s.name.into(), None));
                 Ok(Loop::Continue)
             }
-            Some(Token::Colon) => Self::varof(s.name.into(), scope, ctx, iter),
+            Some(Token::Colon) => Self::varof(s.name.into(), ctx, iter),
             Some(tok) => {
                 let iter = &mut core::iter::once(tok).chain(iter);
-                Self::aterm(None, scope.go(s, ctx)?, scope, ctx, iter)
+                Self::aterm(None, A::go(s, ctx), ctx, iter)
             }
         }
     }
 
-    fn varof<I, SC>(v: V, scope: &SC, ctx: &mut Ctx<C, V>, iter: &mut I) -> Result<Loop<Self>>
+    fn varof<I>(v: V, ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<Loop<Self>>
     where
         I: Iterator<Item = Token<S>>,
-        SC: Scope<S, C, V>,
     {
         match iter.next() {
             None => Ok(Loop::Return(Self::VarOf(v))),
-            Some(Token::Symb(s)) => Self::aterm(Some(v), scope.go(s, ctx)?, scope, ctx, iter),
-            Some(Token::Type) => Self::aterm(Some(v), App::new(Term1::Type), scope, ctx, iter),
+            Some(Token::Symb(s)) => Self::aterm(Some(v), A::go(s, ctx), ctx, iter),
             Some(Token::LPar) => {
                 let x = Some(v);
                 ctx.stack.push(Cont::LPar(LPar { x, app: None }));
@@ -311,15 +293,13 @@ impl<S: Into<V>, C, V> State<S, C, V> {
 
     fn aterm(
         mut x: Option<V>,
-        mut app: Term<C, V>,
-        scope: &impl Scope<S, C, V>,
-        ctx: &mut Ctx<C, V>,
+        mut app: Term<A, V>,
+        ctx: &mut Ctx<A, V>,
         iter: &mut impl Iterator<Item = Token<S>>,
     ) -> Result<Loop<Self>> {
         for tok in iter {
             match tok {
-                Token::Symb(s) => app.1.push(scope.go(s, ctx)?),
-                Token::Type => app.1.push(App::new(Term1::Type)),
+                Token::Symb(s) => app.1.push(A::go(s, ctx)),
                 Token::Arrow => {
                     ctx.stack.push(Cont::Prod(x, app));
                     return Ok(Loop::Continue);
@@ -360,16 +340,14 @@ impl<S: Into<V>, C, V> State<S, C, V> {
     }
 }
 
-impl<C, V> Term<Symb<C>, V> {
-    pub fn parse<S: Into<C> + Into<V> + Eq, I>(
-        ctx: &mut Ctx<Symb<C>, V>,
-        iter: &mut I,
-    ) -> Result<(Self, Token<()>)>
+impl<A, V> Term<A, V> {
+    pub fn parse<S: Into<V>, I>(ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<(Self, Token<()>)>
     where
         I: Iterator<Item = Token<S>>,
+        A: Scope<S, V>,
         V: Borrow<S>,
     {
-        match State::init(&scope::ToVarOrConst, ctx, iter)? {
+        match State::init(ctx, iter)? {
             State::Init | State::VarOf(_) => Err(Error::ExpectedIdentOrLPar),
             // TODO: handle this case
             State::Symb(_) | State::ATerm(..) => panic!("expected input"),
@@ -378,7 +356,7 @@ impl<C, V> Term<Symb<C>, V> {
     }
 }
 
-impl<'s> Term<Symb<&'s str>, &'s str> {
+impl<'s> Term<Atom<Symb<&'s str>>, &'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self> {
         use crate::Lex;
         let mut ctx = Ctx::default();
