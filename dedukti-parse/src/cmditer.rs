@@ -1,5 +1,9 @@
 use crate::{cmd, term, Command, Scope, Symb, Term, Token};
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+use core::borrow::Borrow;
 use logos::Logos;
+use term::Ctx;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -13,7 +17,13 @@ where
     Token<S>: Logos<'s>,
 {
     lexer: logos::Lexer<'s, Token<S>>,
-    ctx: term::Ctx<A, V>,
+    ctx: Ctx<A, V>,
+}
+
+pub struct Lazy<I, A, V> {
+    lines: I,
+    ctx: Ctx<A, V>,
+    buf: Vec<Command<String, V, Term<A, V>>>,
 }
 
 impl<'s, A, V> CmdIter<'s, &'s str, A, V> {
@@ -25,45 +35,143 @@ impl<'s, A, V> CmdIter<'s, &'s str, A, V> {
     }
 }
 
+impl<I, A, V> Lazy<I, A, V> {
+    pub fn new(lines: I) -> Self {
+        Self {
+            lines,
+            ctx: Default::default(),
+            buf: Vec::new(),
+        }
+    }
+}
+
+struct State<S, C, A, V> {
+    cmd: cmd::State<C, V, Term<A, V>>,
+    trm: term::State<S, A, V>,
+}
+
+impl<S, C, A, V> State<S, C, A, V> {
+    fn map_symb<T>(self, f: impl FnOnce(S) -> T) -> State<T, C, A, V> {
+        State {
+            cmd: self.cmd,
+            trm: self.trm.map_symb(f),
+        }
+    }
+}
+
+impl<S, C, A, V> Default for State<S, C, A, V> {
+    fn default() -> Self {
+        Self {
+            cmd: cmd::State::Init,
+            trm: term::State::Init,
+        }
+    }
+}
+
+impl<S: Into<C> + Into<V>, C, A: Scope<S, V>, V: cmd::Joker> State<S, C, A, V> {
+    fn feed<I>(self, ctx: &mut Ctx<A, V>, token: Token<S>, iter: &mut I) -> Result<Self, Error>
+    where
+        I: Iterator<Item = Token<S>>,
+    {
+        if self.cmd.expects_term() {
+            let iter = &mut core::iter::once(token).chain(iter);
+            match self.trm.parse(ctx, iter) {
+                Ok(term::State::Term(tm, tok)) => {
+                    let cmd = self
+                        .cmd
+                        .apply(ctx.bound_mut(), tm, tok)
+                        .map_err(Error::Command)?;
+                    let trm = term::State::Init;
+                    Ok(State { cmd, trm })
+                }
+                Ok(trm) => Ok(State { cmd: self.cmd, trm }),
+                Err(e) => Err(Error::Term(e)),
+            }
+        } else {
+            assert!(matches!(self.trm, term::State::Init));
+            let cmd = self
+                .cmd
+                .parse(ctx.bound_mut(), token)
+                .map_err(Error::Command)?;
+            Ok(State { cmd, trm: self.trm })
+        }
+    }
+}
+
 impl<'s, S: Into<V>, A: Scope<S, V>, V: cmd::Joker> Iterator for CmdIter<'s, S, A, V>
 where
     Token<S>: Logos<'s>,
 {
     type Item = Result<Command<S, V, Term<A, V>>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
-        use cmd::State as CState;
-        use term::State as TState;
-
-        let mut cmds = CState::Init;
-        let mut trms = TState::Init;
-
+        let mut state = State::<S, S, A, V>::default();
         let mut token_seen = false;
 
         while let Some(next) = self.lexer.next() {
             token_seen = true;
-            if cmds.expects_term() {
-                let iter = &mut core::iter::once(next).chain(&mut self.lexer);
-                match trms.parse(&mut self.ctx, iter) {
-                    Ok(TState::Term(tm, tok)) => match cmds.apply(self.ctx.bound_mut(), tm, tok) {
-                        Ok(CState::Command(cmd)) => return Some(Ok(cmd)),
-                        Ok(st) => {
-                            trms = TState::Init;
-                            cmds = st
-                        }
-                        Err(e) => return Some(Err(Error::Command(e))),
-                    },
-                    Ok(st) => trms = st,
-                    Err(e) => return Some(Err(Error::Term(e))),
-                };
-            } else {
-                assert!(matches!(trms, TState::Init));
-                match cmds.parse(self.ctx.bound_mut(), next) {
-                    Ok(st) => cmds = st,
-                    Err(e) => return Some(Err(Error::Command(e))),
-                }
+            match state.feed(&mut self.ctx, next, &mut self.lexer) {
+                Err(e) => return Some(Err(e)),
+                Ok(st) => match st.cmd {
+                    cmd::State::Command(cmd) => return Some(Ok(cmd)),
+                    _ => state = st,
+                },
             }
         }
         token_seen.then(|| Err(Error::ExpectedInput))
+    }
+}
+
+impl<I, A, V> Iterator for Lazy<I, A, V>
+where
+    I: Iterator,
+    I::Item: Borrow<str>,
+    A: for<'a> Scope<&'a str, V>,
+    V: for<'a> From<&'a str> + cmd::Joker,
+{
+    type Item = Result<Command<String, V, Term<A, V>>, Error>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(next) = self.buf.pop() {
+            return Some(Ok(next));
+        }
+
+        let mut open_comments = 0;
+        let mut long_state = State::default();
+
+        let mut last = String::new();
+        for line in &mut self.lines {
+            let last = &mut last;
+            let mut state = long_state.map_symb(|s| {
+                *last = s;
+                &*last as &str
+            });
+
+            let mut lexer = Token::lexer(line.borrow());
+            while let Some(next) = lexer.next() {
+                match state.feed(&mut self.ctx, next, &mut lexer) {
+                    Err(e) => return Some(Err(e)),
+                    Ok(st) => match st.cmd {
+                        cmd::State::Command(cmd) => {
+                            self.buf.push(cmd);
+                            state = State::default()
+                        }
+                        _ => state = st,
+                    },
+                };
+            }
+
+            if !self.buf.is_empty() {
+                self.buf.reverse();
+                return self.buf.pop().map(Ok);
+            }
+
+            long_state = state.map_symb(|s| s.to_string());
+        }
+
+        if open_comments > 0 || !matches!(long_state.cmd, cmd::State::Init) {
+            Some(Err(Error::ExpectedInput))
+        } else {
+            None
+        }
     }
 }
 
