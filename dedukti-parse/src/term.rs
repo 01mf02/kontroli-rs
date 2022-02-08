@@ -182,10 +182,10 @@ impl<S, V> Scope<S, V> for Symb<S> {
     }
 }
 
-impl<S: Borrow<str> + Into<C> + Eq, C, V: Borrow<S>> Scope<S, V> for Atom<Symb<C>> {
+impl<S: Borrow<str> + Into<C> + Eq, C, V: Borrow<str>> Scope<S, V> for Atom<Symb<C>> {
     fn scope(symb: Symb<S>, ctx: &Ctx<Self, V>) -> Self {
         if symb.path.is_empty() {
-            if let Some(v) = ctx.find(&symb.name) {
+            if let Some(v) = ctx.find(symb.name.borrow()) {
                 return Atom::Var(v);
             } else if symb.name.borrow() == "Type" {
                 return Atom::Type;
