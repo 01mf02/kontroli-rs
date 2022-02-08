@@ -97,6 +97,18 @@ pub(crate) enum State<S, A, V> {
     Term(Term<A, V>, Token<()>),
 }
 
+impl<S, A, V> State<S, A, V> {
+    pub fn map_symb<T>(self, f: impl FnOnce(S) -> T) -> State<T, A, V> {
+        match self {
+            Self::Init => State::Init,
+            Self::Symb(s) => State::Symb(f(s)),
+            Self::VarOf(v) => State::VarOf(v),
+            Self::ATerm(v, tm) => State::ATerm(v, tm),
+            Self::Term(tm, tok) => State::Term(tm, tok),
+        }
+    }
+}
+
 impl<S, A, V> Default for State<S, A, V> {
     fn default() -> Self {
         Self::Init
