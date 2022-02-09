@@ -22,7 +22,7 @@ pub mod symb;
 pub mod term;
 
 pub use cmd::{Command, Intro, Rule};
-pub use cmditer::{CmdIter, Error};
+pub use cmditer::{CmdIter, Error, Lazy};
 pub use lex::Token;
 pub use symb::Symb;
 pub use term::{Atom, Scope, Term};
