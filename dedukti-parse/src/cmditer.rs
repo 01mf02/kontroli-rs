@@ -22,6 +22,8 @@ where
 
 pub struct Lazy<I, A, V> {
     lines: I,
+    last: String,
+    state: State<String, String, A, V>,
     ctx: Ctx<A, V>,
     buf: Vec<Command<String, V, Term<A, V>>>,
 }
@@ -39,6 +41,8 @@ impl<I, A, V> Lazy<I, A, V> {
     pub fn new(lines: I) -> Self {
         Self {
             lines,
+            last: String::new(),
+            state: State::default(),
             ctx: Default::default(),
             buf: Vec::new(),
         }
@@ -121,6 +125,7 @@ where
     }
 }
 
+// TODO: implement support for open multi-line comments
 impl<I, A, V> Iterator for Lazy<I, A, V>
 where
     I: Iterator,
@@ -134,13 +139,9 @@ where
             return Some(Ok(next));
         }
 
-        let mut open_comments = 0;
-        let mut long_state = State::default();
-
-        let mut last = String::new();
         for line in &mut self.lines {
-            let last = &mut last;
-            let mut state = long_state.map_symb(|s| {
+            let last = &mut self.last;
+            let mut state = core::mem::take(&mut self.state).map_symb(|s| {
                 *last = s;
                 &*last as &str
             });
@@ -164,10 +165,10 @@ where
                 return self.buf.pop().map(Ok);
             }
 
-            long_state = state.map_symb(|s| s.to_string());
+            self.state = state.map_symb(|s| s.to_string());
         }
 
-        if open_comments > 0 || !matches!(long_state.cmd, cmd::State::Init) {
+        if !matches!(self.state.cmd, cmd::State::Init) {
             Some(Err(Error::ExpectedInput))
         } else {
             None
@@ -177,18 +178,13 @@ where
 
 impl<'s> Command<&'s str, &'s str, Term<term::Atom<Symb<&'s str>>, &'s str>> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
-        let err = Err(Error::ExpectedInput);
-        CmdIter::new(s).next().unwrap_or(err)
+        CmdIter::new(s).next().unwrap_or(Err(Error::ExpectedInput))
     }
 }
 
 impl<'s> Command<String, String, Term<term::Atom<Symb<String>>, String>> {
-    pub fn parse_lines<S>(lines: impl Iterator<Item = S>) -> Result<Self, Error>
-    where
-        S: Borrow<str>,
-    {
-        let err = Err(Error::ExpectedInput);
-        Lazy::new(lines).next().unwrap_or(err)
+    pub fn parse_lines<S: Borrow<str>>(lines: impl Iterator<Item = S>) -> Result<Self, Error> {
+        Lazy::new(lines).next().unwrap_or(Err(Error::ExpectedInput))
     }
 }
 
