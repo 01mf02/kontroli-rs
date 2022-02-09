@@ -182,6 +182,16 @@ impl<'s> Command<&'s str, &'s str, Term<term::Atom<Symb<&'s str>>, &'s str>> {
     }
 }
 
+impl<'s> Command<String, String, Term<term::Atom<Symb<String>>, String>> {
+    pub fn parse_lines<S>(lines: impl Iterator<Item = S>) -> Result<Self, Error>
+    where
+        S: Borrow<str>,
+    {
+        let err = Err(Error::ExpectedInput);
+        Lazy::new(lines).next().unwrap_or(err)
+    }
+}
+
 #[test]
 fn positive() -> Result<(), Error> {
     Command::parse_str("prop : Type.")?;
@@ -190,6 +200,9 @@ fn positive() -> Result<(), Error> {
     Command::parse_str("[x, y] prf (imp x y) --> prf x -> prf y.")?;
     Command::parse_str("thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.")?;
     Command::parse_str("[] eq _ _ --> false.")?;
+
+    Command::parse_lines("prop :\nType.".lines())?;
+    Command::parse_lines("imp : prop\n-> prop\n-> prop\n.".lines())?;
     Ok(())
 }
 
