@@ -12,8 +12,9 @@ where
         let file = PathRead::try_from(file)?;
 
         use kontroli::scope::Command as SCommand;
-
-        let cmds = kontroli::parse::CmdIter::new(&file.read)
+        use std::io::{BufRead, BufReader};
+        let lines = BufReader::new(file.read).lines().map(|line| line.unwrap());
+        let cmds = kontroli::parse::Lazy::new(lines)
             .inspect(|cmd| cmd.iter().for_each(kocheck::log_cmd))
             .filter(|cmd| !opt.omits(kocheck::Stage::Scope) || cmd.is_err())
             .map(|cmd| Ok::<_, Error>(Into::<SCommand<String>>::into(cmd?)));
