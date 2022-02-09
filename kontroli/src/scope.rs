@@ -15,7 +15,7 @@ pub type Intro<S> = crate::Intro<Term<S>>;
 pub type Rule<S> = crate::Rule<Arg<String, Option<Term<S>>>, Term<S>>;
 pub type Command<S> = crate::Command<String, Intro<S>, Rule<S>>;
 
-impl<'s, S: From<&'s str>> Into<Term<S>> for parse::term::Term1<Atom<Symbol<&'s str>>, &'s str> {
+impl<R: ToString, S: From<R>> Into<Term<S>> for parse::term::Term1<Atom<Symbol<R>>, R> {
     fn into(self) -> Term<S> {
         match self {
             Self::Atom(Atom::Const(Symbol { path, name })) => {
@@ -24,8 +24,7 @@ impl<'s, S: From<&'s str>> Into<Term<S>> for parse::term::Term1<Atom<Symbol<&'s 
             Self::Atom(Atom::Var(x)) => Term::BVar(x),
             Self::Atom(Atom::Type) => Term::Type,
             Self::Prod(x, ty, tm) => {
-                let x = x.unwrap_or("$");
-                let id = x.to_string();
+                let id = x.map(|x| x.to_string()).unwrap_or_else(|| "$".to_string());
                 let ty = (*ty).into();
                 let prod = TermC::Prod(Arg { id, ty }, (*tm).into());
                 Term::Comb(BTerm::new(prod))
@@ -40,7 +39,7 @@ impl<'s, S: From<&'s str>> Into<Term<S>> for parse::term::Term1<Atom<Symbol<&'s 
     }
 }
 
-impl<'s, S: From<&'s str>> Into<Term<S>> for parse::Term<Atom<Symbol<&'s str>>, &'s str> {
+impl<R: ToString, S: From<R>> Into<Term<S>> for parse::Term<Atom<Symbol<R>>, R> {
     fn into(self) -> Term<S> {
         let head = self.0.into();
         if self.1.is_empty() {
@@ -52,9 +51,7 @@ impl<'s, S: From<&'s str>> Into<Term<S>> for parse::Term<Atom<Symbol<&'s str>>, 
     }
 }
 
-impl<'s, S: From<&'s str>> Into<Rule<S>>
-    for parse::Rule<&'s str, parse::Term<Atom<Symbol<&'s str>>, &'s str>>
-{
+impl<R: ToString, S: From<R>> Into<Rule<S>> for parse::Rule<R, parse::Term<Atom<Symbol<R>>, R>> {
     fn into(self) -> Rule<S> {
         let mut ctx = Vec::new();
         for (id, ty) in self.ctx {
@@ -81,8 +78,8 @@ impl<Tm> From<parse::Intro<Tm>> for crate::Intro<Tm> {
     }
 }
 
-impl<'s, S: From<&'s str>> Into<Command<S>>
-    for parse::Command<&'s str, &'s str, parse::Term<Atom<Symbol<&'s str>>, &'s str>>
+impl<R: Clone + ToString, S: From<R>> Into<Command<S>>
+    for parse::Command<R, R, parse::Term<Atom<Symbol<R>>, R>>
 {
     fn into(self) -> Command<S> {
         match self {
@@ -93,7 +90,8 @@ impl<'s, S: From<&'s str>> Into<Command<S>>
                 let id = id.to_string();
                 let args = args.into_iter().rev();
                 let it = args.fold(crate::Intro::from(it), |it, (name, arg_ty)| {
-                    it.map_type(|ty| App::new(Prod(Some(name), arg_ty.clone().into(), ty.into())))
+                    let prid = Some(name.clone());
+                    it.map_type(|ty| App::new(Prod(prid, arg_ty.clone().into(), ty.into())))
                         .map_term(|tm| App::new(Abst(name, Some(arg_ty.into()), tm.into())))
                 });
                 Command::Intro(id, it.map_type(|tm| tm.into()).map_term(|tm| tm.into()))
