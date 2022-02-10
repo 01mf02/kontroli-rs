@@ -113,7 +113,7 @@ fn moustache<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Symb<&'s str>> {
 fn comment1<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Filter<usize> {
     match comment(lex, 1) {
         0 => Filter::Skip,
-        n => Filter::Emit(n)
+        n => Filter::Emit(n),
     }
 }
 
