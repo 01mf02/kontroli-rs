@@ -22,6 +22,7 @@ where
 
 pub struct Lazy<I, A, V> {
     lines: I,
+    open_comments: usize,
     last: String,
     state: State<String, String, A, V>,
     ctx: Ctx<A, V>,
@@ -41,6 +42,7 @@ impl<I, A, V> Lazy<I, A, V> {
     pub fn new(lines: I) -> Self {
         Self {
             lines,
+            open_comments: 0,
             last: String::new(),
             state: State::default(),
             ctx: Default::default(),
@@ -72,32 +74,44 @@ impl<S, C, A, V> Default for State<S, C, A, V> {
     }
 }
 
+type Open = usize;
+
 impl<S: Into<C> + Into<V>, C, A: Scope<S, V>, V: cmd::Joker> State<S, C, A, V> {
-    fn feed<I>(self, ctx: &mut Ctx<A, V>, token: Token<S>, iter: &mut I) -> Result<Self, Error>
+    fn feed<I>(
+        self,
+        ctx: &mut Ctx<A, V>,
+        token: Token<S>,
+        iter: &mut I,
+    ) -> Result<(Self, Open), Error>
     where
         I: Iterator<Item = Token<S>>,
     {
         if self.cmd.expects_term() {
             let iter = &mut core::iter::once(token).chain(iter);
             match self.trm.parse(ctx, iter) {
-                Ok(term::State::Term(tm, tok)) => {
+                Ok((term::State::Term(tm, tok), _)) => {
                     let cmd = self
                         .cmd
                         .apply(ctx.bound_mut(), tm, tok)
                         .map_err(Error::Command)?;
                     let trm = term::State::Init;
-                    Ok(State { cmd, trm })
+                    Ok((State { cmd, trm }, 0))
                 }
-                Ok(trm) => Ok(State { cmd: self.cmd, trm }),
+                Ok((trm, Some(Token::Comment(o)))) => Ok((State { cmd: self.cmd, trm }, o)),
+                Ok((trm, None)) => Ok((State { cmd: self.cmd, trm }, 0)),
+                Ok((trm, _)) => Ok((State { cmd: self.cmd, trm }, 0)),
                 Err(e) => Err(Error::Term(e)),
             }
         } else {
             assert!(matches!(self.trm, term::State::Init));
+            if let Token::Comment(open) = token {
+                return Ok((self, open));
+            }
             let cmd = self
                 .cmd
                 .parse(ctx.bound_mut(), token)
                 .map_err(Error::Command)?;
-            Ok(State { cmd, trm: self.trm })
+            Ok((State { cmd, trm: self.trm }, 0))
         }
     }
 }
@@ -115,8 +129,9 @@ where
             token_seen = true;
             match state.feed(&mut self.ctx, next, &mut self.lexer) {
                 Err(e) => return Some(Err(e)),
-                Ok(st) => match st.cmd {
+                Ok((st, open)) => match st.cmd {
                     cmd::State::Command(cmd) => return Some(Ok(cmd)),
+                    _ if open > 0 => break,
                     _ => state = st,
                 },
             }
@@ -147,28 +162,41 @@ where
             });
 
             let mut lexer = Token::lexer(line.borrow());
+
+            // eat leading open comments
+            match crate::lex::comment(&mut lexer, self.open_comments) {
+                logos::Filter::Emit(open) => {
+                    self.open_comments = open;
+                    continue;
+                }
+                logos::Filter::Skip => self.open_comments = 0,
+            }
+
             while let Some(next) = lexer.next() {
                 match state.feed(&mut self.ctx, next, &mut lexer) {
                     Err(e) => return Some(Err(e)),
-                    Ok(st) => match st.cmd {
+                    Ok((st, open)) => match st.cmd {
                         cmd::State::Command(cmd) => {
                             self.buf.push(cmd);
                             state = State::default()
                         }
-                        _ => state = st,
+                        _ => {
+                            state = st;
+                            self.open_comments = open;
+                        }
                     },
                 };
             }
+
+            self.state = state.map_symb(|s| s.to_string());
 
             if !self.buf.is_empty() {
                 self.buf.reverse();
                 return self.buf.pop().map(Ok);
             }
-
-            self.state = state.map_symb(|s| s.to_string());
         }
 
-        if !matches!(self.state.cmd, cmd::State::Init) {
+        if self.open_comments > 0 || !matches!(self.state.cmd, cmd::State::Init) {
             Some(Err(Error::ExpectedInput))
         } else {
             None
@@ -199,6 +227,8 @@ fn positive() -> Result<(), Error> {
 
     Command::parse_lines("prop :\nType.".lines())?;
     Command::parse_lines("imp : prop\n-> prop\n-> prop\n.".lines())?;
+    Command::parse_lines("(; \n ;) prop : Type. (; \n ;)".lines())?;
+    Command::parse_lines("imp : prop (; \n ;) -> (; ;) prop\n-> prop\n(; ;).".lines())?;
     Ok(())
 }
 
