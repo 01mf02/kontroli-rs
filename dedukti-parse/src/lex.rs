@@ -58,30 +58,6 @@ pub enum Token<S> {
     Error,
 }
 
-impl<S> Token<S> {
-    pub fn map<T>(self, f: impl Fn(S) -> T) -> Token<T> {
-        use Token::*;
-        match self {
-            Def => Def,
-            Thm => Thm,
-            LBrk => LBrk,
-            RBrk => RBrk,
-            LPar => LPar,
-            RPar => RPar,
-            Colon => Colon,
-            ColonEq => ColonEq,
-            Arrow => Arrow,
-            FatArrow => FatArrow,
-            LongArrow => LongArrow,
-            Comma => Comma,
-            Dot => Dot,
-            Symb(s) => Symb(s.map(f)),
-            Comment(o) => Comment(o),
-            Error => Error,
-        }
-    }
-}
-
 impl<S: Display> Display for Token<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

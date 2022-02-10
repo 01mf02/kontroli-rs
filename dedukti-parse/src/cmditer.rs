@@ -89,7 +89,9 @@ impl<S: Into<C> + Into<V>, C, A: Scope<S, V>, V: cmd::Joker> State<S, C, A, V> {
         if self.cmd.expects_term() {
             let iter = &mut core::iter::once(token).chain(iter);
             match self.trm.parse(ctx, iter) {
-                Ok((term::State::Term(tm, tok), _)) => {
+                Ok((trm, None)) => Ok((State { cmd: self.cmd, trm }, 0)),
+                Ok((trm, Some(Token::Comment(o)))) => Ok((State { cmd: self.cmd, trm }, o)),
+                Ok((term::State::ATerm(None, tm), Some(tok))) => {
                     let cmd = self
                         .cmd
                         .apply(ctx.bound_mut(), tm, tok)
@@ -97,9 +99,7 @@ impl<S: Into<C> + Into<V>, C, A: Scope<S, V>, V: cmd::Joker> State<S, C, A, V> {
                     let trm = term::State::Init;
                     Ok((State { cmd, trm }, 0))
                 }
-                Ok((trm, Some(Token::Comment(o)))) => Ok((State { cmd: self.cmd, trm }, o)),
-                Ok((trm, None)) => Ok((State { cmd: self.cmd, trm }, 0)),
-                Ok((trm, _)) => Ok((State { cmd: self.cmd, trm }, 0)),
+                Ok((_, Some(_tok))) => panic!("unrecognised token"),
                 Err(e) => Err(Error::Term(e)),
             }
         } else {
