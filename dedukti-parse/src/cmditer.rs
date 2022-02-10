@@ -154,33 +154,32 @@ where
         }
 
         for line in &mut self.lines {
+            let mut lexer = Token::lexer(line.borrow());
+
+            // eat leading open comments
+            self.open_comments = crate::lex::comment(&mut lexer, self.open_comments);
+            if self.open_comments > 0 {
+                continue;
+            }
+
             let last = &mut self.last;
             let mut state = core::mem::take(&mut self.state).map_symb(|s| {
                 *last = s;
                 &*last as &str
             });
 
-            let mut lexer = Token::lexer(line.borrow());
-
-            // eat leading open comments
-            self.open_comments = crate::lex::comment(&mut lexer, self.open_comments);
-            if self.open_comments > 0 {
-                continue
-            }
-
             while let Some(next) = lexer.next() {
                 match state.feed(&mut self.ctx, next, &mut lexer) {
                     Err(e) => return Some(Err(e)),
-                    Ok((st, open)) => match st.cmd {
-                        cmd::State::Command(cmd) => {
+                    Ok((st, open)) => {
+                        state = if let cmd::State::Command(cmd) = st.cmd {
                             self.buf.push(cmd);
-                            state = State::default()
-                        }
-                        _ => {
-                            state = st;
-                            self.open_comments = open;
-                        }
-                    },
+                            State::default()
+                        } else {
+                            st
+                        };
+                        self.open_comments = open;
+                    }
                 };
             }
 
