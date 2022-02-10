@@ -140,7 +140,6 @@ where
     }
 }
 
-// TODO: implement support for open multi-line comments
 impl<I, A, V> Iterator for Lazy<I, A, V>
 where
     I: Iterator,
@@ -164,12 +163,9 @@ where
             let mut lexer = Token::lexer(line.borrow());
 
             // eat leading open comments
-            match crate::lex::comment(&mut lexer, self.open_comments) {
-                logos::Filter::Emit(open) => {
-                    self.open_comments = open;
-                    continue;
-                }
-                logos::Filter::Skip => self.open_comments = 0,
+            self.open_comments = crate::lex::comment(&mut lexer, self.open_comments);
+            if self.open_comments > 0 {
+                continue
             }
 
             while let Some(next) = lexer.next() {

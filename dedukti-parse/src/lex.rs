@@ -111,11 +111,14 @@ fn moustache<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Symb<&'s str>> {
 }
 
 fn comment1<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Filter<usize> {
-    comment(lex, 1)
+    match comment(lex, 1) {
+        0 => Filter::Skip,
+        n => Filter::Emit(n)
+    }
 }
 
 /// Lex inside a comment until end of comment or input, return number of open comments.
-pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> Filter<usize> {
+pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> usize {
     let prefix: &[_] = &['(', ';'];
     while open > 0 {
         // go to first occurrence of either ';' or '('
@@ -123,7 +126,7 @@ pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> Filt
             Some(offset) => lex.bump(offset),
             None => {
                 lex.bump(lex.remainder().len());
-                return Filter::Emit(open);
+                return open;
             }
         };
         if lex.remainder().starts_with("(;") {
@@ -136,7 +139,7 @@ pub fn comment<'s>(lex: &mut Lexer<'s, Token<&'s str>>, mut open: usize) -> Filt
             lex.bump(1);
         }
     }
-    Filter::Skip
+    0
 }
 
 #[test]
