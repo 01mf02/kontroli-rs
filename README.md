@@ -13,12 +13,8 @@ It is also a testbed for parallelising type checking.
 
 # Usage
 
-Kontroli requires at least Rust 1.40.
-On a recent Ubuntu system, this can be installed via:
-
-    sudo apt install rustc
-
-For other systems, instructions are available at <https://rustup.rs/>.
+Kontroli requires at least Rust 1.56.
+Installation instructions are available at <https://rustup.rs/>.
 
 To run Kontroli on output generated from Isabelle/Pure:
 

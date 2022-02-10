@@ -162,10 +162,9 @@ where
                 continue;
             }
 
-            let last = &mut self.last;
             let mut state = core::mem::take(&mut self.state).map_symb(|s| {
-                *last = s;
-                &*last as &str
+                self.last = s;
+                &self.last as &str
             });
 
             while let Some(next) = lexer.next() {
