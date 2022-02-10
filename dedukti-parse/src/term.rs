@@ -309,7 +309,9 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
     ) -> Result<Loop<(Self, OTok<S>)>> {
         loop {
             match iter.next() {
-                tok @ (None | Some(Token::Comment(_))) => return Ok(Loop::Return((State::ATerm(x, app), tok))),
+                tok @ (None | Some(Token::Comment(_))) => {
+                    return Ok(Loop::Return((State::ATerm(x, app), tok)))
+                }
                 Some(Token::Symb(s)) => app.1.push(A::go(s, ctx)),
                 Some(Token::Arrow) => {
                     ctx.stack.push(Cont::Prod(x, app));
@@ -338,7 +340,7 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
                                 app
                             }
                         }
-                    },
+                    }
                     (Some(_lpar), _) => return Err(Error::UnclosedLPar),
                     (None, tm) => return Ok(Loop::Return((State::ATerm(x, tm), Some(tok)))),
                 },
