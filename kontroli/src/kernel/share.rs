@@ -33,11 +33,13 @@ impl<'s, S: Borrow<str> + Ord> Share<'s, TermC<'s>> for scope::TermC<S> {
 
 impl<'s, S: Borrow<str> + Ord> Share<'s, Rule<'s>> for scope::Rule<S> {
     fn share(self, syms: &Symbols<'s>) -> Result<Rule<'s>, Error> {
+        let joker = self.ctx.len();
         let ctx = self.ctx.into_iter();
         let ctx = ctx.map(|arg| arg.try_map_type(|ty| ty.map(|ty| ty.share(syms)).transpose()));
         let ctx = ctx.collect::<Result<_, _>>()?;
 
         let lhs = Pattern::try_from(self.lhs).map_err(|_| Error::NoPrepattern)?;
+        let lhs = lhs.joke(joker);
         let lhs = lhs.try_map(&|c| c.share(syms))?;
         let lhs = TopPattern::try_from(lhs).map_err(|_| Error::NoTopPattern)?;
         let rhs = self.rhs.share(syms)?;

@@ -58,6 +58,15 @@ impl<S> Pattern<S> {
             Self::Joker => Ok(Pattern::Joker),
         }
     }
+
+    /// Replace all variables that equal the given one by jokers.
+    pub fn joke(self, joker: Miller) -> Self {
+        match self {
+            Self::Symb(s, args) => Self::Symb(s, args.into_iter().map(|p| p.joke(joker)).collect()),
+            Self::MVar(v) if v == joker => Self::Joker,
+            pat => pat,
+        }
+    }
 }
 
 impl<S: Borrow<str>, V> TryFrom<Term<Symbol<S>, BTerm<Symbol<S>, V>>> for Pattern<Symbol<S>> {
