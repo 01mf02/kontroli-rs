@@ -3,20 +3,24 @@ use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
 use core::fmt::{self, Display};
 
-pub type Term<A, V> = App<Term1<A, V>>;
+pub type Term<A, V> = App<AppH<A, V>>;
 
+/// Application of applications to a head.
 #[derive(Clone, Debug)]
-pub struct App<Tm>(pub Tm, pub Vec<Self>);
+pub struct App<H>(pub H, pub Vec<Self>);
 
+/// Head of an application.
 #[derive(Clone, Debug)]
-pub enum Term1<A, V> {
+pub enum AppH<A, V> {
+    /// atom (constants, variables)
     Atom(A),
-    // Abstraction (`x : A => t`)
+    /// abstraction (`x : A => t`)
     Abst(V, Option<Box<App<Self>>>, Box<App<Self>>),
-    // Dependent product (`x : A -> t`)
+    /// dependent product (`x : A -> t`)
     Prod(Option<V>, Box<App<Self>>, Box<App<Self>>),
 }
 
+/// Term without subterms.
 #[derive(Clone, Debug)]
 pub enum Atom<C> {
     Const(C),
@@ -24,7 +28,7 @@ pub enum Atom<C> {
     Type,
 }
 
-impl<Tm: Display> Display for App<Tm> {
+impl<H: Display> Display for App<H> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if !self.1.is_empty() {
             write!(f, "(")?;
@@ -48,7 +52,7 @@ impl<C: Display> Display for Atom<C> {
     }
 }
 
-impl<A: Display, V: Display> Display for Term1<A, V> {
+impl<A: Display, V: Display> Display for AppH<A, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Atom(a) => a.fmt(f),
@@ -70,9 +74,10 @@ pub enum Error {
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-impl<Tm> App<Tm> {
-    pub fn new(tm: Tm) -> Self {
-        Self(tm, Vec::new())
+impl<H> App<H> {
+    /// Create an application with a head and no applied arguments.
+    pub fn new(head: H) -> Self {
+        Self(head, Vec::new())
     }
 }
 
@@ -83,6 +88,7 @@ struct LPar<A, V> {
     app: Option<Term<A, V>>,
 }
 
+/// State of the term parser.
 #[derive(Debug)]
 pub(crate) enum State<S, A, V> {
     /// nothing
@@ -112,6 +118,7 @@ impl<S, A, V> Default for State<S, A, V> {
     }
 }
 
+/// Unfinished term that surrounds the currently parsed term.
 #[derive(Debug)]
 enum Cont<A, V> {
     /// `x`, possibly followed by `: ty`, followed by `=>`,
@@ -127,6 +134,7 @@ enum Cont<A, V> {
 
 #[derive(Debug)]
 pub struct Ctx<A, V> {
+    /// variables that were bound outside the term
     bound: Vec<V>,
     stack: Vec<Cont<A, V>>,
 }
@@ -136,6 +144,18 @@ impl<A, V> Ctx<A, V> {
         &mut self.bound
     }
 
+    /// If a symbol is bound in a superterm, return its Bruijn variable.
+    ///
+    /// This implementation is not particularly efficient,
+    /// because it traverses all superterms in the worst case,
+    /// including superterms that can not even bind variables.
+    /// However, because we commit to not cloning symbols,
+    /// this is one of the best things we can do.
+    ///
+    /// Previously, I kept all bound variables in `bound`,
+    /// removing them from the stack.
+    /// However, when we reduce the stack, we need to obtain the variables,
+    /// and this is quite error-prone and ugly.
     pub fn find<S: Eq + ?Sized>(&self, s: &S) -> Option<usize>
     where
         V: Borrow<S>,
@@ -174,23 +194,28 @@ impl<A, V> Default for Ctx<A, V> {
     }
 }
 
+/// Convert a symbol to a given type of atoms.
 pub trait Scope<S, V>
 where
     Self: Sized,
 {
+    /// Convert a symbol to a given type of atoms.
     fn scope(symb: Symb<S>, ctx: &Ctx<Self, V>) -> Self;
 
+    /// Convenience function to convert a symbol to a term.
     fn go(symb: Symb<S>, ctx: &Ctx<Self, V>) -> Term<Self, V> {
-        Term::new(Term1::Atom(Self::scope(symb, ctx)))
+        Term::new(AppH::Atom(Self::scope(symb, ctx)))
     }
 }
 
+/// The identity scoper.
 impl<S, V> Scope<S, V> for Symb<S> {
     fn scope(symb: Symb<S>, _: &Ctx<Self, V>) -> Self {
         symb
     }
 }
 
+/// Distinguish symbols into constants and variables.
 impl<S: Borrow<str> + Into<C> + Eq, C, V: Borrow<str>> Scope<S, V> for Atom<Symb<C>> {
     fn scope(symb: Symb<S>, ctx: &Ctx<Self, V>) -> Self {
         if symb.path.is_empty() {
@@ -208,8 +233,8 @@ impl<A, V> Term<A, V> {
     fn reduce(mut self, ctx: &mut Ctx<A, V>) -> (Option<LPar<A, V>>, Self) {
         while let Some(cur) = ctx.stack.pop() {
             match cur {
-                Cont::Abst(x, ty) => self = App::new(Term1::Abst(x, ty.map(Box::new), self.into())),
-                Cont::Prod(x, ty) => self = App::new(Term1::Prod(x, Box::new(ty), self.into())),
+                Cont::Abst(x, ty) => self = App::new(AppH::Abst(x, ty.map(Box::new), self.into())),
+                Cont::Prod(x, ty) => self = App::new(AppH::Prod(x, Box::new(ty), self.into())),
                 Cont::LPar(lpar) => return (Some(lpar), self),
             }
         }

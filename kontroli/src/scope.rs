@@ -4,7 +4,7 @@ use crate::parse;
 use crate::Arg;
 use alloc::{string::String, string::ToString, vec::Vec};
 
-use crate::parse::term::Atom;
+use crate::parse::term::{App, AppH, Atom};
 pub use crate::parse::Symb as Symbol;
 
 pub type Term<S> = crate::Term<Symbol<S>, BTerm<S>>;
@@ -15,7 +15,7 @@ pub type Intro<S> = crate::Intro<Term<S>>;
 pub type Rule<S> = crate::Rule<Arg<String, Option<Term<S>>>, Term<S>>;
 pub type Command<S> = crate::Command<String, Intro<S>, Rule<S>>;
 
-impl<R: ToString, S: From<R>> Into<Term<S>> for parse::term::Term1<Atom<Symbol<R>>, R> {
+impl<R: ToString, S: From<R>> Into<Term<S>> for AppH<Atom<Symbol<R>>, R> {
     fn into(self) -> Term<S> {
         match self {
             Self::Atom(Atom::Const(Symbol { path, name })) => {
@@ -84,8 +84,7 @@ impl<R: Clone + ToString, S: From<R>> Into<Command<S>>
     fn into(self) -> Command<S> {
         match self {
             Self::Intro(id, args, it) => {
-                use parse::term::App;
-                use parse::term::Term1::{Abst, Prod};
+                use AppH::{Abst, Prod};
 
                 let id = id.to_string();
                 let args = args.into_iter().rev();
