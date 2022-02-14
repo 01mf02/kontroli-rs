@@ -20,7 +20,7 @@ impl<'s> RTerm<'s> {
             TermC::Abst(arg, f) => {
                 let arg2 = arg.clone().map_type(|o| o.map(sub));
                 let f2 = f.clone().apply_subst(subst, k + 1);
-                if !arg.type_ptr_eq(&arg2) || !f.ptr_eq(&f2) {
+                if !arg.eq_ty(&arg2, Term::ptr_eq) || !f.ptr_eq(&f2) {
                     return TermC::Abst(arg2, f2).into();
                 }
             }
