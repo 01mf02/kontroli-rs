@@ -135,7 +135,7 @@ pub mod rc {
     pub use kernel::*;
 }
 
-mod application;
+mod app;
 mod arg;
 mod bterm;
 mod command;
@@ -152,7 +152,7 @@ mod symbols;
 mod term;
 mod typing;
 
-pub use application::Application;
+pub use app::Application;
 pub use arg::Arg;
 pub use bterm::BTerm;
 pub use command::Command;

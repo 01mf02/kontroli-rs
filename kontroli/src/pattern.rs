@@ -1,6 +1,6 @@
 //! Rewrite patterns.
 
-use crate::application::format as fmt_appl;
+use crate::app::format as fmt_appl;
 use crate::scope::Symbol;
 use crate::term::{Term, TermC};
 use crate::BTerm;

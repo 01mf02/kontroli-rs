@@ -1,6 +1,6 @@
 //! Terms for the lambda-Pi calculus.
 
-use crate::application::format as fmt_appl;
+use crate::app::format as fmt_appl;
 use crate::Arg;
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
