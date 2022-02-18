@@ -16,7 +16,6 @@ pub enum ScopeError {
     UndeclaredSymbol(String),
     NoPrepattern,
     NoTopPattern,
-    PatternArguments,
 }
 
 #[derive(Debug)]
