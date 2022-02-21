@@ -20,6 +20,16 @@ pub enum Error {
     PatternNoTerm,
 }
 
+impl<V, L, R> Rule<V, L, R> {
+    pub fn map_lhs<L2>(self, f: impl FnOnce(L) -> L2) -> Rule<V, L2, R> {
+        Rule {
+            ctx: self.ctx,
+            lhs: f(self.lhs),
+            rhs: self.rhs,
+        }
+    }
+}
+
 impl<V, Pat, Tm: TryFrom<Pat>> TryFrom<Rule<Arg<V, Option<Tm>>, Pat, Tm>> for Rule<Tm> {
     type Error = Error;
     fn try_from(rule: Rule<Arg<V, Option<Tm>>, Pat, Tm>) -> Result<Self, Self::Error> {
