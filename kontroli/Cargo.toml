@@ -2,7 +2,7 @@
 name = "kontroli"
 version = "0.3.0"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
-edition = "2018"
+edition = "2021"
 description = "Type checking for the lambda-Pi calculus modulo rewriting"
 readme = "../README.md"
 repository = "https://github.com/01mf02/kontroli-rs"
