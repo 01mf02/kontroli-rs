@@ -4,6 +4,7 @@ use super::sterm::{self, LTerm, STerm};
 use super::{GCtx, Intro};
 use crate::error::TypingError as Error;
 use crate::Stack;
+use alloc::vec::Vec;
 
 type Result<T> = core::result::Result<T, Error>;
 
@@ -22,7 +23,7 @@ fn declare<'s>(ty: LTerm<'s>, gc: &GCtx<'s>) -> Result<(Typing<'s>, Option<Check
         return Err(Error::SortExpected);
     }
     let typing = Typing {
-        lc: Stack::new(),
+        lc: Vec::new(),
         ty,
         tm: None,
     };
@@ -42,11 +43,11 @@ fn define<'s>(
         LTerm::try_from(&STerm::from(&tm).infer(gc, &mut Stack::new())?)?
     };
     let typing = Typing {
-        lc: Stack::new(),
+        lc: Vec::new(),
         ty: ty.clone(),
         tm: Some(tm.clone()),
     };
-    let lc = Stack::new();
+    let lc = Vec::new();
     Ok((typing, check.then(|| Check { lc, ty, tm })))
 }
 
@@ -57,11 +58,11 @@ fn theorem<'s>(
 ) -> Result<(Typing<'s>, Option<Check<'s>>)> {
     let _ = STerm::from(&ty).infer(gc, &mut Stack::new())?;
     let typing = Typing {
-        lc: Stack::new(),
+        lc: Vec::new(),
         ty: ty.clone(),
         tm: None,
     };
-    let lc = Stack::new();
+    let lc = Vec::new();
     let check = Check { lc, ty, tm };
     Ok((typing, Some(check)))
 }
@@ -99,7 +100,7 @@ pub fn rewrite<'s>(rule: crate::Rule<LTerm<'s>>, gc: &GCtx<'s>) -> Result<Check<
         tm: rule.rhs,
         // TODO: check for Kind/Type?
         ty: LTerm::try_from(&STerm::from(&rule.lhs).infer(gc, &mut lc)?)?,
-        lc: Stack::from(rule.ctx),
+        lc: rule.ctx.clone(),
     })
 }
 

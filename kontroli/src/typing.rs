@@ -7,7 +7,7 @@
 #[derive(Clone)]
 pub struct Typing<Ty, Tm = Ty> {
     /// local context
-    pub lc: crate::Stack<Ty>,
+    pub lc: alloc::vec::Vec<Ty>,
     pub ty: Ty,
     pub tm: Tm,
 }
