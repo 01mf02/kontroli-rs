@@ -5,7 +5,7 @@ pub mod rterm;
 mod share;
 pub mod state;
 mod subst;
-mod typing;
+pub mod typing;
 
 // We have a hole here which can be instantiated with any
 // pointer type that implements `ptr_eq`, such as `Arc` or `Rc`.

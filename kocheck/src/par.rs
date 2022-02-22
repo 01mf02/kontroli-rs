@@ -3,7 +3,7 @@
 use crate::{Error, Event, Opt, PathRead, Stage};
 use colosseum::sync::Arena;
 use core::{borrow::Borrow, convert::TryFrom};
-use kontroli::arc::{GCtx, Intro, Rule, Typing};
+use kontroli::arc::{typing, GCtx, Intro, Rule, Typing};
 use kontroli::error::Error as KoError;
 use kontroli::{Share, Symbol, Symbols};
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -48,7 +48,7 @@ fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Check<'s>, KoError> 
             let rewritable = it.rewritable();
 
             // defer checking to later
-            let typing = Typing::intro(it, gc)?;
+            let typing = typing::intro(it, gc)?;
             check.0.push(typing.clone());
             let typing = typing.map_tm(|otm| otm.map(|(tm, _chk)| tm));
             gc.insert(sym, typing, rewritable)?;
@@ -56,7 +56,7 @@ fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Check<'s>, KoError> 
         kontroli::Command::Rules(rules) => {
             for rule in rules.clone() {
                 if let Ok(rule) = kontroli::Rule::try_from(rule) {
-                    check.0.push(Typing::rewrite(rule, gc)?);
+                    check.0.push(typing::rewrite(rule, gc)?);
                 } else {
                     log::warn!("Rewrite rule contains unannotated variable")
                 }

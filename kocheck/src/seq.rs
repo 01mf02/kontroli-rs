@@ -2,7 +2,7 @@ use crate::{Error, Event, Opt, PathRead, Stage};
 use colosseum::unsync::Arena;
 use core::{borrow::Borrow, convert::TryFrom};
 use kontroli::error::Error as KoError;
-use kontroli::rc::{GCtx, Intro, Rule, Typing};
+use kontroli::rc::{typing, GCtx, Intro, Rule};
 use kontroli::{Share, Symbol, Symbols};
 
 type Command<'s> = kontroli::Command<Symbol<'s>, Intro<'s>, Rule<'s>>;
@@ -41,7 +41,7 @@ fn infer_check<'s>(cmd: Command<'s>, check: bool, gc: &mut GCtx<'s>) -> Result<(
         kontroli::Command::Intro(sym, it) => {
             let rewritable = it.rewritable();
 
-            let typing = Typing::intro(it, gc)?;
+            let typing = typing::intro(it, gc)?;
             if check {
                 typing.check(gc)?
             }
@@ -51,7 +51,7 @@ fn infer_check<'s>(cmd: Command<'s>, check: bool, gc: &mut GCtx<'s>) -> Result<(
         kontroli::Command::Rules(rules) => {
             for rule in rules.clone() {
                 if let Ok(rule) = kontroli::Rule::try_from(rule) {
-                    let typing = Typing::rewrite(rule, gc)?;
+                    let typing = typing::rewrite(rule, gc)?;
                     if check {
                         typing.check(gc)?
                     }
