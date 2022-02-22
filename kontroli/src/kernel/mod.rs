@@ -1,10 +1,8 @@
 mod convertible;
 mod infer_check;
-mod matching;
 mod reduce;
 pub mod rterm;
 mod share;
-pub mod state;
 mod subst;
 pub mod typing;
 
