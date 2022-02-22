@@ -39,7 +39,7 @@ impl<'s> RTerm<'s> {
 impl<'s> Term<'s> {
     pub fn apply_subst<S>(self, subst: &S, k: usize) -> Self
     where
-        S: Fn(usize, usize) -> Term<'s>,
+        S: Fn(usize, usize) -> Self,
     {
         match self {
             Self::BVar(n) if n >= k => subst(n, k),
@@ -48,31 +48,25 @@ impl<'s> Term<'s> {
         }
     }
 
-    pub fn subst(self, u: &Term<'s>) -> Self {
+    pub fn subst(self, u: &Self) -> Self {
         self.apply_subst(&u.psubst_single(), 0)
     }
 
     fn psubst_single<'t>(&'t self) -> impl Fn(usize, usize) -> Term<'s> + 't {
         move |n: usize, k: usize| {
             if n == k {
-                self.clone() << k
+                self.clone().shift(k)
             } else {
-                Term::BVar(n - 1)
+                Self::BVar(n - 1)
             }
         }
     }
-}
 
-/// Definition of `<<` for terms.
-#[allow(clippy::suspicious_arithmetic_impl)]
-impl<'s> core::ops::Shl<usize> for Term<'s> {
-    type Output = Self;
-
-    fn shl(self, rhs: usize) -> Self::Output {
+    pub fn shift(self, rhs: usize) -> Self {
         if rhs == 0 {
             self
         } else {
-            self.apply_subst(&|n, _k| Term::BVar(n + rhs), 0)
+            self.apply_subst(&|n, _k| Self::BVar(n + rhs), 0)
         }
     }
 }

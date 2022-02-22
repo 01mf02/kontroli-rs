@@ -45,7 +45,7 @@ fn eta_step<'s>((cn1, cn2): Constraint<'s>, cns: &mut Vec<Constraint<'s>>) -> bo
         Some((_, b)) => Some((cn1, b)),
         None => cn1.get_abst().map(|(_, b)| (cn2, b)),
     } {
-        let app = (a << 1).apply(Vec::from([Term::BVar(0)]));
+        let app = a.shift(1).apply(Vec::from([Term::BVar(0)]));
         cns.push((b.clone(), app));
         true
     } else {

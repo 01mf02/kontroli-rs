@@ -126,7 +126,7 @@ impl<'s> Term<'s> {
 
 fn psubst<'s, 'c>(args: &'c Context<'s>) -> impl Fn(usize, usize) -> Term<'s> + 'c {
     move |n: usize, k: usize| match args.get(n - k) {
-        Some(arg) => arg.force().clone() << k,
+        Some(arg) => arg.force().clone().shift(k),
         None => Term::BVar(n - args.len()),
     }
 }

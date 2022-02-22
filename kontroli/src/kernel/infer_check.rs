@@ -12,7 +12,7 @@ type LCtx<'s> = crate::Stack<Term<'s>>;
 
 impl<'s> LCtx<'s> {
     fn get_type(&self, n: usize) -> Option<Term<'s>> {
-        Some(self.get(n)?.clone() << (n + 1))
+        Some(self.get(n)?.clone().shift(n + 1))
     }
 
     fn bind<A, F>(&mut self, arg: Term<'s>, f: F) -> Result<A>
@@ -37,7 +37,7 @@ impl<'s> fmt::Display for LCtx<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
         for (i, x) in self.iter().enumerate() {
-            write!(f, "{} : {}, ", Term::BVar(i), x.clone() << (i + 1))?;
+            write!(f, "{} : {}, ", Term::BVar(i), x.clone().shift(i + 1))?;
         }
         write!(f, "]")
     }
