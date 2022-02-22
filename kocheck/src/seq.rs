@@ -41,11 +41,10 @@ fn infer_check<'s>(cmd: Command<'s>, check: bool, gc: &mut GCtx<'s>) -> Result<(
         kontroli::Command::Intro(sym, it) => {
             let rewritable = it.rewritable();
 
-            let typing = typing::intro(it, gc)?;
+            let (typing, chk) = typing::intro(it, gc)?;
             if check {
-                typing.check(gc)?
+                chk.into_iter().try_for_each(|chk| chk.check(gc))?;
             }
-            let typing = typing.map_tm(|otm| otm.map(|(tm, _chk)| tm));
             Ok(gc.insert(sym, typing, rewritable)?)
         }
         kontroli::Command::Rules(rules) => {

@@ -11,20 +11,3 @@ pub struct Typing<Ty, Tm = Ty> {
     pub ty: Ty,
     pub tm: Tm,
 }
-
-impl<Ty, Tm> Typing<Ty, Tm> {
-    pub fn map_tm<Tm2>(self, f: impl Fn(Tm) -> Tm2) -> Typing<Ty, Tm2> {
-        Typing {
-            lc: self.lc,
-            ty: self.ty,
-            tm: f(self.tm),
-        }
-    }
-}
-
-/// Have we assured that a given term matches a given type?
-#[derive(Clone)]
-pub enum Check {
-    Checked,
-    Unchecked,
-}

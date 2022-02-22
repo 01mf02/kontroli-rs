@@ -3,14 +3,14 @@
 use crate::{Error, Event, Opt, PathRead, Stage};
 use colosseum::sync::Arena;
 use core::{borrow::Borrow, convert::TryFrom};
-use kontroli::arc::{typing, GCtx, Intro, Rule, Typing};
+use kontroli::arc::{typing, GCtx, Intro, Rule};
 use kontroli::error::Error as KoError;
 use kontroli::{Share, Symbol, Symbols};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 type Command<'s> = kontroli::Command<Symbol<'s>, Intro<'s>, Rule<'s>>;
 
-type Check<'s> = (Vec<Typing<'s>>, GCtx<'s>);
+type Checks<'s> = (Vec<typing::Check<'s>>, GCtx<'s>);
 
 fn from_event<'s>(
     event: Event,
@@ -41,22 +41,21 @@ fn share<'s, S: Borrow<str> + Ord>(
     }
 }
 
-fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Check<'s>, KoError> {
-    let mut check = (Vec::new(), gc.clone());
+fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Checks<'s>, KoError> {
+    let mut checks = (Vec::<typing::Check>::new(), gc.clone());
     match cmd {
         kontroli::Command::Intro(sym, it) => {
             let rewritable = it.rewritable();
 
             // defer checking to later
-            let typing = typing::intro(it, gc)?;
-            check.0.push(typing.clone());
-            let typing = typing.map_tm(|otm| otm.map(|(tm, _chk)| tm));
+            let (typing, check) = typing::intro(it, gc)?;
+            check.into_iter().for_each(|chk| checks.0.push(chk));
             gc.insert(sym, typing, rewritable)?;
         }
         kontroli::Command::Rules(rules) => {
             for rule in rules.clone() {
                 if let Ok(rule) = kontroli::Rule::try_from(rule) {
-                    check.0.push(typing::rewrite(rule, gc)?);
+                    checks.0.push(typing::rewrite(rule, gc)?);
                 } else {
                     log::warn!("Rewrite rule contains unannotated variable")
                 }
@@ -64,11 +63,11 @@ fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Check<'s>, KoError> 
             rules.into_iter().try_for_each(|r| gc.add_rule(r))?
         }
     }
-    Ok(check)
+    Ok(checks)
 }
 
-fn check((typings, gc): Check) -> Result<(), KoError> {
-    typings.into_iter().try_for_each(|t| Ok(t.check(&gc)?))
+fn check((checks, gc): Checks) -> Result<(), KoError> {
+    checks.into_iter().try_for_each(|chk| Ok(chk.check(&gc)?))
 }
 
 fn infer_checks<'s, I>(iter: I, checks: bool, gc: &mut GCtx<'s>) -> Result<(), Error>
