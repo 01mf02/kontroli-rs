@@ -118,3 +118,12 @@ impl<A> FromIterator<A> for Stack<A> {
         Self(Vec::from_iter(iter))
     }
 }
+
+impl<T> Extend<T> for Stack<T> {
+    fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
+        self.0.extend(iter)
+    }
+}
