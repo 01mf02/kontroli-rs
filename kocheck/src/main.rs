@@ -1,7 +1,6 @@
 //! A typechecker for the lambda-Pi calculus modulo rewriting.
 
 use clap::Parser;
-use core::convert::TryFrom;
 use kocheck::{par, Error, Event, Opt, PathRead};
 
 fn produce<F, E>(opt: &Opt, send: F) -> Result<(), Error>

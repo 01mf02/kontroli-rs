@@ -2,7 +2,7 @@
 
 use crate::{Error, Event, Opt, PCommand, PathRead, Stage};
 use colosseum::sync::Arena;
-use core::{borrow::Borrow, convert::TryFrom};
+use core::borrow::Borrow;
 use kontroli::error::Error as KoError;
 use kontroli::kernel::{typing, GCtx, Intro, Rule};
 use kontroli::{Share, Symbol, Symbols};

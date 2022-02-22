@@ -10,7 +10,6 @@ use crate::{Arg, Symbol, Symbols};
 use alloc::string::{String, ToString};
 use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
-use core::convert::TryFrom;
 
 type Result<T> = core::result::Result<T, Error>;
 
