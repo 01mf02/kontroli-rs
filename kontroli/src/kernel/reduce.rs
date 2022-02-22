@@ -117,10 +117,12 @@ impl<'s, 't> From<RState<'s, 't>> for STerm<'s, 't> {
 
 impl<'s, 't> From<State<'s, 't>> for STerm<'s, 't> {
     fn from(state: State<'s, 't>) -> Self {
-        state
-            .term
-            .psubst(&state.ctx)
-            .apply(state.stack.0.into_iter().rev().map(Self::from).collect())
+        let subst = state.term.psubst(&state.ctx);
+        if state.stack.0.is_empty() {
+            subst
+        } else {
+            subst.apply(state.stack.0.into_iter().rev().map(Self::from))
+        }
     }
 }
 

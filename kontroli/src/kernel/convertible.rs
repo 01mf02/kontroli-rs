@@ -69,7 +69,7 @@ fn eta_step<'s, 't>((cn1, cn2): Constraint<'s, 't>, cns: &mut Vec<Constraint<'s,
         Some((_, b)) => Some((cn1, b)),
         None => cn1.get_abst().map(|(_, b)| (cn2, b)),
     } {
-        let app = a.shift(1).apply(Vec::from([STerm::Var(0)]));
+        let app = a.shift(1).apply(core::iter::once(STerm::Var(0)));
         cns.push((b, app));
         true
     } else {

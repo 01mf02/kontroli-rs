@@ -1,7 +1,7 @@
 //! Terms for the lambda-Pi calculus.
 
 use crate::{Arg, Symbol};
-use alloc::{boxed::Box, rc::Rc, vec::Vec};
+use alloc::{boxed::Box, rc::Rc};
 use core::fmt::{self, Display};
 
 pub use crate::lterm::{Comb, DeBruijn, LComb, LTerm};
@@ -56,21 +56,17 @@ impl<'s, 't> STerm<'s, 't> {
     }
 
     /// Apply some terms to the term.
-    pub fn apply(self, mut args: Vec<Self>) -> Self {
-        if args.is_empty() {
-            return self;
-        }
+    pub fn apply(self, args: impl Iterator<Item = Self>) -> Self {
         if let Self::SComb(comb) = &self {
             if let Comb::Appl(tm, args1) = &**comb {
-                let mut args1 = args1.clone();
-                args1.append(&mut args);
-                return Self::SComb(Rc::new(Comb::Appl(tm.clone(), args1)));
+                let args1 = args1.iter().cloned().chain(args);
+                return Self::SComb(Rc::new(Comb::Appl(tm.clone(), args1.collect())));
             }
         } else if let Self::LComb(Comb::Appl(tm, args1)) = &self {
-            let args1 = args1.iter().map(STerm::from).chain(args.into_iter());
+            let args1 = args1.iter().map(Self::from).chain(args);
             return Self::SComb(Rc::new(Comb::Appl(tm.into(), args1.collect())));
         };
-        Self::SComb(Rc::new(Comb::Appl(self, args)))
+        Self::SComb(Rc::new(Comb::Appl(self, args.collect())))
     }
 }
 
