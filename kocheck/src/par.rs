@@ -67,14 +67,19 @@ fn check((checks, gc): Checks) -> Result<(), KoError> {
     checks.into_iter().try_for_each(|chk| Ok(chk.check(&gc)?))
 }
 
-fn infer_checks<'s, I>(iter: I, checks: bool, gc: &mut GCtx<'s>) -> Result<(), Error>
+fn infer_checks<'s, I>(iter: I, opt: &Opt, gc: &mut GCtx<'s>) -> Result<(), Error>
 where
     I: Iterator<Item = Result<Command<'s>, Error>> + Send,
 {
-    iter.map(|cmd| infer(cmd?, gc).map_err(Error::Ko))
-        .filter(|cmd| checks || cmd.is_err())
-        .par_bridge()
-        .try_for_each(|ts| check(ts?).map_err(Error::Ko))
+    let mut iter = iter
+        .map(|cmd| infer(cmd?, gc).map_err(Error::Ko))
+        .filter(|cmd| !opt.omits(Stage::Check) || cmd.is_err());
+    if opt.jobs.is_some() {
+        iter.par_bridge()
+            .try_for_each(|ts| check(ts?).map_err(Error::Ko))
+    } else {
+        iter.try_for_each(|ts| check(ts?).map_err(Error::Ko))
+    }
 }
 
 pub fn run(opt: &Opt) -> Result<(), Error> {
@@ -88,17 +93,15 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
         let file = PathRead::try_from(file)?;
         syms.set_path(file.path);
 
-        use Stage::{Check, Infer, Share};
-
         use std::io::{BufRead, BufReader};
         let lines = BufReader::new(file.read).lines().map(|line| line.unwrap());
         let cmds = kontroli::parse::Lazy::new(lines)
             .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
-            .filter(|cmd| !opt.omits(Share) || cmd.is_err())
+            .filter(|cmd| !opt.omits(Stage::Share) || cmd.is_err())
             .map(|cmd| share(cmd?, &mut syms, &arena).map_err(Error::Ko))
-            .filter(|cmd| !opt.omits(Infer) || cmd.is_err());
+            .filter(|cmd| !opt.omits(Stage::Infer) || cmd.is_err());
 
-        infer_checks(cmds, !opt.omits(Check), &mut gc)?
+        infer_checks(cmds, opt, &mut gc)?
     }
     Ok(())
 }
@@ -113,15 +116,13 @@ where
 
     gc.eta = opt.eta;
 
-    use Stage::{Check, Infer, Share};
-
     // run as long as we receive events, and abort on error
     let cmds = iter
-        .filter(|event| !opt.omits(Share) || event.is_err())
+        .filter(|event| !opt.omits(Stage::Share) || event.is_err())
         .map(|event| from_event(event?, &mut syms, &arena).map_err(Error::Ko))
         .map(|ro| ro.transpose())
         .flatten()
-        .filter(|cmd| !opt.omits(Infer) || cmd.is_err());
+        .filter(|cmd| !opt.omits(Stage::Infer) || cmd.is_err());
 
-    infer_checks(cmds, !opt.omits(Check), &mut gc)
+    infer_checks(cmds, opt, &mut gc)
 }
