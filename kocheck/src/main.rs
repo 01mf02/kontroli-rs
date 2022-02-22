@@ -2,7 +2,7 @@
 
 use clap::Parser;
 use core::convert::TryFrom;
-use kocheck::{par, seq, Error, Event, Opt, PathRead};
+use kocheck::{par, Error, Event, Opt, PathRead};
 
 fn produce<F, E>(opt: &Opt, send: F) -> Result<(), Error>
 where
@@ -11,13 +11,11 @@ where
     for file in opt.files.iter() {
         let file = PathRead::try_from(file)?;
 
-        use kontroli::scope::Command as SCommand;
         use std::io::{BufRead, BufReader};
         let lines = BufReader::new(file.read).lines().map(|line| line.unwrap());
         let cmds = kontroli::parse::Lazy::new(lines)
             .inspect(|cmd| cmd.iter().for_each(kocheck::log_cmd))
-            .filter(|cmd| !opt.omits(kocheck::Stage::Scope) || cmd.is_err())
-            .map(|cmd| Ok::<_, Error>(Into::<SCommand<String>>::into(cmd?)));
+            .map(|cmd| cmd.map_err(Error::Parse));
 
         let head = core::iter::once(Ok(Event::Module(file.path)));
         let tail = cmds.map(|cmd| cmd.map(Event::Command));
@@ -48,8 +46,6 @@ fn main() -> Result<(), Error> {
             .unwrap();
     }
 
-    let parallel = opt.jobs.is_some();
-
     match opt.channel_capacity {
         Some(capacity) => {
             let (sender, receiver) = match capacity {
@@ -58,13 +54,7 @@ fn main() -> Result<(), Error> {
             };
 
             let optr = opt.clone();
-            let consumer = std::thread::spawn(move || {
-                if parallel {
-                    par::consume(receiver.into_iter(), &optr)
-                } else {
-                    seq::consume(receiver.into_iter(), &optr)
-                }
-            });
+            let consumer = std::thread::spawn(move || par::consume(receiver.into_iter(), &optr));
 
             produce(&opt, |event| sender.send(event))?;
 
@@ -75,12 +65,6 @@ fn main() -> Result<(), Error> {
             // wait for all commands to be consumed
             consumer.join().unwrap()
         }
-        None => {
-            if parallel {
-                par::run(&opt)
-            } else {
-                seq::run(&opt)
-            }
-        }
+        None => par::run(&opt),
     }
 }

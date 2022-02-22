@@ -119,42 +119,24 @@ extern crate log;
 
 pub use dedukti_parse as parse;
 
-/// Multi-threading kernel.
-#[cfg(not(doctest))]
-pub mod arc {
-    use alloc::sync::Arc as Rc;
-    #[path = "../kernel/mod.rs"]
-    mod kernel;
-    pub use kernel::*;
-}
-/// Single-threading kernel.
-pub mod rc {
-    use alloc::rc::Rc;
-    #[path = "../kernel/mod.rs"]
-    mod kernel;
-    pub use kernel::*;
-}
-
 mod app;
 mod arg;
-mod bterm;
 mod command;
 pub mod error;
 mod gctx;
 mod intro;
+pub mod kernel;
+pub mod lterm;
 mod pattern;
 mod rule;
-pub mod scope;
 mod share;
 mod stack;
 mod symbol;
 mod symbols;
-mod term;
 mod typing;
 
 pub use app::Application;
 pub use arg::Arg;
-pub use bterm::BTerm;
 pub use command::Command;
 pub use error::Error;
 pub use gctx::GCtx;
@@ -165,5 +147,4 @@ pub use share::Share;
 pub use stack::Stack;
 pub use symbol::Symbol;
 pub use symbols::Symbols;
-pub use term::Term;
 pub use typing::Typing;

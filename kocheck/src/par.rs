@@ -1,10 +1,10 @@
 //! Parallel event processing.
 
-use crate::{Error, Event, Opt, PathRead, Stage};
+use crate::{Error, Event, Opt, PCommand, PathRead, Stage};
 use colosseum::sync::Arena;
 use core::{borrow::Borrow, convert::TryFrom};
-use kontroli::arc::{typing, GCtx, Intro, Rule};
 use kontroli::error::Error as KoError;
+use kontroli::kernel::{typing, GCtx, Intro, Rule};
 use kontroli::{Share, Symbol, Symbols};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
@@ -24,25 +24,21 @@ fn from_event<'s>(
 }
 
 fn share<'s, S: Borrow<str> + Ord>(
-    cmd: kontroli::scope::Command<S>,
+    cmd: PCommand<S>,
     syms: &mut Symbols<'s>,
     arena: &'s Arena<String>,
 ) -> Result<Command<'s>, KoError> {
-    match cmd {
+    match cmd.share(syms)? {
         kontroli::Command::Intro(id, it) => {
-            let it = it.share(syms)?;
             let id = syms.insert(arena.alloc(id))?;
             Ok(Command::Intro(id, it))
         }
-        kontroli::Command::Rules(rules) => {
-            let rules = rules.into_iter().map(|r| r.share(syms));
-            Ok(Command::Rules(rules.collect::<Result<_, _>>()?))
-        }
+        kontroli::Command::Rules(rules) => Ok(Command::Rules(rules)),
     }
 }
 
 fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Checks<'s>, KoError> {
-    let mut checks = (Vec::<typing::Check>::new(), gc.clone());
+    let mut checks = (Vec::new(), gc.clone());
     match cmd {
         kontroli::Command::Intro(sym, it) => {
             let rewritable = it.rewritable();
@@ -54,6 +50,7 @@ fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Checks<'s>, KoError>
         }
         kontroli::Command::Rules(rules) => {
             for rule in rules.clone() {
+                let rule = rule.map_lhs(kontroli::Pattern::from);
                 if let Ok(rule) = kontroli::Rule::try_from(rule) {
                     checks.0.push(typing::rewrite(rule, gc)?);
                 } else {
@@ -91,15 +88,12 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
         let file = PathRead::try_from(file)?;
         syms.set_path(file.path);
 
-        use kontroli::scope::Command as SCommand;
-        use Stage::{Check, Infer, Scope, Share};
+        use Stage::{Check, Infer, Share};
 
         use std::io::{BufRead, BufReader};
         let lines = BufReader::new(file.read).lines().map(|line| line.unwrap());
         let cmds = kontroli::parse::Lazy::new(lines)
             .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
-            .filter(|cmd| !opt.omits(Scope) || cmd.is_err())
-            .map(|cmd| Ok::<_, Error>(Into::<SCommand<String>>::into(cmd?)))
             .filter(|cmd| !opt.omits(Share) || cmd.is_err())
             .map(|cmd| share(cmd?, &mut syms, &arena).map_err(Error::Ko))
             .filter(|cmd| !opt.omits(Infer) || cmd.is_err());

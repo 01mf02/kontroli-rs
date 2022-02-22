@@ -1,6 +1,7 @@
 //! Reduction to weak head normal form (WHNF), including rewriting.
 
-use super::{GCtx, Pattern, Rule, Term, TermC, TopPattern};
+use super::sterm::{Comb, STerm};
+use super::{GCtx, Pattern, Rule, TopPattern};
 use crate::pattern::Miller;
 use crate::stack;
 use alloc::{boxed::Box, rc::Rc, vec::Vec};
@@ -17,13 +18,13 @@ use lazy_st::Thunk;
 /// *Sadhana*. **34**: 71–144.
 /// doi: [10.1007/s12046-009-0003-3](https://doi.org/10.1007%2Fs12046-009-0003-3).
 #[derive(Clone)]
-pub struct State<'s> {
-    pub ctx: Context<'s>,
-    pub term: Term<'s>,
-    pub stack: Stack<'s>,
+pub struct State<'s, 't> {
+    pub ctx: Context<'s, 't>,
+    pub term: STerm<'s, 't>,
+    pub stack: Stack<'s, 't>,
 }
 
-impl<'s> State<'s> {
+impl<'s, 't> State<'s, 't> {
     /// Construct a new state from a reference to a term.
     ///
     /// This does not yet evaluate anything, as can be seen from following example:
@@ -41,7 +42,7 @@ impl<'s> State<'s> {
     /// assert!(Term::ptr_eq(&Term::from(state), &term));
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn new(term: Term<'s>) -> Self {
+    pub fn new(term: STerm<'s, 't>) -> Self {
         Self {
             ctx: Context::new(),
             term,
@@ -51,22 +52,22 @@ impl<'s> State<'s> {
 }
 
 /// Map from de Bruijn indices in the term of the abstract machine to lazy terms.
-pub type Context<'s> = stack::Stack<RTTerm<'s>>;
+pub type Context<'s, 't> = stack::Stack<RTTerm<'s, 't>>;
 
 /// Arguments to the abstract machine term.
-pub type Stack<'s> = stack::Stack<RState<'s>>;
+pub type Stack<'s, 't> = stack::Stack<RState<'s, 't>>;
 
 /// A shared lazy term constructed from a shared mutable state.
 #[derive(Clone)]
-pub struct RTTerm<'s>(Rc<Thunk<RState<'s>, Term<'s>>>);
+pub struct RTTerm<'s, 't>(Rc<Thunk<RState<'s, 't>, STerm<'s, 't>>>);
 
-impl<'s> RTTerm<'s> {
-    pub fn new(st: RState<'s>) -> Self {
+impl<'s, 't> RTTerm<'s, 't> {
+    pub fn new(st: RState<'s, 't>) -> Self {
         Self(Rc::new(Thunk::new(st)))
     }
 
     /// Force evaluation of the lazy term.
-    pub fn force(&self) -> &Term<'s> {
+    pub fn force(&self) -> &STerm<'s, 't> {
         &**self.0
     }
 }
@@ -77,36 +78,44 @@ impl<'s> RTTerm<'s> {
 /// because evaluation requires a global context and
 /// because we sometimes wish to access the original state.
 #[derive(Clone)]
-pub struct RState<'s>(Rc<RefCell<WState<'s>>>);
+pub struct RState<'s, 't>(Rc<RefCell<WState<'s, 't>>>);
 
-impl<'s> RState<'s> {
-    pub fn new(wst: WState<'s>) -> Self {
+impl<'s, 't> RState<'s, 't> {
+    pub fn new(wst: WState<'s, 't>) -> Self {
         Self(Rc::new(RefCell::new(wst)))
     }
 
-    pub fn borrow(&self) -> Ref<WState<'s>> {
+    fn from_ctx_term(ctx: Context<'s, 't>, term: STerm<'s, 't>) -> Self {
+        RState::new(WState::new(State {
+            ctx,
+            term,
+            stack: Stack::new(),
+        }))
+    }
+
+    pub fn borrow(&self) -> Ref<WState<'s, 't>> {
         self.0.borrow()
     }
 
-    pub fn borrow_mut(&self) -> RefMut<WState<'s>> {
+    pub fn borrow_mut(&self) -> RefMut<WState<'s, 't>> {
         self.0.borrow_mut()
     }
 }
 
-impl<'s> lazy_st::Evaluate<Term<'s>> for RState<'s> {
-    fn evaluate(self) -> Term<'s> {
-        Term::from(self)
+impl<'s, 't> lazy_st::Evaluate<STerm<'s, 't>> for RState<'s, 't> {
+    fn evaluate(self) -> STerm<'s, 't> {
+        STerm::from(self)
     }
 }
 
-impl<'s> From<RState<'s>> for Term<'s> {
-    fn from(s: RState<'s>) -> Self {
-        Term::from(s.borrow_state().clone())
+impl<'s, 't> From<RState<'s, 't>> for STerm<'s, 't> {
+    fn from(s: RState<'s, 't>) -> Self {
+        STerm::from(s.borrow_state().clone())
     }
 }
 
-impl<'s> From<State<'s>> for Term<'s> {
-    fn from(state: State<'s>) -> Self {
+impl<'s, 't> From<State<'s, 't>> for STerm<'s, 't> {
+    fn from(state: State<'s, 't>) -> Self {
         state
             .term
             .psubst(&state.ctx)
@@ -114,8 +123,8 @@ impl<'s> From<State<'s>> for Term<'s> {
     }
 }
 
-impl<'s> Term<'s> {
-    fn psubst(self, args: &Context<'s>) -> Self {
+impl<'s, 't> STerm<'s, 't> {
+    fn psubst(self, args: &Context<'s, 't>) -> Self {
         if args.is_empty() {
             self
         } else {
@@ -124,27 +133,27 @@ impl<'s> Term<'s> {
     }
 }
 
-fn psubst<'s, 'c>(args: &'c Context<'s>) -> impl Fn(usize, usize) -> Term<'s> + 'c {
+fn psubst<'s, 't, 'c>(args: &'c Context<'s, 't>) -> impl Fn(usize, usize) -> STerm<'s, 't> + 'c {
     move |n: usize, k: usize| match args.get(n - k) {
         Some(arg) => arg.force().clone().shift(k),
-        None => Term::BVar(n - args.len()),
+        None => STerm::Var(n - args.len()),
     }
 }
 
 /// A version of `State` that tracks whether it was reduced to WHNF yet.
-pub struct WState<'s> {
-    state: State<'s>,
+pub struct WState<'s, 't> {
+    state: State<'s, 't>,
     whnfed: bool,
 }
 
-impl<'s> WState<'s> {
-    fn new(state: State<'s>) -> Self {
+impl<'s, 't> WState<'s, 't> {
+    fn new(state: State<'s, 't>) -> Self {
         let whnfed = false;
         Self { state, whnfed }
     }
 
     /// Replace the state with its WHNF if it was not in WHNF before.
-    fn whnf(&mut self, gc: &GCtx<'s>) {
+    fn whnf(&mut self, gc: &'t GCtx<'s>) {
         if !self.whnfed {
             self.state.whnf(gc);
             self.whnfed = true
@@ -152,19 +161,19 @@ impl<'s> WState<'s> {
     }
 }
 
-impl<'s> RState<'s> {
+impl<'s, 't> RState<'s, 't> {
     /// Replace the state with its WHNF if it was not in WHNF before.
-    pub fn whnf(&self, gc: &GCtx<'s>) {
+    pub fn whnf(&self, gc: &'t GCtx<'s>) {
         self.borrow_mut().whnf(gc)
     }
 
     /// Obtain a reference to the state.
-    pub fn borrow_state(&self) -> Ref<State<'s>> {
+    pub fn borrow_state(&self) -> Ref<State<'s, 't>> {
         Ref::map(self.borrow(), |wst| &wst.state)
     }
 }
 
-impl<'s> State<'s> {
+impl<'s, 't> State<'s, 't> {
     /// Evaluate the state to its weak head normal form.
     ///
     /// ~~~
@@ -185,26 +194,26 @@ impl<'s> State<'s> {
     /// assert_eq!(state.term, expected);
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn whnf(&mut self, gc: &GCtx<'s>) {
-        use crate::Term::*;
+    pub fn whnf(&mut self, gc: &'t GCtx<'s>) {
+        use STerm::*;
         loop {
             trace!("whnf: {}", self.term);
             match &self.term {
                 Type | Kind => break,
-                BVar(x) => match self.ctx.get(*x) {
+                Var(x) => match self.ctx.get(*x) {
                     Some(ctm) => {
                         self.term = ctm.force().clone();
                         self.ctx.clear()
                     }
                     None => {
                         if !self.ctx.is_empty() {
-                            self.term = BVar(x - self.ctx.len());
+                            self.term = Var(x - self.ctx.len());
                             self.ctx.clear();
                         }
                         break;
                     }
                 },
-                Symb(s) => match &gc.rules.get(s) {
+                Const(s) => match &gc.rules.get(s) {
                     None => break,
                     Some(rules) => {
                         match rules
@@ -216,45 +225,54 @@ impl<'s> State<'s> {
                             Some((subst, rule)) => {
                                 trace!("rewrite: {} ... ⟶ {}", s, rule);
                                 self.ctx = subst;
-                                self.term = rule.rhs.clone();
+                                self.term = (&rule.rhs).into();
                                 self.stack.pop_many(rule.lhs.args.len());
                             }
                         }
                     }
                 },
-                Comb(c) => match &**c {
-                    TermC::Prod(_, _) => break,
-                    TermC::Abst(_, t) => match self.stack.pop() {
+                LComb(Comb::Prod(..)) => break,
+                LComb(Comb::Abst(_, t)) => match self.stack.pop() {
+                    None => break,
+                    Some(p) => {
+                        self.term = t.into();
+                        self.ctx.push(RTTerm::new(p));
+                    }
+                },
+                LComb(Comb::Appl(head, tail)) => {
+                    let tail = tail.iter().rev().map(|tm| tm.into());
+                    let tail = tail.map(|tm| RState::from_ctx_term(self.ctx.clone(), tm));
+                    self.stack.extend(tail);
+                    self.term = head.into();
+                }
+                SComb(c) => match &**c {
+                    Comb::Prod(_, _) => break,
+                    Comb::Abst(_, t) => match self.stack.pop() {
                         None => break,
                         Some(p) => {
                             self.term = t.clone();
                             self.ctx.push(RTTerm::new(p));
                         }
                     },
-                    TermC::Appl(head, tail) => {
-                        for t in tail.iter().rev() {
-                            let st = State {
-                                ctx: self.ctx.clone(),
-                                term: t.clone(),
-                                stack: Stack::new(),
-                            };
-                            self.stack.push(RState::new(WState::new(st)))
-                        }
+                    Comb::Appl(head, tail) => {
+                        let tail = tail.iter().rev().cloned();
+                        let tail = tail.map(|tm| RState::from_ctx_term(self.ctx.clone(), tm));
+                        self.stack.extend(tail);
                         self.term = head.clone();
                     }
                 },
             }
         }
 
-        if let BVar(_) = self.term {
+        if let Var(_) = self.term {
             assert!(self.ctx.is_empty())
         }
     }
 }
 
-impl<'s> Term<'s> {
+impl<'s, 't> STerm<'s, 't> {
     /// Return the weak head normal form of the term.
-    pub fn whnf(self, gc: &GCtx<'s>) -> Self {
+    pub fn whnf(self, gc: &'t GCtx<'s>) -> Self {
         trace!("whnf of {}", self);
         let mut state = State::new(self);
         state.whnf(gc);
@@ -262,7 +280,7 @@ impl<'s> Term<'s> {
     }
 
     /// Return true if the given terms have a common redex.
-    pub fn convertible(tm1: Self, tm2: Self, gc: &GCtx<'s>) -> bool {
+    pub fn convertible(tm1: Self, tm2: Self, gc: &'t GCtx<'s>) -> bool {
         let mut cns = Vec::from([(tm1, tm2)]);
         loop {
             match cns.pop() {
@@ -286,22 +304,22 @@ impl<'s> Term<'s> {
 /// This is used for checking nonlinear pattern matches, because there
 /// we want to ensure that all states that were
 /// matched with the same variable are convertible.
-fn all_convertible<'s, I>(mut iter: I, gc: &GCtx<'s>) -> Option<RTTerm<'s>>
+fn all_convertible<'s, 't, I>(mut iter: I, gc: &GCtx<'s>) -> Option<RTTerm<'s, 't>>
 where
-    I: Iterator<Item = RState<'s>>,
+    I: Iterator<Item = RState<'s, 't>>,
 {
     // assure that we have at least one term
     let tm = RTTerm::new(iter.next()?);
     for stn in iter {
         // the first term is only evaluated if we have some other terms
-        if !Term::convertible(tm.force().clone(), Term::from(stn), gc) {
+        if !STerm::convertible(tm.force().clone(), STerm::from(stn), gc) {
             return None;
         }
     }
     Some(tm)
 }
 
-impl<'s> Stack<'s> {
+impl<'s, 't> Stack<'s, 't> {
     /// Determine whether the stack of an abstract machine matches the rule's LHS.
     ///
     /// Return a new machine context containing variable assignments in case of a match.
@@ -326,7 +344,7 @@ impl<'s> Stack<'s> {
     /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn match_flatten(&self, rule: &Rule<'s>, gc: &GCtx<'s>) -> Option<Context<'s>> {
+    pub fn match_flatten(&self, rule: &'t Rule<'s>, gc: &'t GCtx<'s>) -> Option<Context<'s, 't>> {
         self.match_rule(rule, gc)?
             .into_iter()
             .map(|s| all_convertible(s.into_iter(), gc))
@@ -335,10 +353,13 @@ impl<'s> Stack<'s> {
     }
 }
 
-type Subst<'s, 'a> = Box<dyn Iterator<Item = Option<(Miller, RState<'s>)>> + 'a>;
+type Subst<'s, 't, 'a> = Box<dyn Iterator<Item = Option<(Miller, RState<'s, 't>)>> + 'a>;
 
-impl<'s> Stack<'s> {
-    fn into_match_pats<'a>(self, pats: &'a [Pattern<'s>], gc: &'a GCtx<'s>) -> Subst<'s, 'a> {
+impl<'s, 't> Stack<'s, 't> {
+    fn into_match_pats<'a>(self, pats: &'t [Pattern<'s>], gc: &'t GCtx<'s>) -> Subst<'s, 't, 'a>
+    where
+        't: 'a,
+    {
         Box::new(
             self.into_iter()
                 .zip(pats)
@@ -347,7 +368,10 @@ impl<'s> Stack<'s> {
         )
     }
 
-    fn match_pats<'a>(&'a self, pats: &'a [Pattern<'s>], gc: &'a GCtx<'s>) -> Subst<'s, 'a> {
+    fn match_pats<'a>(&'a self, pats: &'t [Pattern<'s>], gc: &'t GCtx<'s>) -> Subst<'s, 't, 'a>
+    where
+        't: 'a,
+    {
         Box::new(
             self.iter()
                 .zip(pats)
@@ -356,7 +380,10 @@ impl<'s> Stack<'s> {
         )
     }
 
-    fn match_top<'a>(&'a self, pat: &'a TopPattern<'s>, gc: &'a GCtx<'s>) -> Subst<'s, 'a> {
+    fn match_top<'a>(&'a self, pat: &'t TopPattern<'s>, gc: &'t GCtx<'s>) -> Subst<'s, 't, 'a>
+    where
+        't: 'a,
+    {
         if self.len() < pat.args.len() {
             // we do not have enough arguments on the stack to match against
             return Box::new(core::iter::once(None));
@@ -365,7 +392,11 @@ impl<'s> Stack<'s> {
         self.match_pats(&pat.args, gc)
     }
 
-    pub fn match_rule(&self, rule: &Rule<'s>, gc: &GCtx<'s>) -> Option<Vec<Vec<RState<'s>>>> {
+    pub fn match_rule(
+        &self,
+        rule: &'t Rule<'s>,
+        gc: &'t GCtx<'s>,
+    ) -> Option<Vec<Vec<RState<'s, 't>>>> {
         let mut subst = alloc::vec![Vec::new(); rule.ctx.len()];
         for i in self.match_top(&rule.lhs, gc) {
             let (m, st1) = i?;
@@ -378,13 +409,16 @@ impl<'s> Stack<'s> {
     }
 }
 
-impl<'s> RState<'s> {
-    fn match_pat<'a>(self, pat: &'a Pattern<'s>, gc: &'a GCtx<'s>) -> Subst<'s, 'a> {
+impl<'s, 't> RState<'s, 't> {
+    fn match_pat<'a>(self, pat: &'t Pattern<'s>, gc: &'t GCtx<'s>) -> Subst<'s, 't, 'a>
+    where
+        't: 'a,
+    {
         match pat {
             Pattern::Symb(sp, pats) => {
                 self.whnf(gc);
                 let state = self.borrow_state();
-                if let Term::Symb(st) = &state.term {
+                if let STerm::Const(st) = &state.term {
                     // The stack and pattern length have to be equal,
                     // to exclude pattern matches like `f (g a) ~ f g`.
                     // This is unlike `TopPattern::matches`, which

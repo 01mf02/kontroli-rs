@@ -1,12 +1,8 @@
 //! Rewrite patterns.
 
 use crate::app::format as fmt_appl;
-use crate::scope::Symbol;
-use crate::term::{Term, TermC};
-use crate::BTerm;
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
-use core::{borrow::Borrow, convert::TryFrom, ops::Deref};
 
 /// Miller variable.
 ///
@@ -48,17 +44,6 @@ pub enum Pattern<S> {
 pub type TopPattern<S> = crate::Application<S, Pattern<S>>;
 
 impl<S> Pattern<S> {
-    pub fn try_map<S2, E>(self, f: &impl Fn(S) -> Result<S2, E>) -> Result<Pattern<S2>, E> {
-        match self {
-            Self::Symb(s, args) => {
-                let args = args.into_iter().map(|p| p.try_map(f));
-                Ok(Pattern::Symb(f(s)?, args.collect::<Result<_, _>>()?))
-            }
-            Self::MVar(m) => Ok(Pattern::MVar(m)),
-            Self::Joker => Ok(Pattern::Joker),
-        }
-    }
-
     /// Replace all variables that equal the given one by jokers.
     pub fn joke(self, joker: Miller) -> Self {
         match self {
@@ -66,60 +51,6 @@ impl<S> Pattern<S> {
             Self::MVar(v) if v == joker => Self::Joker,
             pat => pat,
         }
-    }
-}
-
-impl<S: Borrow<str>, V> TryFrom<Term<Symbol<S>, BTerm<Symbol<S>, V>>> for Pattern<Symbol<S>> {
-    type Error = ();
-
-    fn try_from(tm: Term<Symbol<S>, BTerm<Symbol<S>, V>>) -> Result<Self, Self::Error> {
-        use Term::*;
-        match tm {
-            Symb(s) if s.name.borrow() == "_" && s.path.is_empty() => Ok(Pattern::Joker),
-            Symb(s) => Ok(Self::Symb(s, Vec::new())),
-            BVar(v) => Ok(Self::MVar(v)),
-            Comb(comb) => match comb.get() {
-                TermC::Appl(head, args2) => match Self::try_from(head)? {
-                    Self::Symb(s, mut args) => {
-                        let args2 = args2.into_iter().map(Self::try_from);
-                        args.append(&mut args2.collect::<Result<_, _>>()?);
-                        Ok(Self::Symb(s, args))
-                    }
-                    _ => Err(()),
-                },
-                _ => Err(()),
-            },
-            _ => Err(()),
-        }
-    }
-}
-
-impl<C, V, T> TryFrom<Pattern<C>> for Term<C, T>
-where
-    T: Deref<Target = TermC<V, Term<C, T>>> + From<TermC<V, Term<C, T>>>,
-{
-    type Error = ();
-
-    fn try_from(p: Pattern<C>) -> Result<Self, Self::Error> {
-        use Pattern::*;
-        match p {
-            Symb(s, args) => {
-                let args: Result<_, _> = args.into_iter().map(Self::try_from).collect();
-                Ok(Term::Comb(T::from(TermC::Appl(Term::Symb(s), args?))))
-            }
-            MVar(v) => Ok(Term::BVar(v)),
-            Joker => Err(()),
-        }
-    }
-}
-
-impl<C, V, T> TryFrom<TopPattern<C>> for Term<C, T>
-where
-    T: Deref<Target = TermC<V, Term<C, T>>> + From<TermC<V, Term<C, T>>>,
-{
-    type Error = ();
-    fn try_from(p: TopPattern<C>) -> Result<Self, Self::Error> {
-        Term::try_from(Pattern::from(p))
     }
 }
 

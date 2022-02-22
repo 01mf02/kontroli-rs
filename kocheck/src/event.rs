@@ -1,8 +1,10 @@
+use crate::PCommand;
 use core::fmt::{self, Display};
 use kontroli::Symbols;
 
-pub type Command = kontroli::scope::Command<String>;
+pub type Command = PCommand<String>;
 
+#[allow(clippy::large_enum_variant)]
 /// Commands with interspersed module opening.
 pub enum Event {
     /// Open a new module
@@ -30,7 +32,7 @@ impl Display for Event {
                 let path = path.iter().fold(String::new(), |acc, arg| acc + "/" + arg);
                 write!(f, "Open module {}", path)
             }
-            Self::Command(Command::Intro(id, _)) => write!(f, "Introduce symbol {}", id),
+            Self::Command(Command::Intro(id, _, _)) => write!(f, "Introduce symbol {}", id),
             Self::Command(Command::Rules(rules)) => write!(f, "Add {} rules", rules.len()),
         }
     }

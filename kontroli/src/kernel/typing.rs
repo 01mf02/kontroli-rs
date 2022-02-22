@@ -1,17 +1,24 @@
 //! Type checking and type inference for terms.
 
-use super::{GCtx, Intro, Term};
+use super::sterm::{self, LTerm, STerm};
+use super::{GCtx, Intro};
 use crate::error::TypingError as Error;
 use crate::Stack;
 
 type Result<T> = core::result::Result<T, Error>;
 
-pub type Typing<'s> = crate::Typing<Term<'s>, Option<Term<'s>>>;
-pub type Check<'s> = crate::Typing<Term<'s>>;
+pub type Typing<'s> = crate::Typing<LTerm<'s>, Option<LTerm<'s>>>;
+pub type Check<'s> = crate::Typing<LTerm<'s>>;
 
-fn declare<'s>(ty: Term<'s>, gc: &GCtx<'s>) -> Result<(Typing<'s>, Option<Check<'s>>)> {
-    let ty_of_ty = ty.infer(gc, &mut Stack::new())?;
-    if !matches!(ty_of_ty, Term::Kind | Term::Type) {
+impl From<sterm::UnexpectedKind> for Error {
+    fn from(_: sterm::UnexpectedKind) -> Self {
+        Error::UnexpectedKind
+    }
+}
+
+fn declare<'s>(ty: LTerm<'s>, gc: &GCtx<'s>) -> Result<(Typing<'s>, Option<Check<'s>>)> {
+    let ty_of_ty = STerm::from(&ty).infer(gc, &mut Stack::new())?;
+    if !matches!(ty_of_ty, STerm::Kind | STerm::Type) {
         return Err(Error::SortExpected);
     }
     let typing = Typing {
@@ -23,16 +30,16 @@ fn declare<'s>(ty: Term<'s>, gc: &GCtx<'s>) -> Result<(Typing<'s>, Option<Check<
 }
 
 fn define<'s>(
-    ty: Option<Term<'s>>,
-    tm: Term<'s>,
+    ty: Option<LTerm<'s>>,
+    tm: LTerm<'s>,
     gc: &GCtx<'s>,
 ) -> Result<(Typing<'s>, Option<Check<'s>>)> {
     let check = ty.is_none();
     let ty = if let Some(ty) = ty {
-        let _ = ty.infer(gc, &mut Stack::new())?;
+        let _ = STerm::from(&ty).infer(gc, &mut Stack::new())?;
         ty
     } else {
-        tm.infer(gc, &mut Stack::new())?
+        LTerm::try_from(&STerm::from(&tm).infer(gc, &mut Stack::new())?)?
     };
     let typing = Typing {
         lc: Stack::new(),
@@ -44,11 +51,11 @@ fn define<'s>(
 }
 
 fn theorem<'s>(
-    ty: Term<'s>,
-    tm: Term<'s>,
+    ty: LTerm<'s>,
+    tm: LTerm<'s>,
     gc: &GCtx<'s>,
 ) -> Result<(Typing<'s>, Option<Check<'s>>)> {
-    let _ = ty.infer(gc, &mut Stack::new())?;
+    let _ = STerm::from(&ty).infer(gc, &mut Stack::new())?;
     let typing = Typing {
         lc: Stack::new(),
         ty: ty.clone(),
@@ -84,19 +91,25 @@ pub fn intro<'s>(it: Intro<'s>, gc: &GCtx<'s>) -> Result<(Typing<'s>, Option<Che
     }
 }
 
-pub fn rewrite<'s>(rule: crate::Rule<Term<'s>>, gc: &GCtx<'s>) -> Result<Check<'s>> {
+pub fn rewrite<'s>(rule: crate::Rule<LTerm<'s>>, gc: &GCtx<'s>) -> Result<Check<'s>> {
     // TODO: check types in context?
-    let mut lc = Stack::from(rule.ctx);
-    // TODO: check for Kind/Type?
-    let ty = rule.lhs.infer(gc, &mut lc)?;
-    let tm = rule.rhs;
-    Ok(Check { lc, ty, tm })
+    let mut lc = rule.ctx.iter().map(STerm::from).collect();
+
+    Ok(Check {
+        tm: rule.rhs,
+        // TODO: check for Kind/Type?
+        ty: LTerm::try_from(&STerm::from(&rule.lhs).infer(gc, &mut lc)?)?,
+        lc: Stack::from(rule.ctx),
+    })
 }
 
 impl<'s> Check<'s> {
     /// Verify whether `t: A`.
-    pub fn check(&self, gc: &GCtx<'s>) -> Result<()> {
-        if self.tm.check(gc, &mut self.lc.clone(), self.ty.clone())? {
+    pub fn check(self, gc: &GCtx<'s>) -> Result<()> {
+        let mut lc = self.lc.iter().map(STerm::from).collect();
+        let tm = STerm::from(&self.tm);
+        let ty = STerm::from(&self.ty);
+        if tm.check(gc, &mut lc, ty)? {
             Ok(())
         } else {
             Err(Error::Unconvertible)

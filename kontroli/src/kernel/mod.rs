@@ -1,18 +1,11 @@
-mod convertible;
+pub mod convertible;
 mod infer_check;
 mod reduce;
-pub mod rterm;
-mod share;
+pub mod sterm;
 mod subst;
 pub mod typing;
 
-// We have a hole here which can be instantiated with any
-// pointer type that implements `ptr_eq`, such as `Arc` or `Rc`.
-// This trick might become unnecessary once GATs are available in Rust.
-use super::Rc;
-
-pub use rterm::RTerm;
-
+use crate::lterm::LTerm;
 use crate::{Arg, Symbol};
 use alloc::string::String;
 
@@ -25,12 +18,9 @@ pub type TopPattern<'s> = crate::pattern::TopPattern<Symbol<'s>>;
 /// Rewrite rules with strings as bound variable identifiers,
 /// a top pattern (symbol application) as left-hand side, and
 /// a shared term as right-hand side.
-pub type Rule<'s> = crate::Rule<Arg<String, Option<Term<'s>>>, TopPattern<'s>, Term<'s>>;
+pub type Rule<'s> = crate::Rule<Arg<String, Option<LTerm<'s>>>, TopPattern<'s>, LTerm<'s>>;
 
 /// The way we introduce a new name.
-pub type Intro<'s> = crate::Intro<Term<'s>>;
+pub type Intro<'s> = crate::Intro<LTerm<'s>>;
 
-pub type GCtx<'s> = crate::GCtx<Symbol<'s>, Pattern<'s>, Term<'s>>;
-
-pub type Term<'s> = crate::Term<Symbol<'s>, RTerm<'s>>;
-pub type TermC<'s> = crate::term::TermC<Rc<String>, Term<'s>>;
+pub type GCtx<'s> = crate::GCtx<Symbol<'s>, Pattern<'s>, LTerm<'s>>;

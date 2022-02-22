@@ -15,7 +15,7 @@ pub struct Opt {
 
     /// Perform only operations until (excluding) the given stage.
     ///
-    /// Possible values are: scope, share, infer, check.
+    /// Possible values are: share, infer, check.
     #[clap(long)]
     pub omit: Option<Stage>,
 
