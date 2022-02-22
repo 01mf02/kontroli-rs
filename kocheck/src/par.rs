@@ -50,6 +50,7 @@ fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Check<'s>, KoError> 
             // defer checking to later
             let typing = Typing::intro(it, gc)?;
             check.0.push(typing.clone());
+            let typing = typing.map_tm(|otm| otm.map(|(tm, _chk)| tm));
             gc.insert(sym, typing, rewritable)?;
         }
         kontroli::Command::Rules(rules) => {

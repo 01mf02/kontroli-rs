@@ -7,31 +7,31 @@ use crate::Arg;
 use core::fmt;
 
 impl<'s> Typing<'s> {
-    pub fn declare(typ: Term<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
-        match typ.infer(gc, &mut LCtx::new())? {
+    pub fn declare(ty: Term<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
+        match ty.infer(gc, &mut LCtx::new())? {
             Term::Kind | Term::Type => Ok(Self {
                 lc: LCtx::new(),
-                typ,
-                term: None,
+                ty,
+                tm: None,
             }),
             _ => Err(Error::SortExpected),
         }
     }
 
-    pub fn define(ty: Option<Term<'s>>, tm: Term<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
-        let (typ, check) = match ty {
+    pub fn define(typ: Option<Term<'s>>, tm: Term<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
+        let (ty, check) = match typ {
             None => (tm.infer(gc, &mut LCtx::new())?, Check::Checked),
             Some(ty) => {
                 let _ = ty.infer(gc, &mut LCtx::new())?;
                 (ty, Check::Unchecked)
             }
         };
-        match typ {
+        match ty {
             Term::Kind => Err(Error::UnexpectedKind),
             _ => Ok(Self {
                 lc: LCtx::new(),
-                typ,
-                term: Some((tm, check)),
+                ty,
+                tm: Some((tm, check)),
             }),
         }
     }
@@ -41,16 +41,16 @@ impl<'s> Typing<'s> {
         let mut lc = LCtx::from(rule.ctx);
         // TODO: check for Kind/Type?
         Ok(Self {
-            typ: rule.lhs.infer(gc, &mut lc)?,
-            term: Some((rule.rhs, Check::Unchecked)),
+            ty: rule.lhs.infer(gc, &mut lc)?,
+            tm: Some((rule.rhs, Check::Unchecked)),
             lc,
         })
     }
 
     /// Verify whether `t: A` if this was not previously checked.
     pub fn check(&self, gc: &GCtx<'s>) -> Result<(), Error> {
-        if let Some((term, Check::Unchecked)) = &self.term {
-            if !term.check(gc, &mut self.lc.clone(), self.typ.clone())? {
+        if let Some((term, Check::Unchecked)) = &self.tm {
+            if !term.check(gc, &mut self.lc.clone(), self.ty.clone())? {
                 return Err(Error::Unconvertible);
             }
         };

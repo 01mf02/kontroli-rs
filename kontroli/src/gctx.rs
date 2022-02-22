@@ -1,9 +1,11 @@
 //! Maps from symbols to their associated types and rewrite rules.
 
-use super::{Application, Typing};
+use super::Application;
 use crate::error::GCtxError as Error;
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 use core::hash::Hash;
+
+pub type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
 
 /// Immutable HashMap for fast cloning of global contexts.
 type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
@@ -71,15 +73,15 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> GCtx<Sym, Pat, Tm> {
 
     /// Introduce a new symbol with given typing.
     pub fn insert(&mut self, sym: Sym, typing: Typing<Tm>, rewritable: bool) -> Result<(), Error> {
-        self.intro_type(sym.clone(), typing.typ)?;
+        self.intro_type(sym.clone(), typing.ty)?;
         if rewritable {
-            let rules = match typing.term {
+            let rules = match typing.tm {
                 None => Vec::new(),
-                Some((tm, _check)) => vec![Rule {
+                Some(tm) => Vec::from([Rule {
                     ctx: Vec::new(),
                     lhs: Application::from(sym.clone()),
                     rhs: tm,
-                }],
+                }]),
             };
             self.intro_rules(sym, rules)?;
         }

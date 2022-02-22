@@ -45,6 +45,7 @@ fn infer_check<'s>(cmd: Command<'s>, check: bool, gc: &mut GCtx<'s>) -> Result<(
             if check {
                 typing.check(gc)?
             }
+            let typing = typing.map_tm(|otm| otm.map(|(tm, _chk)| tm));
             Ok(gc.insert(sym, typing, rewritable)?)
         }
         kontroli::Command::Rules(rules) => {

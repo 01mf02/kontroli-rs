@@ -36,4 +36,4 @@ pub type GCtx<'s> = crate::GCtx<Symbol<'s>, Pattern<'s>, Term<'s>>;
 pub type Term<'s> = crate::Term<Symbol<'s>, RTerm<'s>>;
 pub type TermC<'s> = crate::term::TermC<Rc<String>, Term<'s>>;
 
-pub type Typing<'s> = crate::Typing<Term<'s>>;
+pub type Typing<'s> = crate::Typing<Term<'s>, Option<(Term<'s>, crate::typing::Check)>>;
