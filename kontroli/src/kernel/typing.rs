@@ -35,7 +35,7 @@ fn define<'s>(
     tm: LTerm<'s>,
     gc: &GCtx<'s>,
 ) -> Result<(Typing<'s>, Option<Check<'s>>)> {
-    let check = ty.is_none();
+    let check = ty.is_some();
     let ty = if let Some(ty) = ty {
         let _ = STerm::from(&ty).infer(gc, &mut Stack::new())?;
         ty
