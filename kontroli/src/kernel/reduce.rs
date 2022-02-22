@@ -3,7 +3,6 @@
 use super::sterm::{Comb, STerm};
 use super::{GCtx, Pattern, Rule, TopPattern};
 use crate::pattern::Miller;
-use crate::stack;
 use alloc::{boxed::Box, rc::Rc, vec::Vec};
 use core::cell::{Ref, RefCell, RefMut};
 use lazy_st::Thunk;
@@ -44,18 +43,20 @@ impl<'s, 't> State<'s, 't> {
     /// ~~~
     pub fn new(term: STerm<'s, 't>) -> Self {
         Self {
-            ctx: Context::new(),
+            ctx: Context::default(),
             term,
-            stack: Stack::new(),
+            stack: Stack::default(),
         }
     }
 }
 
 /// Map from de Bruijn indices in the term of the abstract machine to lazy terms.
-pub type Context<'s, 't> = stack::Stack<RTTerm<'s, 't>>;
+#[derive(Clone, Default)]
+pub struct Context<'s, 't>(Vec<RTTerm<'s, 't>>);
 
 /// Arguments to the abstract machine term.
-pub type Stack<'s, 't> = stack::Stack<RState<'s, 't>>;
+#[derive(Clone, Default)]
+pub struct Stack<'s, 't>(Vec<RState<'s, 't>>);
 
 /// A shared lazy term constructed from a shared mutable state.
 #[derive(Clone)]
@@ -89,7 +90,7 @@ impl<'s, 't> RState<'s, 't> {
         RState::new(WState::new(State {
             ctx,
             term,
-            stack: Stack::new(),
+            stack: Stack::default(),
         }))
     }
 
@@ -119,13 +120,13 @@ impl<'s, 't> From<State<'s, 't>> for STerm<'s, 't> {
         state
             .term
             .psubst(&state.ctx)
-            .apply(state.stack.into_iter().map(Self::from).collect())
+            .apply(state.stack.0.into_iter().rev().map(Self::from).collect())
     }
 }
 
 impl<'s, 't> STerm<'s, 't> {
     fn psubst(self, args: &Context<'s, 't>) -> Self {
-        if args.is_empty() {
+        if args.0.is_empty() {
             self
         } else {
             self.apply_subst(&psubst(args), 0)
@@ -134,9 +135,9 @@ impl<'s, 't> STerm<'s, 't> {
 }
 
 fn psubst<'s, 't, 'c>(args: &'c Context<'s, 't>) -> impl Fn(usize, usize) -> STerm<'s, 't> + 'c {
-    move |n: usize, k: usize| match args.get(n - k) {
+    move |n: usize, k: usize| match args.0.iter().rev().nth(n - k) {
         Some(arg) => arg.force().clone().shift(k),
-        None => STerm::Var(n - args.len()),
+        None => STerm::Var(n - args.0.len()),
     }
 }
 
@@ -200,15 +201,15 @@ impl<'s, 't> State<'s, 't> {
             trace!("whnf: {}", self.term);
             match &self.term {
                 Type | Kind => break,
-                Var(x) => match self.ctx.get(*x) {
+                Var(x) => match self.ctx.0.iter().rev().nth(*x) {
                     Some(ctm) => {
                         self.term = ctm.force().clone();
-                        self.ctx.clear()
+                        self.ctx.0.clear()
                     }
                     None => {
-                        if !self.ctx.is_empty() {
-                            self.term = Var(x - self.ctx.len());
-                            self.ctx.clear();
+                        if !self.ctx.0.is_empty() {
+                            self.term = Var(x - self.ctx.0.len());
+                            self.ctx.0.clear();
                         }
                         break;
                     }
@@ -226,38 +227,39 @@ impl<'s, 't> State<'s, 't> {
                                 trace!("rewrite: {} ... ⟶ {}", s, rule);
                                 self.ctx = subst;
                                 self.term = (&rule.rhs).into();
-                                self.stack.pop_many(rule.lhs.args.len());
+                                let len = self.stack.0.len() - rule.lhs.args.len();
+                                self.stack.0.truncate(len);
                             }
                         }
                     }
                 },
                 LComb(Comb::Prod(..)) => break,
-                LComb(Comb::Abst(_, t)) => match self.stack.pop() {
+                LComb(Comb::Abst(_, t)) => match self.stack.0.pop() {
                     None => break,
                     Some(p) => {
                         self.term = t.into();
-                        self.ctx.push(RTTerm::new(p));
+                        self.ctx.0.push(RTTerm::new(p));
                     }
                 },
                 LComb(Comb::Appl(head, tail)) => {
                     let tail = tail.iter().rev().map(|tm| tm.into());
                     let tail = tail.map(|tm| RState::from_ctx_term(self.ctx.clone(), tm));
-                    self.stack.extend(tail);
+                    self.stack.0.extend(tail);
                     self.term = head.into();
                 }
                 SComb(c) => match &**c {
                     Comb::Prod(_, _) => break,
-                    Comb::Abst(_, t) => match self.stack.pop() {
+                    Comb::Abst(_, t) => match self.stack.0.pop() {
                         None => break,
                         Some(p) => {
                             self.term = t.clone();
-                            self.ctx.push(RTTerm::new(p));
+                            self.ctx.0.push(RTTerm::new(p));
                         }
                     },
                     Comb::Appl(head, tail) => {
                         let tail = tail.iter().rev().cloned();
                         let tail = tail.map(|tm| RState::from_ctx_term(self.ctx.clone(), tm));
-                        self.stack.extend(tail);
+                        self.stack.0.extend(tail);
                         self.term = head.clone();
                     }
                 },
@@ -265,7 +267,7 @@ impl<'s, 't> State<'s, 't> {
         }
 
         if let Var(_) = self.term {
-            assert!(self.ctx.is_empty())
+            assert!(self.ctx.0.is_empty())
         }
     }
 }
@@ -349,7 +351,8 @@ impl<'s, 't> Stack<'s, 't> {
             .into_iter()
             .map(|s| all_convertible(s.into_iter(), gc))
             .rev()
-            .collect()
+            .collect::<Option<_>>()
+            .map(Context)
     }
 }
 
@@ -360,10 +363,10 @@ impl<'s, 't> Stack<'s, 't> {
     where
         't: 'a,
     {
+        let iter = self.0.into_iter().rev();
         Box::new(
-            self.into_iter()
-                .zip(pats)
-                .map(move |(rstate, pat)| rstate.match_pat(pat, gc))
+            iter.zip(pats)
+                .map(|(rstate, pat)| rstate.match_pat(pat, gc))
                 .flatten(),
         )
     }
@@ -372,10 +375,10 @@ impl<'s, 't> Stack<'s, 't> {
     where
         't: 'a,
     {
+        let iter = self.0.iter().rev();
         Box::new(
-            self.iter()
-                .zip(pats)
-                .map(move |(rstate, pat)| rstate.clone().match_pat(pat, gc))
+            iter.zip(pats)
+                .map(|(rstate, pat)| rstate.clone().match_pat(pat, gc))
                 .flatten(),
         )
     }
@@ -384,7 +387,7 @@ impl<'s, 't> Stack<'s, 't> {
     where
         't: 'a,
     {
-        if self.len() < pat.args.len() {
+        if self.0.len() < pat.args.len() {
             // we do not have enough arguments on the stack to match against
             return Box::new(core::iter::once(None));
         }
@@ -423,7 +426,7 @@ impl<'s, 't> RState<'s, 't> {
                     // to exclude pattern matches like `f (g a) ~ f g`.
                     // This is unlike `TopPattern::matches`, which
                     // allows matches like `add 0 n ~ add 0`.
-                    if sp == st && state.stack.len() == pats.len() {
+                    if sp == st && state.stack.0.len() == pats.len() {
                         return state.stack.clone().into_match_pats(pats, gc);
                     }
                 }

@@ -3,7 +3,6 @@
 use super::sterm::{self, LTerm, STerm};
 use super::{GCtx, Intro};
 use crate::error::TypingError as Error;
-use crate::Stack;
 use alloc::vec::Vec;
 
 type Result<T> = core::result::Result<T, Error>;
@@ -18,7 +17,7 @@ impl From<sterm::UnexpectedKind> for Error {
 }
 
 fn declare<'s>(ty: LTerm<'s>, gc: &GCtx<'s>) -> Result<(Typing<'s>, Option<Check<'s>>)> {
-    let ty_of_ty = STerm::from(&ty).infer(gc, &mut Stack::new())?;
+    let ty_of_ty = STerm::from(&ty).infer(gc, &mut Default::default())?;
     if !matches!(ty_of_ty, STerm::Kind | STerm::Type) {
         return Err(Error::SortExpected);
     }
@@ -37,10 +36,10 @@ fn define<'s>(
 ) -> Result<(Typing<'s>, Option<Check<'s>>)> {
     let check = ty.is_some();
     let ty = if let Some(ty) = ty {
-        let _ = STerm::from(&ty).infer(gc, &mut Stack::new())?;
+        let _ = STerm::from(&ty).infer(gc, &mut Default::default())?;
         ty
     } else {
-        LTerm::try_from(&STerm::from(&tm).infer(gc, &mut Stack::new())?)?
+        LTerm::try_from(&STerm::from(&tm).infer(gc, &mut Default::default())?)?
     };
     let typing = Typing {
         lc: Vec::new(),
@@ -56,7 +55,7 @@ fn theorem<'s>(
     tm: LTerm<'s>,
     gc: &GCtx<'s>,
 ) -> Result<(Typing<'s>, Option<Check<'s>>)> {
-    let _ = STerm::from(&ty).infer(gc, &mut Stack::new())?;
+    let _ = STerm::from(&ty).infer(gc, &mut Default::default())?;
     let typing = Typing {
         lc: Vec::new(),
         ty: ty.clone(),

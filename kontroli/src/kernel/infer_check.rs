@@ -4,23 +4,28 @@ use super::sterm::{SComb, STerm};
 use super::GCtx;
 use crate::error::TypingError as Error;
 use crate::Arg;
+use alloc::vec::Vec;
 use core::fmt;
 
 type Result<T> = core::result::Result<T, Error>;
 
 /// Map from de Bruijn indices to associated types.
-type LCtx<'s, 't> = crate::Stack<STerm<'s, 't>>;
+#[derive(Default)]
+pub struct LCtx<'s, 't>(Vec<STerm<'s, 't>>);
 
 impl<'s, 't> LCtx<'s, 't> {
     fn get_type(&self, n: usize) -> Option<STerm<'s, 't>> {
-        Some(self.get(n)?.clone().shift(n + 1))
+        Some(self.0.iter().rev().nth(n)?.clone().shift(n + 1))
     }
 
     fn bind<A, F>(&mut self, arg: STerm<'s, 't>, f: F) -> Result<A>
     where
         F: FnOnce(&mut LCtx<'s, 't>) -> Result<A>,
     {
-        self.try_with_pushed(arg, f)
+        self.0.push(arg);
+        let y = f(self)?;
+        self.0.pop();
+        Ok(y)
     }
 
     fn bind_of_type<A, F>(&mut self, gc: &'t GCtx<'s>, arg: STerm<'s, 't>, f: F) -> Result<A>
@@ -37,10 +42,16 @@ impl<'s, 't> LCtx<'s, 't> {
 impl<'s, 't> fmt::Display for LCtx<'s, 't> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
-        for (i, x) in self.iter().enumerate() {
+        for (i, x) in self.0.iter().rev().enumerate() {
             write!(f, "{} : {}, ", STerm::Var(i), x.clone().shift(i + 1))?;
         }
         write!(f, "]")
+    }
+}
+
+impl<'s, 't> FromIterator<STerm<'s, 't>> for LCtx<'s, 't> {
+    fn from_iter<I: IntoIterator<Item = STerm<'s, 't>>>(iter: I) -> Self {
+        Self(Vec::from_iter(iter))
     }
 }
 
