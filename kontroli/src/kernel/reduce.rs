@@ -3,7 +3,7 @@
 use super::{GCtx, Pattern, Rule, Term, TermC, TopPattern};
 use crate::pattern::Miller;
 use crate::stack;
-use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
+use alloc::{boxed::Box, rc::Rc, vec::Vec};
 use core::cell::{Ref, RefCell, RefMut};
 use lazy_st::Thunk;
 
@@ -260,6 +260,23 @@ impl<'s> Term<'s> {
         state.whnf(gc);
         Self::from(state)
     }
+
+    /// Return true if the given terms have a common redex.
+    pub fn convertible(tm1: Self, tm2: Self, gc: &GCtx<'s>) -> bool {
+        let mut cns = Vec::from([(tm1, tm2)]);
+        loop {
+            match cns.pop() {
+                Some((cn1, cn2)) => {
+                    trace!("convertible: {} ~? {}", cn1, cn2);
+                    use super::convertible::step;
+                    if cn1 != cn2 && !step((cn1.whnf(gc), cn2.whnf(gc)), &mut cns, gc.eta) {
+                        break false;
+                    }
+                }
+                None => break true,
+            }
+        }
+    }
 }
 
 /// For a sequence of states,
@@ -349,7 +366,7 @@ impl<'s> Stack<'s> {
     }
 
     pub fn match_rule(&self, rule: &Rule<'s>, gc: &GCtx<'s>) -> Option<Vec<Vec<RState<'s>>>> {
-        let mut subst = vec![vec![]; rule.ctx.len()];
+        let mut subst = alloc::vec![Vec::new(); rule.ctx.len()];
         for i in self.match_top(&rule.lhs, gc) {
             let (m, st1) = i?;
             // the next line should not fail, unless

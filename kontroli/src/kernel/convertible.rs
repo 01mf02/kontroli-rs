@@ -1,6 +1,6 @@
 //! Convertibility checking.
 
-use super::{GCtx, Term};
+use super::Term;
 use crate::Arg;
 use alloc::vec::Vec;
 
@@ -8,7 +8,7 @@ type Constraint<'s> = (Term<'s>, Term<'s>);
 
 /// Return true if the given two terms are potentially convertible, and if so,
 /// add convertibility constraints that have to be fulfilled.
-fn step<'s>((cn1, cn2): Constraint<'s>, cns: &mut Vec<Constraint<'s>>, eta: bool) -> bool {
+pub fn step<'s>((cn1, cn2): Constraint<'s>, cns: &mut Vec<Constraint<'s>>, eta: bool) -> bool {
     use crate::term::{Term::*, TermC::*};
     match (&cn1, &cn2) {
         (Kind, Kind) | (Type, Type) => true,
@@ -50,23 +50,5 @@ fn eta_step<'s>((cn1, cn2): Constraint<'s>, cns: &mut Vec<Constraint<'s>>) -> bo
         true
     } else {
         false
-    }
-}
-
-impl<'s> Term<'s> {
-    /// Return true if the given terms have a common redex.
-    pub fn convertible(tm1: Self, tm2: Self, gc: &GCtx<'s>) -> bool {
-        let mut cns = Vec::from([(tm1, tm2)]);
-        loop {
-            match cns.pop() {
-                Some((cn1, cn2)) => {
-                    trace!("convertible: {} ~? {}", cn1, cn2);
-                    if cn1 != cn2 && !step((cn1.whnf(gc), cn2.whnf(gc)), &mut cns, gc.eta) {
-                        break false;
-                    }
-                }
-                None => break true,
-            }
-        }
     }
 }
