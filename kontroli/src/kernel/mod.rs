@@ -1,4 +1,5 @@
 mod convertible;
+mod infer_check;
 mod matching;
 mod reduce;
 pub mod rterm;
