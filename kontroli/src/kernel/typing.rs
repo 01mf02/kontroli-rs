@@ -94,7 +94,7 @@ pub fn rewrite<'s>(rule: crate::Rule<Term<'s>>, gc: &GCtx<'s>) -> Result<Check<'
 }
 
 impl<'s> Check<'s> {
-    /// Verify whether `t: A` if this was not previously checked.
+    /// Verify whether `t: A`.
     pub fn check(&self, gc: &GCtx<'s>) -> Result<()> {
         if self.tm.check(gc, &mut self.lc.clone(), self.ty.clone())? {
             Ok(())
