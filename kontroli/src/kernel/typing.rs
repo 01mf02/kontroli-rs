@@ -6,8 +6,10 @@ use crate::typing::Check;
 use crate::Arg;
 use core::fmt;
 
+type Result<T> = core::result::Result<T, Error>;
+
 impl<'s> Typing<'s> {
-    pub fn declare(ty: Term<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
+    pub fn declare(ty: Term<'s>, gc: &GCtx<'s>) -> Result<Self> {
         match ty.infer(gc, &mut LCtx::new())? {
             Term::Kind | Term::Type => Ok(Self {
                 lc: LCtx::new(),
@@ -18,7 +20,7 @@ impl<'s> Typing<'s> {
         }
     }
 
-    pub fn define(typ: Option<Term<'s>>, tm: Term<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
+    pub fn define(typ: Option<Term<'s>>, tm: Term<'s>, gc: &GCtx<'s>) -> Result<Self> {
         let (ty, check) = match typ {
             None => (tm.infer(gc, &mut LCtx::new())?, Check::Checked),
             Some(ty) => {
@@ -36,7 +38,7 @@ impl<'s> Typing<'s> {
         }
     }
 
-    pub fn rewrite(rule: crate::Rule<Term<'s>>, gc: &GCtx<'s>) -> Result<Self, Error> {
+    pub fn rewrite(rule: crate::Rule<Term<'s>>, gc: &GCtx<'s>) -> Result<Self> {
         // TODO: check types in context?
         let mut lc = LCtx::from(rule.ctx);
         // TODO: check for Kind/Type?
@@ -48,7 +50,7 @@ impl<'s> Typing<'s> {
     }
 
     /// Verify whether `t: A` if this was not previously checked.
-    pub fn check(&self, gc: &GCtx<'s>) -> Result<(), Error> {
+    pub fn check(&self, gc: &GCtx<'s>) -> Result<()> {
         if let Some((term, Check::Unchecked)) = &self.tm {
             if !term.check(gc, &mut self.lc.clone(), self.ty.clone())? {
                 return Err(Error::Unconvertible);
@@ -70,7 +72,7 @@ impl<'s> Typing<'s> {
     /// Constructing a typing from a command of the shape `x: A := t`
     /// does *not* check whether `t: A`. For this, the `check` function can be used.
     /// This allows us to postpone and parallelise type checking.
-    pub fn intro(it: Intro<'s>, gc: &GCtx<'s>) -> Result<Self, Error> {
+    pub fn intro(it: Intro<'s>, gc: &GCtx<'s>) -> Result<Self> {
         match it {
             Intro::Declaration(ty) => Self::declare(ty, gc),
             Intro::Definition(oty, otm) => match (oty, otm) {
@@ -91,16 +93,16 @@ impl<'s> LCtx<'s> {
         Some(self.get(n)?.clone() << (n + 1))
     }
 
-    fn bind<A, F>(&mut self, arg: Term<'s>, f: F) -> Result<A, Error>
+    fn bind<A, F>(&mut self, arg: Term<'s>, f: F) -> Result<A>
     where
-        F: FnOnce(&mut LCtx<'s>) -> Result<A, Error>,
+        F: FnOnce(&mut LCtx<'s>) -> Result<A>,
     {
         self.try_with_pushed(arg, f)
     }
 
-    fn bind_of_type<A, F>(&mut self, gc: &GCtx<'s>, arg: Term<'s>, f: F) -> Result<A, Error>
+    fn bind_of_type<A, F>(&mut self, gc: &GCtx<'s>, arg: Term<'s>, f: F) -> Result<A>
     where
-        F: FnOnce(&mut LCtx<'s>) -> Result<A, Error>,
+        F: FnOnce(&mut LCtx<'s>) -> Result<A>,
     {
         match arg.clone().infer(gc, self)? {
             Term::Type => self.bind(arg, f),
@@ -121,7 +123,7 @@ impl<'s> fmt::Display for LCtx<'s> {
 
 impl<'s> Term<'s> {
     /// Infer the type of a term using supplied types of bound variables.
-    fn infer(&self, gc: &GCtx<'s>, lc: &mut LCtx<'s>) -> Result<Term<'s>, Error> {
+    fn infer(&self, gc: &GCtx<'s>, lc: &mut LCtx<'s>) -> Result<Term<'s>> {
         debug!("infer type of {}", self);
         use crate::Term::*;
         match self {
@@ -134,7 +136,7 @@ impl<'s> Term<'s> {
     }
 
     /// Check whether a term is of the given type, using supplied types of bound variables.
-    fn check(&self, gc: &GCtx<'s>, lc: &mut LCtx<'s>, ty_exp: Term<'s>) -> Result<bool, Error> {
+    fn check(&self, gc: &GCtx<'s>, lc: &mut LCtx<'s>, ty_exp: Term<'s>) -> Result<bool> {
         debug!("check {} is of type {} when {}", self, ty_exp, lc);
         if let Some((arg, tm)) = self.get_abst() {
             let whnf = ty_exp.whnf(gc);
@@ -156,7 +158,7 @@ impl<'s> Term<'s> {
 }
 
 impl<'s> TermC<'s> {
-    fn infer(&self, gc: &GCtx<'s>, lc: &mut LCtx<'s>) -> Result<Term<'s>, Error> {
+    fn infer(&self, gc: &GCtx<'s>, lc: &mut LCtx<'s>) -> Result<Term<'s>> {
         use crate::term::{Term::*, TermC::*};
         match self {
             Appl(tm, args) => {
