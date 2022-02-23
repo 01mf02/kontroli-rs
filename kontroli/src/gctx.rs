@@ -36,7 +36,7 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> GCtx<Sym, Pat, Tm> {
     /// Construct an empty global context without eta modularity.
     ///
     /// ~~~
-    /// # use kontroli::rc::GCtx;
+    /// # use kontroli::kernel::GCtx;
     /// let gc = GCtx::new();
     /// assert!(gc.eta == false);
     /// ~~~
