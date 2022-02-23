@@ -5,12 +5,13 @@ use crate::error::GCtxError as Error;
 use alloc::{string::String, vec::Vec};
 use core::hash::Hash;
 
-pub type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
-
 /// Immutable HashMap for fast cloning of global contexts.
 type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 
-type Rule<Sym, Pat, Tm> = super::Rule<crate::Arg<String, Option<Tm>>, Application<Sym, Pat>, Tm>;
+type Rule<Sym, Pat, Tm> = crate::Rule<crate::Arg<String, Option<Tm>>, Application<Sym, Pat>, Tm>;
+
+type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
+
 
 /// Map from symbols to their associated types and rewrite rules.
 ///
