@@ -134,7 +134,7 @@ mod symbol;
 mod symbols;
 mod typing;
 
-pub use app::Application;
+pub use app::App;
 pub use arg::Arg;
 pub use command::Command;
 pub use error::Error;

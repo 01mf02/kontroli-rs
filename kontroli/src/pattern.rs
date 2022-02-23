@@ -41,7 +41,7 @@ pub enum Pattern<S> {
 ///
 /// The top pattern of a rule must be an application of patterns to a symbol.
 /// This is to exclude rules matching any term, such as `[X] X --> f`.
-pub type TopPattern<S> = crate::Application<S, Pattern<S>>;
+pub type TopPattern<S> = crate::App<S, Pattern<S>>;
 
 impl<S> Pattern<S> {
     /// Replace all variables that equal the given one by jokers.

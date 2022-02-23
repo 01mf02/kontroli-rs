@@ -1,6 +1,5 @@
 //! Maps from symbols to their associated types and rewrite rules.
 
-use super::Application;
 use crate::error::GCtxError as Error;
 use alloc::{string::String, vec::Vec};
 use core::hash::Hash;
@@ -8,7 +7,7 @@ use core::hash::Hash;
 /// Immutable HashMap for fast cloning of global contexts.
 type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 
-type Rule<Sym, Pat, Tm> = crate::Rule<crate::Arg<String, Option<Tm>>, Application<Sym, Pat>, Tm>;
+type Rule<Sym, Pat, Tm> = crate::Rule<crate::Arg<String, Option<Tm>>, crate::App<Sym, Pat>, Tm>;
 
 type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
 
@@ -79,7 +78,7 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> GCtx<Sym, Pat, Tm> {
                 None => Vec::new(),
                 Some(tm) => Vec::from([Rule {
                     ctx: Vec::new(),
-                    lhs: Application::from(sym.clone()),
+                    lhs: sym.clone().into(),
                     rhs: tm,
                 }]),
             };
