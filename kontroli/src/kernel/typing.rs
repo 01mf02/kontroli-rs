@@ -41,13 +41,17 @@ fn define<'s>(
     } else {
         LTerm::try_from(&STerm::from(&tm).infer(gc, &mut Default::default())?)?
     };
-    let typing = Typing {
+    let check = check.then(|| Check {
         lc: Vec::new(),
         ty: ty.clone(),
-        tm: Some(tm.clone()),
+        tm: tm.clone(),
+    });
+    let typing = Typing {
+        lc: Vec::new(),
+        ty: ty,
+        tm: Some(tm),
     };
-    let lc = Vec::new();
-    Ok((typing, check.then(|| Check { lc, ty, tm })))
+    Ok((typing, check))
 }
 
 fn theorem<'s>(
