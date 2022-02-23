@@ -12,7 +12,6 @@ type Rule<Sym, Pat, Tm> = crate::Rule<crate::Arg<String, Option<Tm>>, Applicatio
 
 type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
 
-
 /// Map from symbols to their associated types and rewrite rules.
 ///
 /// Furthermore, set whether convertibility should be checked modulo eta.

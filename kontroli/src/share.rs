@@ -8,7 +8,7 @@ use crate::parse::{self, Symb};
 use crate::pattern::{Pattern, TopPattern};
 use crate::{Arg, Symbol, Symbols};
 use alloc::string::{String, ToString};
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 use core::borrow::Borrow;
 
 type Result<T> = core::result::Result<T, Error>;
@@ -40,13 +40,13 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, LTerm<'s>> for AppH<Atom<Symb<R>>, R> {
                     .unwrap_or_else(|| "$".to_string());
                 let ty = ty.share(syms)?;
                 let prod = Comb::Prod(Arg { id, ty }, tm.share(syms)?);
-                Ok(LTerm::Comb(Box::new(prod)))
+                Ok(LTerm::Comb(prod.into()))
             }
             Self::Abst(x, ty, tm) => {
                 let id = x.borrow().to_string();
                 let ty = ty.map(|ty| (*ty).share(syms)).transpose()?;
                 let abst = Comb::Abst(Arg { id, ty }, tm.share(syms)?);
-                Ok(LTerm::Comb(Box::new(abst)))
+                Ok(LTerm::Comb(abst.into()))
             }
         }
     }
@@ -59,7 +59,7 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, LTerm<'s>> for PTerm<R> {
             Ok(head)
         } else {
             let tail: Result<_> = self.1.into_iter().map(|tm| tm.share(syms)).collect();
-            Ok(LTerm::Comb(Box::new(Comb::Appl(head, tail?))))
+            Ok(LTerm::Comb(Comb::Appl(head, tail?).into()))
         }
     }
 }
@@ -134,8 +134,8 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, Command<'s>> for parse::Command<R, R, P
                         ty: arg_ty.share(syms)?,
                     };
                     Ok(it
-                        .map_type(|ty| LTerm::Comb(Box::new(Comb::Prod(arg.clone(), ty))))
-                        .map_term(|tm| LTerm::Comb(Box::new(Comb::Abst(arg.map_type(Some), tm)))))
+                        .map_type(|ty| LTerm::Comb(Comb::Prod(arg.clone(), ty).into()))
+                        .map_term(|tm| LTerm::Comb(Comb::Abst(arg.map_type(Some), tm).into())))
                 })?;
                 Ok(Command::Intro(id.borrow().to_string(), it))
             }
