@@ -1,7 +1,7 @@
 //! Maps from symbols to their associated types and rewrite rules.
 
 use crate::error::GCtxError as Error;
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 use core::hash::Hash;
 
 /// Immutable HashMap for fast cloning of global contexts.
@@ -16,8 +16,8 @@ type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
 /// Furthermore, set whether convertibility should be checked modulo eta.
 #[derive(Clone)]
 pub struct GCtx<Sym, Pat, Tm> {
-    pub types: FnvHashMap<Sym, Tm>,
-    pub rules: FnvHashMap<Sym, Vec<Rule<Sym, Pat, Tm>>>,
+    pub types: FnvHashMap<Sym, Arc<Tm>>,
+    pub rules: FnvHashMap<Sym, Arc<Vec<Rule<Sym, Pat, Tm>>>>,
     pub eta: bool,
 }
 
@@ -48,14 +48,14 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> GCtx<Sym, Pat, Tm> {
     }
 
     fn intro_type(&mut self, sym: Sym, typ: Tm) -> Result<(), Error> {
-        if self.types.insert(sym, typ).is_some() {
+        if self.types.insert(sym, Arc::new(typ)).is_some() {
             return Err(Error::Reintroduction);
         }
         Ok(())
     }
 
     fn intro_rules(&mut self, sym: Sym, rules: Vec<Rule<Sym, Pat, Tm>>) -> Result<(), Error> {
-        if self.rules.insert(sym, rules).is_some() {
+        if self.rules.insert(sym, Arc::new(rules)).is_some() {
             return Err(Error::Reintroduction);
         }
         Ok(())
@@ -63,10 +63,11 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> GCtx<Sym, Pat, Tm> {
 
     /// Add a rewrite rule to an existing symbol.
     pub fn add_rule(&mut self, rule: Rule<Sym, Pat, Tm>) -> Result<(), Error> {
-        self.rules
+        let rules = self
+            .rules
             .get_mut(&rule.lhs.symbol)
-            .ok_or(Error::NonRewritable)?
-            .push(rule);
+            .ok_or(Error::NonRewritable)?;
+        Arc::make_mut(rules).push(rule);
         Ok(())
     }
 
