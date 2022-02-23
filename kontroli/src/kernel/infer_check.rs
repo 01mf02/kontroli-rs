@@ -115,10 +115,7 @@ impl<'s, 't> SComb<'s, 't> {
             }
             Self::Prod(Arg { ty, .. }, tm) => {
                 let tm_ty = lc.bind_of_type(gc, ty.clone(), |lc| tm.infer(gc, lc))?;
-                match tm_ty {
-                    Kind | Type => Ok(tm_ty),
-                    _ => Err(Error::SortExpected),
-                }
+                matches!(tm_ty, Kind | Type).then(|| tm_ty).ok_or(Error::SortExpected)
             }
             Self::Abst(Arg { ty: None, .. }, _) => Err(Error::DomainFreeAbstraction),
         }
