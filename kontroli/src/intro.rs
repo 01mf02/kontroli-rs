@@ -26,6 +26,7 @@ impl<Ty, Tm> Intro<Ty, Tm> {
             Self::Declaration(ty) => Intro::Declaration(f(ty)),
         }
     }
+
     pub fn map_term<F, U>(self, f: F) -> Intro<Ty, U>
     where
         F: FnOnce(Tm) -> U,
@@ -34,28 +35,6 @@ impl<Ty, Tm> Intro<Ty, Tm> {
             Self::Definition(ty, tm) => Intro::Definition(ty, tm.map(f)),
             Self::Theorem(ty, tm) => Intro::Theorem(ty, f(tm)),
             Self::Declaration(ty) => Intro::Declaration(ty),
-        }
-    }
-
-    pub fn try_map_type<F, U, E>(self, f: F) -> Result<Intro<U, Tm>, E>
-    where
-        F: FnOnce(Ty) -> Result<U, E>,
-    {
-        match self {
-            Self::Definition(ty, tm) => Ok(Intro::Definition(ty.map(f).transpose()?, tm)),
-            Self::Theorem(ty, tm) => Ok(Intro::Theorem(f(ty)?, tm)),
-            Self::Declaration(ty) => Ok(Intro::Declaration(f(ty)?)),
-        }
-    }
-
-    pub fn try_map_term<F, U, E>(self, f: F) -> Result<Intro<Ty, U>, E>
-    where
-        F: FnOnce(Tm) -> Result<U, E>,
-    {
-        match self {
-            Self::Definition(ty, tm) => Ok(Intro::Definition(ty, tm.map(f).transpose()?)),
-            Self::Theorem(ty, tm) => Ok(Intro::Theorem(ty, f(tm)?)),
-            Self::Declaration(ty) => Ok(Intro::Declaration(ty)),
         }
     }
 }
