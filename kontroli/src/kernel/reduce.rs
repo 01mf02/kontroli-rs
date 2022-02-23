@@ -4,7 +4,7 @@ use super::sterm::{Comb, STerm};
 use super::{GCtx, Pattern, Rule, TopPattern};
 use crate::pattern::Miller;
 use alloc::{boxed::Box, rc::Rc, vec::Vec};
-use core::cell::{Ref, RefCell, RefMut};
+use core::cell::{Ref, RefCell};
 use lazy_st::Thunk;
 
 /// An abstract machine representing arguments applied to a substituted term.
@@ -82,24 +82,13 @@ impl<'s, 't> RTTerm<'s, 't> {
 pub struct RState<'s, 't>(Rc<RefCell<WState<'s, 't>>>);
 
 impl<'s, 't> RState<'s, 't> {
-    pub fn new(wst: WState<'s, 't>) -> Self {
+    fn new(wst: WState<'s, 't>) -> Self {
         Self(Rc::new(RefCell::new(wst)))
     }
 
     fn from_ctx_term(ctx: Context<'s, 't>, term: STerm<'s, 't>) -> Self {
-        RState::new(WState::new(State {
-            ctx,
-            term,
-            stack: Stack::default(),
-        }))
-    }
-
-    pub fn borrow(&self) -> Ref<WState<'s, 't>> {
-        self.0.borrow()
-    }
-
-    pub fn borrow_mut(&self) -> RefMut<WState<'s, 't>> {
-        self.0.borrow_mut()
+        let stack = Stack::default();
+        Self::new(WState::new(State { ctx, term, stack }))
     }
 }
 
@@ -166,13 +155,13 @@ impl<'s, 't> WState<'s, 't> {
 
 impl<'s, 't> RState<'s, 't> {
     /// Replace the state with its WHNF if it was not in WHNF before.
-    pub fn whnf(&self, gc: &'t GCtx<'s>) {
-        self.borrow_mut().whnf(gc)
+    fn whnf(&self, gc: &'t GCtx<'s>) {
+        self.0.borrow_mut().whnf(gc)
     }
 
     /// Obtain a reference to the state.
-    pub fn borrow_state(&self) -> Ref<State<'s, 't>> {
-        Ref::map(self.borrow(), |wst| &wst.state)
+    fn borrow_state(&self) -> Ref<State<'s, 't>> {
+        Ref::map(self.0.borrow(), |wst| &wst.state)
     }
 }
 
@@ -197,7 +186,7 @@ impl<'s, 't> State<'s, 't> {
     /// assert_eq!(state.term, expected);
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn whnf(&mut self, gc: &'t GCtx<'s>) {
+    fn whnf(&mut self, gc: &'t GCtx<'s>) {
         use STerm::*;
         loop {
             trace!("whnf: {}", self.term);
@@ -348,7 +337,7 @@ impl<'s, 't> Stack<'s, 't> {
     /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
     /// # Ok::<(), Error>(())
     /// ~~~
-    pub fn match_flatten(&self, rule: &'t Rule<'s>, gc: &'t GCtx<'s>) -> Option<Context<'s, 't>> {
+    fn match_flatten(&self, rule: &'t Rule<'s>, gc: &'t GCtx<'s>) -> Option<Context<'s, 't>> {
         self.match_rule(rule, gc)?
             .into_iter()
             .map(|s| all_convertible(s.into_iter(), gc))
@@ -397,11 +386,7 @@ impl<'s, 't> Stack<'s, 't> {
         self.match_pats(&pat.args, gc)
     }
 
-    pub fn match_rule(
-        &self,
-        rule: &'t Rule<'s>,
-        gc: &'t GCtx<'s>,
-    ) -> Option<Vec<Vec<RState<'s, 't>>>> {
+    fn match_rule(&self, rule: &'t Rule<'s>, gc: &'t GCtx<'s>) -> Option<Vec<Vec<RState<'s, 't>>>> {
         let mut subst = alloc::vec![Vec::new(); rule.ctx.len()];
         for i in self.match_top(&rule.lhs, gc) {
             let (m, st1) = i?;
