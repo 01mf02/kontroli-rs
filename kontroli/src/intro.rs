@@ -16,10 +16,7 @@ impl<Ty, Tm> Intro<Ty, Tm> {
         }
     }
 
-    pub fn map_type<F, U>(self, f: F) -> Intro<U, Tm>
-    where
-        F: FnOnce(Ty) -> U,
-    {
+    pub fn map_type<U>(self, f: impl FnOnce(Ty) -> U) -> Intro<U, Tm> {
         match self {
             Self::Definition(ty, tm) => Intro::Definition(ty.map(f), tm),
             Self::Theorem(ty, tm) => Intro::Theorem(f(ty), tm),
@@ -27,10 +24,7 @@ impl<Ty, Tm> Intro<Ty, Tm> {
         }
     }
 
-    pub fn map_term<F, U>(self, f: F) -> Intro<Ty, U>
-    where
-        F: FnOnce(Tm) -> U,
-    {
+    pub fn map_term<U>(self, f: impl FnOnce(Tm) -> U) -> Intro<Ty, U> {
         match self {
             Self::Definition(ty, tm) => Intro::Definition(ty, tm.map(f)),
             Self::Theorem(ty, tm) => Intro::Theorem(ty, f(tm)),
