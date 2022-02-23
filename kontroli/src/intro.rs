@@ -11,8 +11,8 @@ pub enum Intro<Ty, Tm = Ty> {
 impl<Ty, Tm> Intro<Ty, Tm> {
     pub fn rewritable(&self) -> bool {
         match self {
-            Self::Definition(_, _) => true,
-            Self::Declaration(_) | Self::Theorem(_, _) => false,
+            Self::Definition(..) => true,
+            Self::Declaration(_) | Self::Theorem(..) => false,
         }
     }
 
