@@ -28,12 +28,12 @@ impl<'s, 't> LCtx<'s, 't> {
         Ok(y)
     }
 
-    fn bind_of_type<A, F>(&mut self, gc: &'t GCtx<'s>, arg: STerm<'s, 't>, f: F) -> Result<A>
+    fn bind_of_type<A, F>(&mut self, gc: &'t GCtx<'s>, arg: &STerm<'s, 't>, f: F) -> Result<A>
     where
         F: FnOnce(&mut LCtx<'s, 't>) -> Result<A>,
     {
         match arg.infer(gc, self)? {
-            STerm::Type => self.bind(arg, f),
+            STerm::Type => self.bind(arg.clone(), f),
             _ => Err(Error::BindNoType),
         }
     }
@@ -105,7 +105,7 @@ impl<'s, 't> SComb<'s, 't> {
                 })
             }
             Self::Abst(Arg { id, ty: Some(ty) }, tm) => {
-                let tm_ty = lc.bind_of_type(gc, ty.clone(), |lc| tm.infer(gc, lc))?;
+                let tm_ty = lc.bind_of_type(gc, ty, |lc| tm.infer(gc, lc))?;
                 if tm_ty == Kind {
                     Err(Error::UnexpectedKind)
                 } else {
@@ -113,10 +113,9 @@ impl<'s, 't> SComb<'s, 't> {
                     Ok(SComb(Self::Prod(Arg { id, ty }, tm_ty).into()))
                 }
             }
-            Self::Prod(Arg { ty, .. }, tm) => {
-                let tm_ty = lc.bind_of_type(gc, ty.clone(), |lc| tm.infer(gc, lc))?;
-                matches!(tm_ty, Kind | Type).then(|| tm_ty).ok_or(Error::SortExpected)
-            }
+            Self::Prod(Arg { ty, .. }, tm) => Some(lc.bind_of_type(gc, ty, |lc| tm.infer(gc, lc))?)
+                .filter(|tt| matches!(tt, Kind | Type))
+                .ok_or(Error::SortExpected),
             Self::Abst(Arg { ty: None, .. }, _) => Err(Error::DomainFreeAbstraction),
         }
     }
