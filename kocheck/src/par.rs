@@ -37,22 +37,26 @@ fn share<'s, S: Borrow<str> + Ord>(
     }
 }
 
-fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Checks<'s>, KoError> {
-    let mut checks = (Vec::new(), gc.clone());
+fn infer_with<'s, F>(cmd: Command<'s>, gc: &mut GCtx<'s>, mut f: F) -> Result<(), KoError>
+where
+    F: FnMut(typing::Check<'s>, &GCtx<'s>) -> Result<(), KoError>,
+{
     match cmd {
         kontroli::Command::Intro(sym, it) => {
             let rewritable = it.rewritable();
 
             // defer checking to later
             let (typing, check) = typing::intro(it, gc)?;
-            check.into_iter().for_each(|chk| checks.0.push(chk));
+            if let Some(check) = check {
+                f(check, gc)?
+            }
             gc.insert(sym, typing, rewritable)?;
         }
         kontroli::Command::Rules(rules) => {
-            for rule in rules.clone() {
+            for rule in rules.iter().cloned() {
                 let rule = rule.map_lhs(kontroli::Pattern::from);
                 if let Ok(rule) = kontroli::Rule::try_from(rule) {
-                    checks.0.push(typing::rewrite(rule, gc)?);
+                    f(typing::rewrite(rule, gc)?, gc)?;
                 } else {
                     log::warn!("Rewrite rule contains unannotated variable")
                 }
@@ -60,6 +64,21 @@ fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Checks<'s>, KoError>
             rules.into_iter().try_for_each(|r| gc.add_rule(r))?
         }
     }
+    Ok(())
+}
+
+fn infer_check<'s>(cmd: Command<'s>, opt: &Opt, gc: &mut GCtx<'s>) -> Result<(), KoError> {
+    infer_with(cmd, gc, |check, gc| {
+        if !opt.omits(Stage::Check) {
+            check.check(gc)?
+        };
+        Ok(())
+    })
+}
+
+fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Checks<'s>, KoError> {
+    let mut checks = (Vec::new(), gc.clone());
+    infer_with(cmd, gc, |check, _gc| Ok(checks.0.push(check)))?;
     Ok(checks)
 }
 
@@ -71,14 +90,14 @@ fn infer_checks<'s, I>(iter: I, opt: &Opt, gc: &mut GCtx<'s>) -> Result<(), Erro
 where
     I: Iterator<Item = Result<Command<'s>, Error>> + Send,
 {
-    let mut iter = iter
-        .map(|cmd| infer(cmd?, gc).map_err(Error::Ko))
-        .filter(|cmd| !opt.omits(Stage::Check) || cmd.is_err());
+    let mut iter = iter.filter(|cmd| !opt.omits(Stage::Infer) || cmd.is_err());
     if opt.jobs.is_some() {
-        iter.par_bridge()
+        iter.map(|cmd| infer(cmd?, gc).map_err(Error::Ko))
+            .filter(|cmd| !opt.omits(Stage::Check) || cmd.is_err())
+            .par_bridge()
             .try_for_each(|ts| check(ts?).map_err(Error::Ko))
     } else {
-        iter.try_for_each(|ts| check(ts?).map_err(Error::Ko))
+        iter.try_for_each(|cmd| infer_check(cmd?, opt, gc).map_err(Error::Ko))
     }
 }
 
@@ -98,8 +117,7 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
         let cmds = kontroli::parse::Lazy::new(lines)
             .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
             .filter(|cmd| !opt.omits(Stage::Share) || cmd.is_err())
-            .map(|cmd| share(cmd?, &mut syms, &arena).map_err(Error::Ko))
-            .filter(|cmd| !opt.omits(Stage::Infer) || cmd.is_err());
+            .map(|cmd| share(cmd?, &mut syms, &arena).map_err(Error::Ko));
 
         infer_checks(cmds, opt, &mut gc)?
     }
@@ -121,8 +139,7 @@ where
         .filter(|event| !opt.omits(Stage::Share) || event.is_err())
         .map(|event| from_event(event?, &mut syms, &arena).map_err(Error::Ko))
         .map(|ro| ro.transpose())
-        .flatten()
-        .filter(|cmd| !opt.omits(Stage::Infer) || cmd.is_err());
+        .flatten();
 
     infer_checks(cmds, opt, &mut gc)
 }
