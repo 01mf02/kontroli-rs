@@ -48,7 +48,7 @@ fn define<'s>(
     });
     let typing = Typing {
         lc: Vec::new(),
-        ty: ty,
+        ty,
         tm: Some(tm),
     };
     Ok((typing, check))
