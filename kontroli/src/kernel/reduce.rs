@@ -205,7 +205,7 @@ impl<'s, 't> State<'s, 't> {
                         break;
                     }
                 },
-                Const(s) => match &gc.rules.get(s) {
+                Const(s) => match &gc.get_rules(s) {
                     None => break,
                     Some(rules) => {
                         match rules

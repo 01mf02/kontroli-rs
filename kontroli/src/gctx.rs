@@ -17,7 +17,7 @@ type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
 #[derive(Clone)]
 pub struct GCtx<Sym, Pat, Tm> {
     types: FnvHashMap<Sym, Arc<Tm>>,
-    pub rules: FnvHashMap<Sym, Arc<Vec<Rule<Sym, Pat, Tm>>>>,
+    rules: FnvHashMap<Sym, Arc<Vec<Rule<Sym, Pat, Tm>>>>,
     pub eta: bool,
 }
 
@@ -40,15 +40,15 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> GCtx<Sym, Pat, Tm> {
     /// assert!(gc.eta == false);
     /// ~~~
     pub fn new() -> Self {
-        Self {
-            types: Default::default(),
-            rules: Default::default(),
-            eta: false,
-        }
+        Self::default()
     }
 
     pub fn get_type(&self, sym: &Sym) -> Option<&Arc<Tm>> {
         self.types.get(sym)
+    }
+
+    pub fn get_rules(&self, sym: &Sym) -> Option<&Arc<Vec<Rule<Sym, Pat, Tm>>>> {
+        self.rules.get(sym)
     }
 
     fn intro_type(&mut self, sym: Sym, typ: Tm) -> Result<(), Error> {
