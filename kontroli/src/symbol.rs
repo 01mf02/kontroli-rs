@@ -45,14 +45,11 @@ use core::hash::{Hash, Hasher};
 /// [`Symbols`]: super::Symbols
 
 #[derive(Clone, Debug)]
-pub struct Owned {
-    name: String,
-    idx: usize,
-}
+pub struct Owned(String);
 
 impl Owned {
-    pub fn new(name: String, idx: usize) -> Self {
-        Self { name, idx }
+    pub fn new(name: String) -> Self {
+        Self(name)
     }
 }
 
@@ -62,10 +59,6 @@ pub struct Symbol<'s>(&'s Owned);
 impl<'s> Symbol<'s> {
     pub fn new(s: &'s Owned) -> Self {
         Self(s)
-    }
-
-    pub fn get_idx(&self) -> usize {
-        self.0.idx
     }
 }
 
@@ -85,6 +78,6 @@ impl<'s> Eq for Symbol<'s> {}
 
 impl<'s> fmt::Display for Symbol<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.name.fmt(f)
+        self.0 .0.fmt(f)
     }
 }

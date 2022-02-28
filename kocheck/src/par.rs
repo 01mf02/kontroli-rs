@@ -30,7 +30,7 @@ fn share<'s, S: Borrow<str> + Ord>(
 ) -> Result<Command<'s>, KoError> {
     match cmd.share(syms)? {
         kontroli::Command::Intro(id, it) => {
-            let owned = symbol::Owned::new(id.clone(), syms.get_idx());
+            let owned = symbol::Owned::new(id.clone());
             let id = syms.insert(id, arena.alloc(owned))?;
             Ok(Command::Intro(id, it))
         }

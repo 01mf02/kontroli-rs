@@ -9,11 +9,7 @@ use nested_modules::Context;
 
 /// Map from strings to (shared) symbols.
 #[derive(Default)]
-pub struct Symbols<'s> {
-    ctx: Context<String, FnvHashMap<String, &'s symbol::Owned>>,
-    /// number of previously introduced symbols
-    idx: usize,
-}
+pub struct Symbols<'s>(Context<String, FnvHashMap<String, &'s symbol::Owned>>);
 
 impl<'s> Symbols<'s> {
     pub fn new() -> Self {
@@ -21,7 +17,7 @@ impl<'s> Symbols<'s> {
     }
 
     pub fn get<S: Borrow<str> + Ord>(&self, path: &[S], name: &S) -> Option<Symbol<'s>> {
-        self.ctx
+        self.0
             .find(path.iter().map(|p| p.borrow()))
             .filter_map(|module| module.data.get(name.borrow()))
             .next()
@@ -29,22 +25,17 @@ impl<'s> Symbols<'s> {
             .map(Symbol::new)
     }
 
-    pub fn get_idx(&self) -> usize {
-        self.idx
-    }
-
     pub fn insert(&mut self, name: String, s: &'s symbol::Owned) -> Result<Symbol<'s>, Error> {
         // `insert` returns false if the symbol is already in the set
-        if self.ctx.get_mut().data.insert(name, s).is_some() {
+        if self.0.get_mut().data.insert(name, s).is_some() {
             return Err(Error::Reinsertion);
         }
-        self.idx += 1;
         Ok(Symbol::new(s))
     }
 
     pub fn set_path(&mut self, path: Vec<String>) {
-        while self.ctx.close() {}
-        path.into_iter().for_each(|p| self.ctx.open_or_default(p))
+        while self.0.close() {}
+        path.into_iter().for_each(|p| self.0.open_or_default(p))
     }
 }
 
