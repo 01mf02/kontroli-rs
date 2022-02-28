@@ -5,7 +5,7 @@ use colosseum::sync::Arena;
 use core::borrow::Borrow;
 use kontroli::error::Error as KoError;
 use kontroli::kernel::{typing, GCtx, Intro, Rule};
-use kontroli::{Share, Symbol, Symbols};
+use kontroli::{symbol, Share, Symbol, Symbols};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 type Command<'s> = kontroli::Command<Symbol<'s>, Intro<'s>, Rule<'s>>;
@@ -15,7 +15,7 @@ type Checks<'s> = (Vec<typing::Check<'s>>, GCtx<'s>);
 fn from_event<'s>(
     event: Event,
     syms: &mut Symbols<'s>,
-    arena: &'s Arena<String>,
+    arena: &'s Arena<symbol::Owned>,
 ) -> Result<Option<Command<'s>>, KoError> {
     event
         .handle(syms)
@@ -26,11 +26,12 @@ fn from_event<'s>(
 fn share<'s, S: Borrow<str> + Ord>(
     cmd: PCommand<S>,
     syms: &mut Symbols<'s>,
-    arena: &'s Arena<String>,
+    arena: &'s Arena<symbol::Owned>,
 ) -> Result<Command<'s>, KoError> {
     match cmd.share(syms)? {
         kontroli::Command::Intro(id, it) => {
-            let id = syms.insert(arena.alloc(id))?;
+            let owned = symbol::Owned::new(id.clone(), syms.get_idx());
+            let id = syms.insert(id, arena.alloc(owned))?;
             Ok(Command::Intro(id, it))
         }
         kontroli::Command::Rules(rules) => Ok(Command::Rules(rules)),
@@ -102,7 +103,7 @@ where
 }
 
 pub fn run(opt: &Opt) -> Result<(), Error> {
-    let arena: Arena<String> = Arena::new();
+    let arena: Arena<symbol::Owned> = Arena::new();
     let mut syms: Symbols = Symbols::new();
     let mut gc: GCtx = GCtx::new();
 
@@ -128,7 +129,7 @@ pub fn consume<I>(iter: I, opt: &Opt) -> Result<(), Error>
 where
     I: Iterator<Item = Result<Event, Error>> + Send,
 {
-    let arena: Arena<String> = Arena::new();
+    let arena: Arena<symbol::Owned> = Arena::new();
     let mut syms: Symbols = Symbols::new();
     let mut gc: GCtx = GCtx::new();
 

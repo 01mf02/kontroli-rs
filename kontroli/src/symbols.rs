@@ -1,15 +1,19 @@
 //! Maps from strings to (shared) symbols.
 
-use super::Symbol;
+use super::{symbol, Symbol};
 use crate::error::SymbolsError as Error;
 use alloc::{string::String, vec::Vec};
-use core::{borrow::Borrow, iter::FromIterator};
-use fnv::FnvHashSet;
-use nested_modules::{Context, Module};
+use core::borrow::Borrow;
+use fnv::FnvHashMap;
+use nested_modules::Context;
 
 /// Map from strings to (shared) symbols.
 #[derive(Default)]
-pub struct Symbols<'s>(Context<String, FnvHashSet<&'s str>>);
+pub struct Symbols<'s> {
+    ctx: Context<String, FnvHashMap<String, &'s symbol::Owned>>,
+    /// number of previously introduced symbols
+    idx: usize,
+}
 
 impl<'s> Symbols<'s> {
     pub fn new() -> Self {
@@ -17,7 +21,7 @@ impl<'s> Symbols<'s> {
     }
 
     pub fn get<S: Borrow<str> + Ord>(&self, path: &[S], name: &S) -> Option<Symbol<'s>> {
-        self.0
+        self.ctx
             .find(path.iter().map(|p| p.borrow()))
             .filter_map(|module| module.data.get(name.borrow()))
             .next()
@@ -25,23 +29,30 @@ impl<'s> Symbols<'s> {
             .map(Symbol::new)
     }
 
-    pub fn insert(&mut self, s: &'s str) -> Result<Symbol<'s>, Error> {
+    pub fn get_idx(&self) -> usize {
+        self.idx
+    }
+
+    pub fn insert(&mut self, name: String, s: &'s symbol::Owned) -> Result<Symbol<'s>, Error> {
         // `insert` returns false if the symbol is already in the set
-        if !self.0.get_mut().data.insert(s) {
+        if self.ctx.get_mut().data.insert(name, s).is_some() {
             return Err(Error::Reinsertion);
         }
+        self.idx += 1;
         Ok(Symbol::new(s))
     }
 
     pub fn set_path(&mut self, path: Vec<String>) {
-        while self.0.close() {}
-        path.into_iter().for_each(|p| self.0.open_or_default(p))
+        while self.ctx.close() {}
+        path.into_iter().for_each(|p| self.ctx.open_or_default(p))
     }
 }
 
+/*
 impl<'s> FromIterator<&'s str> for Symbols<'s> {
     fn from_iter<I: IntoIterator<Item = &'s str>>(iter: I) -> Self {
         let set: FnvHashSet<_> = iter.into_iter().collect();
-        Self(Context::from(Module::from(set)))
+        Self(Context::from(nested_modules::Module::from(set)))
     }
 }
+*/

@@ -1,5 +1,6 @@
 //! Shared strings with fast copying, hashing and equality checking.
 
+use alloc::string::String;
 use core::fmt;
 use core::hash::{Hash, Hasher};
 
@@ -43,12 +44,28 @@ use core::hash::{Hash, Hasher};
 ///
 /// [`Symbols`]: super::Symbols
 
+#[derive(Clone, Debug)]
+pub struct Owned {
+    name: String,
+    idx: usize,
+}
+
+impl Owned {
+    pub fn new(name: String, idx: usize) -> Self {
+        Self { name, idx }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
-pub struct Symbol<'s>(&'s str);
+pub struct Symbol<'s>(&'s Owned);
 
 impl<'s> Symbol<'s> {
-    pub fn new(s: &'s str) -> Self {
+    pub fn new(s: &'s Owned) -> Self {
         Self(s)
+    }
+
+    pub fn get_idx(&self) -> usize {
+        self.0.idx
     }
 }
 
@@ -68,6 +85,6 @@ impl<'s> Eq for Symbol<'s> {}
 
 impl<'s> fmt::Display for Symbol<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        self.0.name.fmt(f)
     }
 }

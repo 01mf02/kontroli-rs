@@ -130,7 +130,7 @@ pub mod lterm;
 mod pattern;
 mod rule;
 mod share;
-mod symbol;
+pub mod symbol;
 mod symbols;
 mod typing;
 
