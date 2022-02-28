@@ -62,7 +62,7 @@ impl<'s, 't> STerm<'s, 't> {
         match self {
             Self::Kind => Err(Error::KindNotTypable),
             Self::Type => Ok(Self::Kind),
-            Self::Const(c) => Ok((&**gc.types.get(c).ok_or(Error::TypeNotFound)?).into()),
+            Self::Const(c) => Ok((&**gc.get_type(c).ok_or(Error::TypeNotFound)?).into()),
             Self::Var(v) => Ok(lc.get_type(*v).ok_or(Error::TypeNotFound)?),
             Self::SComb(c) => c.infer(gc, lc),
             Self::LComb(c) => SComb::from(*c).infer(gc, lc),

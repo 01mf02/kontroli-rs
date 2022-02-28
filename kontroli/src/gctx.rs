@@ -16,7 +16,7 @@ type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
 /// Furthermore, set whether convertibility should be checked modulo eta.
 #[derive(Clone)]
 pub struct GCtx<Sym, Pat, Tm> {
-    pub types: FnvHashMap<Sym, Arc<Tm>>,
+    types: FnvHashMap<Sym, Arc<Tm>>,
     pub rules: FnvHashMap<Sym, Arc<Vec<Rule<Sym, Pat, Tm>>>>,
     pub eta: bool,
 }
@@ -45,6 +45,10 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> GCtx<Sym, Pat, Tm> {
             rules: Default::default(),
             eta: false,
         }
+    }
+
+    pub fn get_type(&self, sym: &Sym) -> Option<&Arc<Tm>> {
+        self.types.get(sym)
     }
 
     fn intro_type(&mut self, sym: Sym, typ: Tm) -> Result<(), Error> {
