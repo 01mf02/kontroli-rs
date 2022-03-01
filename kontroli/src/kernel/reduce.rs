@@ -225,19 +225,8 @@ impl<'s, 't> State<'s, 't> {
                     }
                 },
                 LComb(Comb::Prod(..)) => break,
-                LComb(Comb::Abst(_, t)) => match self.stack.0.pop() {
-                    None => break,
-                    Some(p) => {
-                        self.term = t.into();
-                        self.ctx.0.push(RTTerm::new(p));
-                    }
-                },
-                LComb(Comb::Appl(head, tail)) => {
-                    let tail = tail.iter().rev().map(|tm| tm.into());
-                    let tail = tail.map(|tm| RState::from_ctx_term(self.ctx.clone(), tm));
-                    self.stack.0.extend(tail);
-                    self.term = head.into();
-                }
+                LComb(Comb::Abst(..)) if self.stack.0.is_empty() => break,
+                LComb(c) => self.term = SComb(Rc::new((*c).into())),
                 SComb(c) => match &**c {
                     Comb::Prod(_, _) => break,
                     Comb::Abst(_, t) => match self.stack.0.pop() {
