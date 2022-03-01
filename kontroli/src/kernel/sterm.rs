@@ -73,12 +73,6 @@ impl<'s, 't> STerm<'s, 't> {
 #[derive(Debug)]
 pub struct UnexpectedKind;
 
-impl<'s, 't> From<&STerm<'s, 't>> for STerm<'s, 't> {
-    fn from(tm: &STerm<'s, 't>) -> Self {
-        tm.clone()
-    }
-}
-
 impl<'s, 't> From<&'t LTerm<'s>> for STerm<'s, 't> {
     fn from(tm: &'t LTerm<'s>) -> Self {
         match tm {
