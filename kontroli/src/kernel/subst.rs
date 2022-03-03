@@ -46,9 +46,13 @@ impl<'s, 't> STerm<'s, 't> {
 
     pub fn shift(mut self, rhs: usize) -> Self {
         if rhs != 0 {
-            self.apply_subst(&|n, _k| Self::Var(n + rhs), 0);
+            self.shift_mut(rhs);
         }
         self
+    }
+
+    pub fn shift_mut(&mut self, rhs: usize) {
+        self.apply_subst(&|n, _k| Self::Var(n + rhs), 0);
     }
 }
 
