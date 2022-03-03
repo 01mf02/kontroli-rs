@@ -12,13 +12,3 @@ impl<Id, Ty> Arg<Id, Ty> {
         Arg { id: self.id, ty }
     }
 }
-
-impl<Id, Ty> Arg<Id, Option<Ty>> {
-    pub fn eq_ty(&self, other: &Self, f: impl FnOnce(&Ty, &Ty) -> bool) -> bool {
-        match (&self.ty, &other.ty) {
-            (None, None) => true,
-            (Some(ty1), Some(ty2)) => f(ty1, ty2),
-            _ => false,
-        }
-    }
-}

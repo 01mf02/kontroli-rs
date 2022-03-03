@@ -105,22 +105,21 @@ impl<'s, 't> From<RState<'s, 't>> for STerm<'s, 't> {
 }
 
 impl<'s, 't> From<State<'s, 't>> for STerm<'s, 't> {
-    fn from(state: State<'s, 't>) -> Self {
-        let subst = state.term.psubst(&state.ctx);
+    fn from(mut state: State<'s, 't>) -> Self {
+        state.term.psubst(&state.ctx);
         if state.stack.0.is_empty() {
-            subst
+            state.term
         } else {
-            subst.apply(state.stack.0.into_iter().rev().map(Self::from))
+            let args = state.stack.0.into_iter().rev().map(Self::from);
+            state.term.apply(args)
         }
     }
 }
 
 impl<'s, 't> STerm<'s, 't> {
-    fn psubst(self, args: &Context<'s, 't>) -> Self {
-        if args.0.is_empty() {
-            self
-        } else {
-            self.apply_subst(&psubst(args), 0)
+    fn psubst(&mut self, args: &Context<'s, 't>) {
+        if !args.0.is_empty() {
+            self.apply_subst(&psubst(args), 0);
         }
     }
 }
