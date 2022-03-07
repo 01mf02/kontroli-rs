@@ -226,13 +226,9 @@ impl<'s, 't> State<'s, 't> {
                 },
                 LComb(c) if c.is_whnf(|| self.stack.0.is_empty()) => break,
                 SComb(c) if c.is_whnf(|| self.stack.0.is_empty()) => break,
-                _ => (),
+                LComb(_) | SComb(_) => (),
             };
-            let comb = match core::mem::replace(&mut self.term, Kind) {
-                LComb(c) => c.into(),
-                SComb(c) => Rc::try_unwrap(c).unwrap_or_else(|rc| (*rc).clone()),
-                _ => unreachable!(),
-            };
+            let comb = core::mem::replace(&mut self.term, Kind).get_comb().unwrap();
             match comb {
                 Comb::Prod(..) => unreachable!(),
                 Comb::Abst(.., t) => {
