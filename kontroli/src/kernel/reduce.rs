@@ -222,11 +222,10 @@ impl<'s, 't> State<'s, 't> {
                         }
                     }
                 },
-                LComb(Comb::Prod(..)) => break,
-                LComb(Comb::Abst(..)) if self.stack.0.is_empty() => break,
+                LComb(c) if c.is_whnf(|| self.stack.0.is_empty()) => break,
                 LComb(c) => self.term = SComb(Rc::new((*c).into())),
                 SComb(c) => match &**c {
-                    Comb::Prod(_, _) => break,
+                    Comb::Prod(..) => break,
                     Comb::Abst(_, t) => match self.stack.0.pop() {
                         None => break,
                         Some(p) => {

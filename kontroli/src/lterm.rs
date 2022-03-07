@@ -26,6 +26,16 @@ pub enum Comb<Id, Tm> {
     Abst(Arg<Id, Option<Tm>>, Tm),
 }
 
+impl<Id, Tm> Comb<Id, Tm> {
+    pub fn is_whnf(&self, no_args: impl FnOnce() -> bool) -> bool {
+        match self {
+            Comb::Appl(..) => false,
+            Comb::Prod(..) => true,
+            Comb::Abst(..) => no_args(),
+        }
+    }
+}
+
 impl<'s> TryFrom<Pattern<Symbol<'s>>> for LTerm<'s> {
     type Error = ();
 
