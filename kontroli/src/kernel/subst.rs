@@ -10,8 +10,10 @@ impl<'s, 't> STerm<'s, 't> {
         match self {
             Self::Var(n) if *n >= k => *self = subst(*n, k),
             Self::LComb(c) => {
-                *self = Self::SComb(SComb::from(*c).into());
-                return self.apply_subst(subst, k);
+                let mut c = SComb::from(*c);
+                let change = c.apply_subst(subst, k);
+                *self = Self::SComb(c.into());
+                return change;
             }
             Self::SComb(c) => match alloc::rc::Rc::get_mut(c) {
                 Some(c) => return c.apply_subst(subst, k),
