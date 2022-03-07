@@ -56,23 +56,14 @@ impl<'s, 't> STerm<'s, 't> {
     }
 
     /// Apply some terms to the term.
-    pub fn apply(&mut self, args: impl Iterator<Item = Self>) {
-        if let Self::SComb(c) = self {
+    pub fn apply(mut self, args: impl Iterator<Item = Self>) -> Self {
+        if let Self::SComb(ref mut c) = self {
             if let Some(Comb::Appl(_, args1)) = Rc::get_mut(c) {
-                args1.extend(args)
-            } else if let Comb::Appl(tm, args1) = &**c {
-                let args1 = args1.iter().cloned().chain(args);
-                *c = Rc::new(Comb::Appl(tm.clone(), args1.collect()));
-            } else {
-                *c = Rc::new(Comb::Appl(Self::SComb(Rc::clone(c)), args.collect()));
+                args1.extend(args);
+                return self;
             }
-        } else if let Self::LComb(Comb::Appl(tm, args1)) = self {
-            let args1 = args1.iter().map(Self::from).chain(args);
-            *self = Self::SComb(Rc::new(Comb::Appl(tm.into(), args1.collect())));
-        } else {
-            let selfie = core::mem::replace(self, Self::Kind);
-            *self = Self::SComb(Rc::new(Comb::Appl(selfie, args.collect())))
         }
+        Self::SComb(Rc::new(Comb::Appl(self, args.collect())))
     }
 }
 

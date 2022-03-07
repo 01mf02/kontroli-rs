@@ -48,8 +48,7 @@ fn eta_step<'s, 't>((cn1, cn2): Constraint<'s, 't>, cns: &mut Vec<Constraint<'s,
         None => cn1.get_abst().map(|(_, b)| (cn2, b)),
     } {
         a.shift_mut(1);
-        a.apply(core::iter::once(STerm::Var(0)));
-        cns.push((b, a));
+        cns.push((b, a.apply(core::iter::once(STerm::Var(0)))));
         true
     } else {
         false

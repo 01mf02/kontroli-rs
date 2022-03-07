@@ -109,7 +109,7 @@ impl<'s, 't> From<State<'s, 't>> for STerm<'s, 't> {
         state.term.psubst(&state.ctx);
         if !state.stack.0.is_empty() {
             let args = state.stack.0.into_iter().rev().map(Self::from);
-            state.term.apply(args);
+            state.term = state.term.apply(args);
         }
         state.term
     }
