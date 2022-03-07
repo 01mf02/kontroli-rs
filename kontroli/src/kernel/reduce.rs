@@ -193,7 +193,8 @@ impl<'s, 't> State<'s, 't> {
                 Var(x) => match self.ctx.0.iter().rev().nth(*x) {
                     Some(ctm) => {
                         self.term = ctm.force().clone();
-                        self.ctx.0.clear()
+                        self.ctx.0.clear();
+                        continue;
                     }
                     None => {
                         if !self.ctx.0.is_empty() {
@@ -218,28 +219,35 @@ impl<'s, 't> State<'s, 't> {
                                 self.term = (&rule.rhs).into();
                                 let len = self.stack.0.len() - rule.lhs.args.len();
                                 self.stack.0.truncate(len);
+                                continue;
                             }
                         }
                     }
                 },
                 LComb(c) if c.is_whnf(|| self.stack.0.is_empty()) => break,
-                LComb(c) => self.term = SComb(Rc::new((*c).into())),
-                SComb(c) => match &**c {
-                    Comb::Prod(..) => break,
-                    Comb::Abst(_, t) => match self.stack.0.pop() {
-                        None => break,
-                        Some(p) => {
-                            self.term = t.clone();
-                            self.ctx.0.push(RTTerm::new(p));
-                        }
-                    },
-                    Comb::Appl(head, tail) => {
-                        let tail = tail.iter().rev().cloned();
-                        let tail = tail.map(|tm| RState::from_ctx_term(self.ctx.clone(), tm));
-                        self.stack.0.extend(tail);
-                        self.term = head.clone();
+                SComb(c) if c.is_whnf(|| self.stack.0.is_empty()) => break,
+                _ => (),
+            };
+            let comb = match core::mem::replace(&mut self.term, Kind) {
+                LComb(c) => c.into(),
+                SComb(c) => Rc::try_unwrap(c).unwrap_or_else(|rc| (*rc).clone()),
+                _ => unreachable!(),
+            };
+            match comb {
+                Comb::Prod(..) => unreachable!(),
+                Comb::Abst(_, t) => match self.stack.0.pop() {
+                    None => unreachable!(),
+                    Some(p) => {
+                        self.term = t;
+                        self.ctx.0.push(RTTerm::new(p));
                     }
                 },
+                Comb::Appl(head, tail) => {
+                    let tail = tail.into_iter().rev();
+                    let tail = tail.map(|tm| RState::from_ctx_term(self.ctx.clone(), tm));
+                    self.stack.0.extend(tail);
+                    self.term = head;
+                }
             }
         }
 
