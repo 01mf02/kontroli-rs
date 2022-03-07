@@ -90,9 +90,7 @@ impl<'s, 't> TryFrom<&STerm<'s, 't>> for LTerm<'s> {
 impl<'s, 't> From<&'t LComb<'s>> for SComb<'s, 't> {
     fn from(comb: &'t LComb<'s>) -> Self {
         match comb {
-            Comb::Appl(head, args) => {
-                Self::Appl(head.into(), args.iter().map(STerm::from).collect())
-            }
+            Comb::Appl(tm, args) => Self::Appl(tm.into(), args.iter().map(STerm::from).collect()),
             Comb::Prod(id, ty, tm) => Self::Prod(&*id, STerm::from(ty), tm.into()),
             Comb::Abst(id, ty, tm) => Self::Abst(&*id, ty.as_ref().map(STerm::from), tm.into()),
         }
