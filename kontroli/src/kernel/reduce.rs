@@ -207,20 +207,18 @@ impl<'s, 't> State<'s, 't> {
                 Const(s) => match &gc.get_rules(s) {
                     None => break,
                     Some(rules) => {
-                        match rules
+                        let mut matches = rules
                             .iter()
-                            .filter_map(|r| Some((self.stack.match_flatten(r, gc)?, r)))
-                            .next()
-                        {
-                            None => break,
-                            Some((subst, rule)) => {
-                                trace!("rewrite: {} ... ⟶ {}", s, rule);
-                                self.ctx = subst;
-                                self.term = (&rule.rhs).into();
-                                let len = self.stack.0.len() - rule.lhs.args.len();
-                                self.stack.0.truncate(len);
-                                continue;
-                            }
+                            .filter_map(|r| Some((self.stack.match_flatten(r, gc)?, r)));
+                        if let Some((subst, rule)) = matches.next() {
+                            trace!("rewrite: {} ... ⟶ {}", s, rule);
+                            self.ctx = subst;
+                            self.term = (&rule.rhs).into();
+                            let len = self.stack.0.len() - rule.lhs.args.len();
+                            self.stack.0.truncate(len);
+                            continue;
+                        } else {
+                            break;
                         }
                     }
                 },
