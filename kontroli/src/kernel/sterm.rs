@@ -20,17 +20,6 @@ pub enum STerm<'s, 't> {
 pub type SComb<'s, 't> = Comb<&'t str, STerm<'s, 't>>;
 
 impl<'s, 't> STerm<'s, 't> {
-    pub fn ptr_eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Type, Self::Type) | (Self::Kind, Self::Kind) => true,
-            (Self::Const(c1), Self::Const(c2)) => c1 == c2,
-            (Self::Var(v1), Self::Var(v2)) => v1 == v2,
-            (Self::SComb(l), Self::SComb(r)) => Rc::ptr_eq(l, r),
-            (Self::LComb(l), Self::LComb(r)) => core::ptr::eq(l, r),
-            _ => false,
-        }
-    }
-
     pub fn get_comb(self) -> Option<SComb<'s, 't>> {
         if let Self::SComb(comb) = self {
             return Some(Rc::try_unwrap(comb).unwrap_or_else(|rc| (*rc).clone()));
