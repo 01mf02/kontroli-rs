@@ -79,7 +79,10 @@ fn infer_check<'s>(cmd: Command<'s>, opt: &Opt, gc: &mut GCtx<'s>) -> Result<(),
 
 fn infer<'s>(cmd: Command<'s>, gc: &mut GCtx<'s>) -> Result<Checks<'s>, KoError> {
     let mut checks = (Vec::new(), gc.clone());
-    infer_with(cmd, gc, |check, _gc| Ok(checks.0.push(check)))?;
+    infer_with(cmd, gc, |check, _gc| {
+        checks.0.push(check);
+        Ok(())
+    })?;
     Ok(checks)
 }
 
