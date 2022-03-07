@@ -235,13 +235,12 @@ impl<'s, 't> State<'s, 't> {
             };
             match comb {
                 Comb::Prod(..) => unreachable!(),
-                Comb::Abst(.., t) => match self.stack.0.pop() {
-                    None => unreachable!(),
-                    Some(p) => {
-                        self.term = t;
-                        self.ctx.0.push(RTTerm::new(p));
-                    }
-                },
+                Comb::Abst(.., t) => {
+                    self.term = t;
+                    // unwrap is safe because `is_whnf` assures that
+                    // if we have an abstraction, the stack is not empty
+                    self.ctx.0.push(RTTerm::new(self.stack.0.pop().unwrap()));
+                }
                 Comb::Appl(head, tail) => {
                     let tail = tail.into_iter().rev();
                     let tail = tail.map(|tm| RState::from_ctx_term(self.ctx.clone(), tm));
