@@ -1,6 +1,6 @@
 //! Terms for the lambda-Pi calculus.
 
-use crate::{Arg, Pattern, Symbol};
+use crate::{Pattern, Symbol};
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::fmt::{self, Display};
 
@@ -22,8 +22,8 @@ pub type LComb<'s> = Comb<String, LTerm<'s>>;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Comb<Id, Tm> {
     Appl(Tm, Vec<Tm>),
-    Prod(Arg<Id, Tm>, Tm),
-    Abst(Arg<Id, Option<Tm>>, Tm),
+    Prod(Id, Tm, Tm),
+    Abst(Id, Option<Tm>, Tm),
 }
 
 impl<Id, Tm> Comb<Id, Tm> {
@@ -67,9 +67,9 @@ impl<V: Display, Tm: Display> Display for Comb<V, Tm> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Appl(head, tail) => crate::app::format(head, tail, f),
-            Self::Prod(arg, tm) => write!(f, "(Π {} : {}. {})", arg.id, arg.ty, tm),
-            Self::Abst(Arg { id, ty: None }, tm) => write!(f, "(λ {}. {})", id, tm),
-            Self::Abst(Arg { id, ty: Some(ty) }, tm) => write!(f, "(λ {} : {}. {})", id, ty, tm),
+            Self::Prod(id, ty, tm) => write!(f, "(Π {} : {}. {})", id, ty, tm),
+            Self::Abst(id, None, tm) => write!(f, "(λ {}. {})", id, tm),
+            Self::Abst(id, Some(ty), tm) => write!(f, "(λ {} : {}. {})", id, ty, tm),
         }
     }
 }

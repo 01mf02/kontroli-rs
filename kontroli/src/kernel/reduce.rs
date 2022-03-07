@@ -235,7 +235,7 @@ impl<'s, 't> State<'s, 't> {
             };
             match comb {
                 Comb::Prod(..) => unreachable!(),
-                Comb::Abst(_, t) => match self.stack.0.pop() {
+                Comb::Abst(.., t) => match self.stack.0.pop() {
                     None => unreachable!(),
                     Some(p) => {
                         self.term = t;

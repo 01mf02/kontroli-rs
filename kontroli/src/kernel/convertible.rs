@@ -1,7 +1,6 @@
 //! Convertibility checking.
 
 use super::sterm::{Comb, STerm};
-use crate::Arg;
 use alloc::{rc::Rc, vec::Vec};
 
 type Constraint<'s, 't> = (STerm<'s, 't>, STerm<'s, 't>);
@@ -17,11 +16,11 @@ pub fn step<'s, 't>(cn0: Constraint<'s, 't>, cns: &mut Vec<Constraint<'s, 't>>, 
         (LComb(c1), _) => step((SComb(Rc::new((*c1).into())), cn0.1), cns, eta),
         (_, LComb(c2)) => step((cn0.0, SComb(Rc::new((*c2).into()))), cns, eta),
         (SComb(c1), SComb(c2)) => match (&**c1, &**c2) {
-            (Comb::Abst(_, t1), Comb::Abst(_, t2)) => {
+            (Comb::Abst(.., t1), Comb::Abst(.., t2)) => {
                 cns.push((t1.clone(), t2.clone()));
                 true
             }
-            (Comb::Prod(Arg { ty: ty1, .. }, tm1), Comb::Prod(Arg { ty: ty2, .. }, tm2)) => {
+            (Comb::Prod(_, ty1, tm1), Comb::Prod(_, ty2, tm2)) => {
                 cns.extend([(ty1.clone(), ty2.clone()), (tm1.clone(), tm2.clone())]);
                 true
             }

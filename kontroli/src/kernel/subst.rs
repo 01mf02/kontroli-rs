@@ -68,12 +68,12 @@ impl<'s, 't> SComb<'s, 't> {
                 change = sub(f);
                 args.iter_mut().for_each(|x| change = sub(x) || change);
             }
-            Comb::Abst(arg, f) => {
+            Comb::Abst(_, ty, f) => {
                 change = f.apply_subst(subst, k + 1);
-                arg.ty.iter_mut().for_each(|x| change = sub(x) || change);
+                ty.iter_mut().for_each(|x| change = sub(x) || change);
             }
-            Comb::Prod(arg, f) => {
-                change = sub(&mut arg.ty);
+            Comb::Prod(_, ty, f) => {
+                change = sub(ty);
                 change = f.apply_subst(subst, k + 1) || change;
             }
         }

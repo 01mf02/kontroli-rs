@@ -104,19 +104,19 @@ impl<'s, 't> SComb<'s, 't> {
                         .ok_or(Error::Unconvertible)
                 })
             }
-            Self::Abst(Arg { id, ty: Some(ty) }, tm) => {
+            Self::Abst(id, Some(ty), tm) => {
                 let tm_ty = lc.bind_of_type(gc, ty, |lc| tm.infer(gc, lc))?;
                 if tm_ty == Kind {
                     Err(Error::UnexpectedKind)
                 } else {
                     let ty = ty.clone();
-                    Ok(SComb(Self::Prod(Arg { id, ty }, tm_ty).into()))
+                    Ok(SComb(Self::Prod(id, ty, tm_ty).into()))
                 }
             }
-            Self::Prod(Arg { ty, .. }, tm) => Some(lc.bind_of_type(gc, ty, |lc| tm.infer(gc, lc))?)
+            Self::Prod(_, ty, tm) => Some(lc.bind_of_type(gc, ty, |lc| tm.infer(gc, lc))?)
                 .filter(|tt| matches!(tt, Kind | Type))
                 .ok_or(Error::SortExpected),
-            Self::Abst(Arg { ty: None, .. }, _) => Err(Error::DomainFreeAbstraction),
+            Self::Abst(_, None, _) => Err(Error::DomainFreeAbstraction),
         }
     }
 }

@@ -39,14 +39,12 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, LTerm<'s>> for AppH<Atom<Symb<R>>, R> {
                     .map(|x| x.borrow().to_string())
                     .unwrap_or_else(|| "$".to_string());
                 let ty = ty.share(syms)?;
-                let prod = Comb::Prod(Arg { id, ty }, tm.share(syms)?);
-                Ok(LTerm::Comb(prod.into()))
+                Ok(LTerm::Comb(Comb::Prod(id, ty, tm.share(syms)?).into()))
             }
             Self::Abst(x, ty, tm) => {
                 let id = x.borrow().to_string();
                 let ty = ty.map(|ty| (*ty).share(syms)).transpose()?;
-                let abst = Comb::Abst(Arg { id, ty }, tm.share(syms)?);
-                Ok(LTerm::Comb(abst.into()))
+                Ok(LTerm::Comb(Comb::Abst(id, ty, tm.share(syms)?).into()))
             }
         }
     }
@@ -128,14 +126,12 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, Command<'s>> for parse::Command<R, R, P
         match self {
             Self::Intro(id, args, it) => {
                 let mut args = args.into_iter().rev();
-                let it = args.try_fold(it.share(syms)?, |it, (name, arg_ty)| {
-                    let arg = Arg {
-                        id: name.borrow().into(),
-                        ty: arg_ty.share(syms)?,
-                    };
+                let it = args.try_fold(it.share(syms)?, |it, (name, aty)| {
+                    let id = name.borrow().to_string();
+                    let aty = aty.share(syms)?;
                     Ok(it
-                        .map_type(|ty| LTerm::Comb(Comb::Prod(arg.clone(), ty).into()))
-                        .map_term(|tm| LTerm::Comb(Comb::Abst(arg.map_type(Some), tm).into())))
+                        .map_type(|ty| LTerm::Comb(Comb::Prod(id.clone(), aty.clone(), ty).into()))
+                        .map_term(|tm| LTerm::Comb(Comb::Abst(id.clone(), Some(aty), tm).into())))
                 })?;
                 Ok(Command::Intro(id.borrow().to_string(), it))
             }

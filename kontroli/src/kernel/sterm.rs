@@ -33,11 +33,11 @@ impl<'s, 't> STerm<'s, 't> {
 
     pub fn get_abst(&self) -> Option<(Arg<&'t str, Option<Self>>, Self)> {
         if let Self::SComb(comb) = self {
-            if let Comb::Abst(Arg { id, ty }, tm) = &**comb {
+            if let Comb::Abst(id, ty, tm) = &**comb {
                 let ty = ty.as_ref().cloned();
                 return Some((Arg { id, ty }, tm.clone()));
             }
-        } else if let Self::LComb(Comb::Abst(Arg { id, ty }, tm)) = self {
+        } else if let Self::LComb(Comb::Abst(id, ty, tm)) = self {
             let ty = ty.as_ref().map(STerm::from);
             return Some((Arg { id, ty }, tm.into()));
         }
@@ -46,10 +46,10 @@ impl<'s, 't> STerm<'s, 't> {
 
     pub fn get_prod(&self) -> Option<(Arg<&'t str, Self>, Self)> {
         if let Self::SComb(comb) = self {
-            if let Comb::Prod(Arg { id, ty }, tm) = &**comb {
+            if let Comb::Prod(id, ty, tm) = &**comb {
                 return Some((Arg { id, ty: ty.clone() }, tm.clone()));
             }
-        } else if let Self::LComb(Comb::Prod(Arg { id, ty }, tm)) = self {
+        } else if let Self::LComb(Comb::Prod(id, ty, tm)) = self {
             return Some((Arg { id, ty: ty.into() }, tm.into()));
         }
         None
@@ -101,20 +101,8 @@ impl<'s, 't> From<&'t LComb<'s>> for SComb<'s, 't> {
             Comb::Appl(head, args) => {
                 Self::Appl(head.into(), args.iter().map(STerm::from).collect())
             }
-            Comb::Prod(arg, tm) => {
-                let arg = Arg {
-                    id: &*arg.id,
-                    ty: STerm::from(&arg.ty),
-                };
-                Self::Prod(arg, tm.into())
-            }
-            Comb::Abst(arg, tm) => {
-                let arg = Arg {
-                    id: &*arg.id,
-                    ty: arg.ty.as_ref().map(STerm::from),
-                };
-                Self::Abst(arg, tm.into())
-            }
+            Comb::Prod(id, ty, tm) => Self::Prod(&*id, STerm::from(ty), tm.into()),
+            Comb::Abst(id, ty, tm) => Self::Abst(&*id, ty.as_ref().map(STerm::from), tm.into()),
         }
     }
 }
@@ -127,20 +115,16 @@ impl<'s, 't> TryFrom<&SComb<'s, 't>> for LComb<'s> {
                 head.try_into()?,
                 args.iter().map(LTerm::try_from).collect::<Result<_, _>>()?,
             )),
-            Comb::Prod(arg, tm) => {
-                let arg = Arg {
-                    id: arg.id.into(),
-                    ty: LTerm::try_from(&arg.ty)?,
-                };
-                Ok(Self::Prod(arg, tm.try_into()?))
-            }
-            Comb::Abst(arg, tm) => {
-                let arg = Arg {
-                    id: arg.id.into(),
-                    ty: arg.ty.as_ref().map(LTerm::try_from).transpose()?,
-                };
-                Ok(Self::Abst(arg, tm.try_into()?))
-            }
+            Comb::Prod(id, ty, tm) => Ok(Self::Prod(
+                (*id).into(),
+                LTerm::try_from(ty)?,
+                LTerm::try_from(tm)?,
+            )),
+            Comb::Abst(id, ty, tm) => Ok(Self::Abst(
+                (*id).into(),
+                ty.as_ref().map(LTerm::try_from).transpose()?,
+                LTerm::try_from(tm)?,
+            )),
         }
     }
 }
