@@ -3,7 +3,6 @@
 use super::sterm::{SComb, STerm};
 use super::GCtx;
 use crate::error::TypingError as Error;
-use crate::Arg;
 use alloc::vec::Vec;
 use core::fmt;
 
@@ -72,10 +71,9 @@ impl<'s, 't> STerm<'s, 't> {
     /// Check whether a term is of the given type, using supplied types of bound variables.
     pub fn check(&self, gc: &'t GCtx<'s>, lc: &mut LCtx<'s, 't>, ty: Self) -> Result<bool> {
         debug!("check {} is of type {} when {}", self, ty, lc);
-        if let Some((arg, tm)) = self.get_abst() {
-            let whnf = ty.whnf(gc);
-            let (Arg { ty: ty_a, .. }, ty_b) = whnf.get_prod().ok_or(Error::ProductExpected)?;
-            if let Some(arg_ty) = arg.ty {
+        if let Some((_, arg_ty, tm)) = self.get_abst() {
+            let (_, ty_a, ty_b) = ty.whnf(gc).get_prod().ok_or(Error::ProductExpected)?;
+            if let Some(arg_ty) = arg_ty {
                 let _ = arg_ty.infer(gc, lc)?;
                 if !Self::convertible(arg_ty, ty_a.clone(), gc) {
                     return Ok(false);
@@ -97,8 +95,7 @@ impl<'s, 't> SComb<'s, 't> {
             Self::Appl(tm, args) => {
                 let tm_ty = tm.infer(gc, lc)?;
                 args.iter().try_fold(tm_ty, |ty, arg| {
-                    let whnf = ty.whnf(gc);
-                    let (Arg { ty: a, .. }, b) = whnf.get_prod().ok_or(Error::ProductExpected)?;
+                    let (_, a, b) = ty.whnf(gc).get_prod().ok_or(Error::ProductExpected)?;
                     arg.check(gc, lc, a)?
                         .then(|| b.subst(arg))
                         .ok_or(Error::Unconvertible)

@@ -1,6 +1,6 @@
 //! Terms for the lambda-Pi calculus.
 
-use crate::{Arg, Symbol};
+use crate::Symbol;
 use alloc::{boxed::Box, rc::Rc};
 use core::fmt::{self, Display};
 
@@ -31,26 +31,29 @@ impl<'s, 't> STerm<'s, 't> {
         }
     }
 
-    pub fn get_abst(&self) -> Option<(Arg<&'t str, Option<Self>>, Self)> {
+    pub fn get_comb(self) -> Option<SComb<'s, 't>> {
         if let Self::SComb(comb) = self {
-            if let Comb::Abst(id, ty, tm) = &**comb {
-                let ty = ty.as_ref().cloned();
-                return Some((Arg { id, ty }, tm.clone()));
-            }
-        } else if let Self::LComb(Comb::Abst(id, ty, tm)) = self {
-            let ty = ty.as_ref().map(STerm::from);
-            return Some((Arg { id, ty }, tm.into()));
+            return Some(Rc::try_unwrap(comb).unwrap_or_else(|rc| (*rc).clone()));
+        } else if let Self::LComb(comb) = self {
+            return Some(SComb::from(comb));
         }
         None
     }
 
-    pub fn get_prod(&self) -> Option<(Arg<&'t str, Self>, Self)> {
+    pub fn get_abst(&self) -> Option<(&'t str, Option<Self>, Self)> {
         if let Self::SComb(comb) = self {
-            if let Comb::Prod(id, ty, tm) = &**comb {
-                return Some((Arg { id, ty: ty.clone() }, tm.clone()));
+            if let Comb::Abst(id, ty, tm) = &**comb {
+                return Some((id, ty.as_ref().cloned(), tm.clone()));
             }
-        } else if let Self::LComb(Comb::Prod(id, ty, tm)) = self {
-            return Some((Arg { id, ty: ty.into() }, tm.into()));
+        } else if let Self::LComb(Comb::Abst(id, ty, tm)) = self {
+            return Some((id, ty.as_ref().map(STerm::from), STerm::from(tm)));
+        }
+        None
+    }
+
+    pub fn get_prod(self) -> Option<(&'t str, Self, Self)> {
+        if let Some(Comb::Prod(id, ty, tm)) = self.get_comb() {
+            return Some((id, ty, tm));
         }
         None
     }
