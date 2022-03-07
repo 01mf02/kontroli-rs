@@ -268,18 +268,14 @@ impl<'s, 't> STerm<'s, 't> {
     /// Return true if the given terms have a common redex.
     pub fn convertible(tm1: Self, tm2: Self, gc: &'t GCtx<'s>) -> bool {
         let mut cns = Vec::from([(tm1, tm2)]);
-        loop {
-            match cns.pop() {
-                Some((cn1, cn2)) => {
-                    trace!("convertible: {} ~? {}", cn1, cn2);
-                    use super::convertible::step;
-                    if cn1 != cn2 && !step((cn1.whnf(gc), cn2.whnf(gc)), &mut cns, gc.eta) {
-                        break false;
-                    }
-                }
-                None => break true,
+        while let Some((cn1, cn2)) = cns.pop() {
+            trace!("convertible: {} ~? {}", cn1, cn2);
+            use super::convertible::step;
+            if cn1 != cn2 && !step((cn1.whnf(gc), cn2.whnf(gc)), &mut cns, gc.eta) {
+                return false;
             }
         }
+        true
     }
 }
 
