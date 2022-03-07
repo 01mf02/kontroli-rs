@@ -1,4 +1,3 @@
-use crate::Arg;
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
 
@@ -29,10 +28,10 @@ impl<V, L, R> Rule<V, L, R> {
     }
 }
 
-impl<V, Pat, Tm: TryFrom<Pat>> TryFrom<Rule<Arg<V, Option<Tm>>, Pat, Tm>> for Rule<Tm> {
+impl<V, Pat, Tm: TryFrom<Pat>> TryFrom<Rule<(V, Option<Tm>), Pat, Tm>> for Rule<Tm> {
     type Error = Error;
-    fn try_from(rule: Rule<Arg<V, Option<Tm>>, Pat, Tm>) -> Result<Self, Self::Error> {
-        let ctx = rule.ctx.into_iter().map(|arg| arg.ty);
+    fn try_from(rule: Rule<(V, Option<Tm>), Pat, Tm>) -> Result<Self, Self::Error> {
+        let ctx = rule.ctx.into_iter().map(|arg| arg.1);
         let ctx = ctx.collect::<Option<_>>().ok_or(Error::TypeAnnotation)?;
         let lhs = Tm::try_from(rule.lhs).map_err(|_| Error::PatternNoTerm)?;
         let rhs = rule.rhs;

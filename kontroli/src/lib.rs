@@ -120,7 +120,6 @@ extern crate log;
 pub use dedukti_parse as parse;
 
 mod app;
-mod arg;
 mod command;
 pub mod error;
 mod gctx;
@@ -135,7 +134,6 @@ mod symbols;
 mod typing;
 
 pub use app::App;
-pub use arg::Arg;
 pub use command::Command;
 pub use error::Error;
 pub use gctx::GCtx;

@@ -6,7 +6,7 @@ mod subst;
 pub mod typing;
 
 use crate::lterm::LTerm;
-use crate::{Arg, Symbol};
+use crate::Symbol;
 use alloc::string::String;
 
 /// Rewrite pattern.
@@ -18,7 +18,7 @@ pub type TopPattern<'s> = crate::pattern::TopPattern<Symbol<'s>>;
 /// Rewrite rules with strings as bound variable identifiers,
 /// a top pattern (symbol application) as left-hand side, and
 /// a shared term as right-hand side.
-pub type Rule<'s> = crate::Rule<Arg<String, Option<LTerm<'s>>>, TopPattern<'s>, LTerm<'s>>;
+pub type Rule<'s> = crate::Rule<(String, Option<LTerm<'s>>), TopPattern<'s>, LTerm<'s>>;
 
 /// The way we introduce a new name.
 pub type Intro<'s> = crate::Intro<LTerm<'s>>;

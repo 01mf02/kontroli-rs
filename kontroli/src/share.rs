@@ -6,7 +6,7 @@ use crate::lterm::{Comb, LTerm};
 use crate::parse::term::{AppH, Atom};
 use crate::parse::{self, Symb};
 use crate::pattern::{Pattern, TopPattern};
-use crate::{Arg, Symbol, Symbols};
+use crate::{Symbol, Symbols};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::borrow::Borrow;
@@ -89,11 +89,10 @@ impl<'s> TryFrom<LTerm<'s>> for Pattern<Symbol<'s>> {
 impl<'s, R: Borrow<str> + Ord> Share<'s, Rule<'s>> for parse::Rule<R, PTerm<R>> {
     fn share(self, syms: &Symbols<'s>) -> Result<Rule<'s>> {
         let joker = self.ctx.len();
-        let ctx = self.ctx.into_iter();
-        let ctx = ctx.map(|(id, ty)| {
+        let ctx = self.ctx.into_iter().map(|(id, ty)| {
             let id = id.borrow().to_string();
             let ty = ty.map(|ty| ty.share(syms)).transpose()?;
-            Ok(Arg { id, ty })
+            Ok((id, ty))
         });
         let ctx = ctx.collect::<Result<_>>()?;
 

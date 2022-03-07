@@ -7,7 +7,7 @@ use core::hash::Hash;
 /// Immutable HashMap for fast cloning of global contexts.
 type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 
-type Rule<Sym, Pat, Tm> = crate::Rule<crate::Arg<String, Option<Tm>>, crate::App<Sym, Pat>, Tm>;
+type Rule<Sym, Pat, Tm> = crate::Rule<(String, Option<Tm>), crate::App<Sym, Pat>, Tm>;
 
 type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
 
