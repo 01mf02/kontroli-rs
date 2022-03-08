@@ -1,7 +1,7 @@
 //! Terms for the lambda-Pi calculus.
 
 use crate::Symbol;
-use alloc::{boxed::Box, rc::Rc};
+use alloc::{boxed::Box, rc::Rc, string::String};
 use core::fmt::{self, Display};
 
 pub use crate::lterm::{Comb, DeBruijn, LComb, LTerm};
@@ -17,7 +17,7 @@ pub enum STerm<'s, 't> {
     SComb(Rc<SComb<'s, 't>>),
 }
 
-pub type SComb<'s, 't> = Comb<&'t str, STerm<'s, 't>>;
+pub type SComb<'s, 't> = Comb<&'t String, STerm<'s, 't>>;
 
 impl<'s, 't> STerm<'s, 't> {
     pub fn get_comb(self) -> Option<SComb<'s, 't>> {
@@ -90,9 +90,9 @@ impl<'s, 't> TryFrom<&STerm<'s, 't>> for LTerm<'s> {
 impl<'s, 't> From<&'t LComb<'s>> for SComb<'s, 't> {
     fn from(comb: &'t LComb<'s>) -> Self {
         match comb {
-            Comb::Appl(tm, args) => Self::Appl(tm.into(), args.iter().map(STerm::from).collect()),
-            Comb::Prod(id, ty, tm) => Self::Prod(&*id, STerm::from(ty), tm.into()),
-            Comb::Abst(id, ty, tm) => Self::Abst(&*id, ty.as_ref().map(STerm::from), tm.into()),
+            Comb::Appl(hd, tl) => Self::Appl(STerm::from(hd), tl.iter().map(STerm::from).collect()),
+            Comb::Prod(id, ty, tm) => Self::Prod(id, STerm::from(ty), STerm::from(tm)),
+            Comb::Abst(id, ty, tm) => Self::Abst(id, ty.as_ref().map(STerm::from), STerm::from(tm)),
         }
     }
 }
@@ -106,12 +106,12 @@ impl<'s, 't> TryFrom<&SComb<'s, 't>> for LComb<'s> {
                 args.iter().map(LTerm::try_from).collect::<Result<_, _>>()?,
             )),
             Comb::Prod(id, ty, tm) => Ok(Self::Prod(
-                (*id).into(),
+                (*id).clone(),
                 LTerm::try_from(ty)?,
                 LTerm::try_from(tm)?,
             )),
             Comb::Abst(id, ty, tm) => Ok(Self::Abst(
-                (*id).into(),
+                (*id).clone(),
                 ty.as_ref().map(LTerm::try_from).transpose()?,
                 LTerm::try_from(tm)?,
             )),
