@@ -6,6 +6,7 @@ use crate::error::TypingError as Error;
 use alloc::vec::Vec;
 
 type Result<T> = core::result::Result<T, Error>;
+type IntroResult<'s> = Result<(Typing<'s>, Option<Check<'s>>)>;
 
 pub type Typing<'s> = crate::Typing<LTerm<'s>, Option<LTerm<'s>>>;
 pub type Check<'s> = crate::Typing<LTerm<'s>>;
@@ -16,7 +17,7 @@ impl From<sterm::UnexpectedKind> for Error {
     }
 }
 
-fn declare<'s>(ty: LTerm<'s>, gc: &GCtx<'s>) -> Result<(Typing<'s>, Option<Check<'s>>)> {
+fn declare<'s>(ty: LTerm<'s>, gc: &GCtx<'s>) -> IntroResult<'s> {
     let ty_of_ty = STerm::from(&ty).infer(gc, &mut Default::default())?;
     if !matches!(ty_of_ty, STerm::Kind | STerm::Type) {
         return Err(Error::SortExpected);
@@ -29,11 +30,7 @@ fn declare<'s>(ty: LTerm<'s>, gc: &GCtx<'s>) -> Result<(Typing<'s>, Option<Check
     Ok((typing, None))
 }
 
-fn define<'s>(
-    ty: Option<LTerm<'s>>,
-    tm: LTerm<'s>,
-    gc: &GCtx<'s>,
-) -> Result<(Typing<'s>, Option<Check<'s>>)> {
+fn define<'s>(ty: Option<LTerm<'s>>, tm: LTerm<'s>, gc: &GCtx<'s>) -> IntroResult<'s> {
     let check = ty.is_some();
     let ty = if let Some(ty) = ty {
         let _ = STerm::from(&ty).infer(gc, &mut Default::default())?;
@@ -54,11 +51,7 @@ fn define<'s>(
     Ok((typing, check))
 }
 
-fn theorem<'s>(
-    ty: LTerm<'s>,
-    tm: LTerm<'s>,
-    gc: &GCtx<'s>,
-) -> Result<(Typing<'s>, Option<Check<'s>>)> {
+fn theorem<'s>(ty: LTerm<'s>, tm: LTerm<'s>, gc: &GCtx<'s>) -> IntroResult<'s> {
     let _ = STerm::from(&ty).infer(gc, &mut Default::default())?;
     let typing = Typing {
         lc: Vec::new(),
@@ -83,7 +76,7 @@ fn theorem<'s>(
 /// Constructing a typing from a command of the shape `x: A := t`
 /// does *not* check whether `t: A`. For this, the `check` function can be used.
 /// This allows us to postpone and parallelise type checking.
-pub fn intro<'s>(it: Intro<'s>, gc: &GCtx<'s>) -> Result<(Typing<'s>, Option<Check<'s>>)> {
+pub fn intro<'s>(it: Intro<'s>, gc: &GCtx<'s>) -> IntroResult<'s> {
     match it {
         Intro::Declaration(ty) => declare(ty, gc),
         Intro::Definition(oty, otm) => match (oty, otm) {
