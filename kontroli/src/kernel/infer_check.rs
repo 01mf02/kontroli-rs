@@ -106,8 +106,7 @@ impl<'s, 't> SComb<'s, 't> {
                 if tm_ty == Kind {
                     Err(Error::UnexpectedKind)
                 } else {
-                    let ty = ty.clone();
-                    Ok(SComb(Self::Prod(id, ty, tm_ty).into()))
+                    Ok(SComb(Self::Prod(id, ty.clone(), tm_ty).into()))
                 }
             }
             Self::Prod(_, ty, tm) => Some(lc.bind_of_type(gc, ty, |lc| tm.infer(gc, lc))?)
