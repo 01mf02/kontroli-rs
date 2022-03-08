@@ -128,7 +128,7 @@ pub mod kernel;
 pub mod lterm;
 mod pattern;
 mod rule;
-mod share;
+pub mod share;
 pub mod symbol;
 mod symbols;
 mod typing;

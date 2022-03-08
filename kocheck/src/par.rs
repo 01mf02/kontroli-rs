@@ -4,7 +4,8 @@ use crate::{Error, Event, Opt, PCommand, PathRead, Stage};
 use colosseum::sync::Arena;
 use core::borrow::Borrow;
 use kontroli::error::Error as KoError;
-use kontroli::kernel::{typing, GCtx, Intro, Rule};
+use kontroli::kernel::{typing, GCtx};
+use kontroli::share::{Intro, Rule};
 use kontroli::{symbol, Share, Symbol, Symbols};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 

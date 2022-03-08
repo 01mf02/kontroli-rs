@@ -1,11 +1,9 @@
 //! Convert from scoped to shared structures.
 
 use crate::error::ScopeError as Error;
-use crate::kernel::{Intro, Rule};
 use crate::lterm::{Comb, LTerm};
 use crate::parse::term::{AppH, Atom};
 use crate::parse::{self, Symb};
-use crate::pattern::{Pattern, TopPattern};
 use crate::{Symbol, Symbols};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -14,7 +12,22 @@ use core::borrow::Borrow;
 type Result<T> = core::result::Result<T, Error>;
 
 type PTerm<S> = parse::Term<Atom<Symb<S>>, S>;
+
 pub type Command<'s> = crate::Command<String, Intro<'s>, Rule<'s>>;
+
+/// The way we introduce a new name.
+pub type Intro<'s> = crate::Intro<LTerm<'s>>;
+
+/// Rewrite rules with strings as bound variable identifiers,
+/// a top pattern (symbol application) as left-hand side, and
+/// a shared term as right-hand side.
+pub type Rule<'s> = crate::Rule<(String, Option<LTerm<'s>>), TopPattern<'s>, LTerm<'s>>;
+
+/// Pattern at the left-hand side of a rewrite rule.
+pub type TopPattern<'s> = crate::pattern::TopPattern<Symbol<'s>>;
+
+/// Rewrite pattern.
+pub type Pattern<'s> = crate::Pattern<Symbol<'s>>;
 
 pub trait Share<'s, Target> {
     fn share(self, syms: &Symbols<'s>) -> Result<Target>;
@@ -62,7 +75,7 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, LTerm<'s>> for PTerm<R> {
     }
 }
 
-impl<'s> TryFrom<LTerm<'s>> for Pattern<Symbol<'s>> {
+impl<'s> TryFrom<LTerm<'s>> for Pattern<'s> {
     type Error = Error;
 
     fn try_from(tm: LTerm<'s>) -> Result<Self> {
