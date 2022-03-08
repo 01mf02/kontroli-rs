@@ -4,7 +4,7 @@ use super::sterm::{SComb, STerm};
 use super::GCtx;
 use crate::error::TypingError as Error;
 use alloc::vec::Vec;
-use core::fmt;
+use core::fmt::{self, Display};
 
 type Result<T> = core::result::Result<T, Error>;
 
@@ -38,7 +38,7 @@ impl<'s, 't> LCtx<'s, 't> {
     }
 }
 
-impl<'s, 't> fmt::Display for LCtx<'s, 't> {
+impl<'s, 't> Display for LCtx<'s, 't> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
         for (i, x) in self.0.iter().rev().enumerate() {
