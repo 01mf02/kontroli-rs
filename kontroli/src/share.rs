@@ -1,10 +1,9 @@
 //! Convert from scoped to shared structures.
 
 use crate::error::ScopeError as Error;
-use crate::lterm::{Comb, LTerm};
 use crate::parse::term::{AppH, Atom};
 use crate::parse::{self, Symb};
-use crate::{Symbol, Symbols};
+use crate::{Comb, LTerm, Symbol, Symbols};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::borrow::Borrow;

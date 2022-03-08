@@ -1,10 +1,11 @@
 //! Terms for the lambda-Pi calculus.
 
 use crate::Symbol;
-use alloc::{boxed::Box, rc::Rc, string::String};
+use alloc::{rc::Rc, string::String};
 use core::fmt::{self, Display};
 
-pub use crate::lterm::{Comb, DeBruijn, LComb, LTerm};
+pub use crate::lterm::{DeBruijn, LComb, LTerm};
+pub use crate::Comb;
 
 /// Short term for the lambda-Pi calculus.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -29,7 +30,7 @@ impl<'s, 't> STerm<'s, 't> {
         None
     }
 
-    pub fn get_abst(&self) -> Option<(&'t str, Option<Self>, Self)> {
+    pub fn get_abst(&self) -> Option<(&'t String, Option<Self>, Self)> {
         if let Self::SComb(comb) = self {
             if let Comb::Abst(id, ty, tm) = &**comb {
                 return Some((id, ty.as_ref().cloned(), tm.clone()));
@@ -40,7 +41,7 @@ impl<'s, 't> STerm<'s, 't> {
         None
     }
 
-    pub fn get_prod(self) -> Option<(&'t str, Self, Self)> {
+    pub fn get_prod(self) -> Option<(&'t String, Self, Self)> {
         if let Some(Comb::Prod(id, ty, tm)) = self.get_comb() {
             return Some((id, ty, tm));
         }
@@ -81,40 +82,8 @@ impl<'s, 't> TryFrom<&STerm<'s, 't>> for LTerm<'s> {
             STerm::Type => Ok(Self::Type),
             STerm::Const(c) => Ok(Self::Const(*c)),
             STerm::Var(v) => Ok(Self::Var(*v)),
-            STerm::LComb(c) => Ok(Self::Comb(Box::new((*c).clone()))),
-            STerm::SComb(c) => Ok(Self::Comb(Box::new((&**c).try_into()?))),
-        }
-    }
-}
-
-impl<'s, 't> From<&'t LComb<'s>> for SComb<'s, 't> {
-    fn from(comb: &'t LComb<'s>) -> Self {
-        match comb {
-            Comb::Appl(hd, tl) => Self::Appl(STerm::from(hd), tl.iter().map(STerm::from).collect()),
-            Comb::Prod(id, ty, tm) => Self::Prod(id, STerm::from(ty), STerm::from(tm)),
-            Comb::Abst(id, ty, tm) => Self::Abst(id, ty.as_ref().map(STerm::from), STerm::from(tm)),
-        }
-    }
-}
-
-impl<'s, 't> TryFrom<&SComb<'s, 't>> for LComb<'s> {
-    type Error = UnexpectedKind;
-    fn try_from(comb: &SComb<'s, 't>) -> Result<LComb<'s>, Self::Error> {
-        match comb {
-            Comb::Appl(head, args) => Ok(Self::Appl(
-                head.try_into()?,
-                args.iter().map(LTerm::try_from).collect::<Result<_, _>>()?,
-            )),
-            Comb::Prod(id, ty, tm) => Ok(Self::Prod(
-                (*id).clone(),
-                LTerm::try_from(ty)?,
-                LTerm::try_from(tm)?,
-            )),
-            Comb::Abst(id, ty, tm) => Ok(Self::Abst(
-                (*id).clone(),
-                ty.as_ref().map(LTerm::try_from).transpose()?,
-                LTerm::try_from(tm)?,
-            )),
+            STerm::LComb(c) => Ok(Self::Comb((*c).clone().into())),
+            STerm::SComb(c) => Ok(Self::Comb(LComb::try_from(&**c)?.into())),
         }
     }
 }

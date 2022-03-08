@@ -1,7 +1,7 @@
 //! Terms for the lambda-Pi calculus.
 
-use crate::{Pattern, Symbol};
-use alloc::{boxed::Box, string::String, vec::Vec};
+use crate::{Comb, Pattern, Symbol};
+use alloc::{boxed::Box, string::String};
 use core::fmt::{self, Display};
 
 /// De Bruijn variable.
@@ -17,24 +17,6 @@ pub enum LTerm<'s> {
 }
 
 pub type LComb<'s> = Comb<String, LTerm<'s>>;
-
-/// Combinator term.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Comb<Id, Tm> {
-    Appl(Tm, Vec<Tm>),
-    Prod(Id, Tm, Tm),
-    Abst(Id, Option<Tm>, Tm),
-}
-
-impl<Id, Tm> Comb<Id, Tm> {
-    pub fn is_whnf(&self, no_args: impl FnOnce() -> bool) -> bool {
-        match self {
-            Comb::Appl(..) => false,
-            Comb::Prod(..) => true,
-            Comb::Abst(..) => no_args(),
-        }
-    }
-}
 
 impl<'s> TryFrom<Pattern<Symbol<'s>>> for LTerm<'s> {
     type Error = ();
@@ -59,17 +41,6 @@ impl<'s> Display for LTerm<'s> {
             Self::Var(v) => write!(f, "β{}", v),
             Self::Const(c) => c.fmt(f),
             Self::Comb(c) => c.fmt(f),
-        }
-    }
-}
-
-impl<V: Display, Tm: Display> Display for Comb<V, Tm> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Appl(head, tail) => crate::app::format(head, tail, f),
-            Self::Prod(id, ty, tm) => write!(f, "(Π {} : {}. {})", id, ty, tm),
-            Self::Abst(id, None, tm) => write!(f, "(λ {}. {})", id, tm),
-            Self::Abst(id, Some(ty), tm) => write!(f, "(λ {} : {}. {})", id, ty, tm),
         }
     }
 }
