@@ -11,3 +11,13 @@ pub struct Typing<Ty, Tm = Ty> {
     pub ty: Ty,
     pub tm: Tm,
 }
+
+impl<Ty, Tm> Typing<Ty, Tm> {
+    pub fn new(ty: Ty, tm: Tm) -> Self {
+        Self {
+            lc: Default::default(),
+            ty,
+            tm,
+        }
+    }
+}
