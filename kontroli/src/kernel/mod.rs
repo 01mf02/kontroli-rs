@@ -5,6 +5,7 @@ mod infer_check;
 mod reduce;
 mod sterm;
 mod subst;
+mod tests;
 
 use crate::error::TypingError as Error;
 use crate::share::{Intro, Pattern, Rule, TopPattern};

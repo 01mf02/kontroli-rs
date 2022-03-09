@@ -5,7 +5,7 @@
 # Call from main directory.
 
 cd kontroli/src/kernel
-tokei -f * -o json | \
+tokei -f *.rs -o json | \
   jq '.Total.children.Rust | map ({name, code: .stats.code})' | \
   sed \
     -e "s/reduce.rs/Reduction/" \
