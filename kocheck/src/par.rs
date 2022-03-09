@@ -4,14 +4,14 @@ use crate::{Error, Event, Opt, PCommand, PathRead, Stage};
 use colosseum::sync::Arena;
 use core::borrow::Borrow;
 use kontroli::error::Error as KoError;
-use kontroli::kernel::{typing, GCtx};
+use kontroli::kernel::{self, GCtx};
 use kontroli::share::{Intro, Rule};
 use kontroli::{symbol, Share, Symbol, Symbols};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 type Command<'s> = kontroli::Command<Symbol<'s>, Intro<'s>, Rule<'s>>;
 
-type Checks<'s> = (Vec<typing::Check<'s>>, GCtx<'s>);
+type Checks<'s> = (Vec<kernel::Check<'s>>, GCtx<'s>);
 
 fn from_event<'s>(
     event: Event,
@@ -41,14 +41,14 @@ fn share<'s, S: Borrow<str> + Ord>(
 
 fn infer_with<'s, F>(cmd: Command<'s>, gc: &mut GCtx<'s>, mut f: F) -> Result<(), KoError>
 where
-    F: FnMut(typing::Check<'s>, &GCtx<'s>) -> Result<(), KoError>,
+    F: FnMut(kernel::Check<'s>, &GCtx<'s>) -> Result<(), KoError>,
 {
     match cmd {
         kontroli::Command::Intro(sym, it) => {
             let rewritable = it.rewritable();
 
             // defer checking to later
-            let (typing, check) = typing::intro(it, gc)?;
+            let (typing, check) = kernel::intro(it, gc)?;
             if let Some(check) = check {
                 f(check, gc)?
             }
@@ -58,7 +58,7 @@ where
             for rule in rules.iter().cloned() {
                 let rule = rule.map_lhs(kontroli::Pattern::from);
                 if let Ok(rule) = kontroli::Rule::try_from(rule) {
-                    f(typing::rewrite(rule, gc)?, gc)?;
+                    f(kernel::rewrite(rule, gc)?, gc)?;
                 } else {
                     log::warn!("Rewrite rule contains unannotated variable")
                 }
