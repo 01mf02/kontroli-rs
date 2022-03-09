@@ -2,6 +2,10 @@
 
 use clap::Parser;
 use kocheck::{par, Error, Event, Opt, PathRead};
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 fn produce<F, E>(opt: &Opt, send: F) -> Result<(), Error>
 where

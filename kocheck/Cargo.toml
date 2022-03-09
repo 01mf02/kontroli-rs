@@ -14,6 +14,7 @@ categories = ["command-line-utilities", "science"]
 clap = { version = "3.0", features = ["derive"] }
 colosseum = "0.2"
 flume = { version = "0.8", default-features = false }
+mimalloc = { version = "0.1.28", default-features = false }
 kontroli = { version = "0.3", path = "../kontroli" }
 log = "0.4"
 env_logger = "0.7"
