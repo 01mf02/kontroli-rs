@@ -39,9 +39,6 @@ pub struct Opt {
     /// If this option is given without an extra argument, then
     /// the number of concurrently executed tasks is
     /// determined automatically from the number of CPUs.
-    ///
-    /// This option enables the parsing of commands in advance ("-c"),
-    /// by default with an unbounded capacity.
     #[clap(long, short = 'j')]
     pub jobs: Option<Option<usize>>,
 

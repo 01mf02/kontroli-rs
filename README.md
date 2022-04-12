@@ -20,6 +20,10 @@ To run Kontroli on output generated from Isabelle/Pure:
 
     cargo run --release examples/pure.dk
 
+The command line option
+`-j` enables concurrent checking and
+`-c` enables concurrent parsing.
+
 To install Kontroli:
 
     cargo install --path kocheck
