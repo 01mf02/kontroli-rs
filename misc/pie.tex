@@ -1,0 +1,18 @@
+\documentclass{standalone}
+
+\usepackage{tikz}
+\usepackage{pgf-pie}
+
+\begin{document}
+\begin{tikzpicture}
+% numbers were generated with `categories.sh`
+\pie[sum=auto, radius=2, text=legend]{
+270/Reduction,
+103/Typing,
+87/Terms,
+76/Substitution,
+72/API,
+48/Convertibility
+}
+\end{tikzpicture}
+\end{document}
