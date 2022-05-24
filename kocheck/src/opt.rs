@@ -15,31 +15,31 @@ pub struct Opt {
 
     /// Perform only operations until (excluding) the given stage.
     ///
-    /// Possible values are: share, infer, check.
-    #[clap(long)]
+    /// Possible values for STAGE are: share, infer, check.
+    #[clap(long, value_name = "STAGE")]
     pub omit: Option<Stage>,
 
-    /// Parse given number of commands in advance (∞ if argument omitted)
+    /// Parse N commands in advance (∞ if argument omitted)
     ///
     /// If this option is used, commands are parsed and checked simultaneously.
-    /// If this option is given with a number n, then
-    /// maximally n commands are parsed in advance.
+    /// If this option is given with a number N, then
+    /// maximally N commands are parsed in advance.
     /// If this option is given without an extra argument, then
     /// the number of commands parsed in advance is unbounded.
     ///
     /// Note that unbounded parsing can lead to high memory usage!
-    #[clap(long, short = 'c')]
+    #[clap(long, short = 'c', value_name = "N")]
     pub channel_capacity: Option<Option<usize>>,
 
-    /// Typecheck concurrently
+    /// Typecheck up to N commands concurrently (∞ if argument omitted)
     ///
     /// If this option is used, type checking tasks are executed in parallel.
-    /// If this option is given with a number n, then
-    /// maximally n type checking tasks are concurrently executed.
+    /// If this option is given with a number N, then
+    /// at most N type checking tasks are executed concurrently.
     /// If this option is given without an extra argument, then
     /// the number of concurrently executed tasks is
     /// determined automatically from the number of CPUs.
-    #[clap(long, short = 'j')]
+    #[clap(long, short = 'j', value_name = "N")]
     pub jobs: Option<Option<usize>>,
 
     /// Files to process (cumulative)
