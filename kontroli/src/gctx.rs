@@ -43,10 +43,12 @@ impl<Sym: Clone + Eq + Hash, Pat: Clone, Tm: Clone> GCtx<Sym, Pat, Tm> {
         Self::default()
     }
 
+    /// Return the type of a symbol.
     pub fn get_type(&self, sym: &Sym) -> Option<&Arc<Tm>> {
         self.types.get(sym)
     }
 
+    /// Return the rewrite rules whose left-hand side head is the given symbol.
     pub fn get_rules(&self, sym: &Sym) -> Option<&Arc<Vec<Rule<Sym, Pat, Tm>>>> {
         self.rules.get(sym)
     }

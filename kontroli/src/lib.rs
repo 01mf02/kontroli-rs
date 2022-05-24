@@ -17,15 +17,15 @@
 //!
 //! How is a user command processed?
 //! A command is parsed from a string to yield a [`parse::Command`].
-//! The scoping operation then refines the parse command to a [`scope::Command`],
-//! verifying whether the names referenced in the parse command
-//! have been previously declared in the [`Symbols`] table.
-//! Once we have a scope command, we distinguish whether it
+//! Once we have a command, we distinguish whether it
 //! introduces a name or adds a rewrite rule:
 //! In case of a rewrite rule, we add the rewrite rule to the global context.
 //! In case of a name introduction, we first
 //! update the [`Symbols`] table with the newly introduced name and
 //! verify that the given types and terms are valid, yielding a [`Typing`].
+//! In both cases, [`share`](share::Share::share) refines terms in a command to shared terms,
+//! verifying whether the names referenced in the terms,
+//! have been previously declared in the [`Symbols`] table.
 //! Once we have a typing, we add it to the global context.
 //!
 //! The following example parses a few commands and executes them on a global context.
@@ -86,31 +86,22 @@
 //!
 //! This library is divided into several modules:
 //! * The [`parse`] module contains unshared, reference-free data structures,
-//! * the [`scope`] module contains data structures with references, and
-//! * the [`rc`] and [`arc`] modules contain data structures with references and shared pointers.
-//!
-//! The [`rc`] and [`arc`] modules expose completely the same API,
-//! the difference being that the structures in [`rc`]
-//! cannot be used in multi-threaded scenarios.
-//! Due to the performance overhead incurred by the data structures in [`arc`],
-//! it is advisable to use these only in multi-threaded scenarios,
-//! and to prefer [`rc`] whenever possible.
+//! * the [`share`] module contains data structures with references, and
+//! * the [`kernel`] module contains data structures with references and shared pointers.
 //!
 //! For many data structures, we have counterparts in
-//! the [`parse`], [`scope`], and [`rc`]/[`arc`] modules.
-//! We call types from the [`parse`] and [`scope`] modules
-//! "parse structures" and "scope structures", respectively.
-//! For example, we distinguish parse terms, scope terms, and terms
-//! (the latter being defined in the [`rc`]/[`arc`] modules).
-//! Parse structures are constructed by the parser and
-//! refined into their corresponding scope structures by the scoper.
-//! Parse and scope structures also implement the `Send` and `Sync` traits,
+//! the [`parse`], [`share`], and [`kernel`] modules.
+//! We call types from the [`parse`] and [`share`] modules
+//! "parsed structures" and "shared structures", respectively.
+//! For example, we distinguish parsed terms, shared terms, and (kernel) terms
+//! (the latter being defined in the [`kernel`] module).
+//! Parsed structures are constructed by the parser and
+//! refined into their corresponding shared structures by the sharer.
+//! Parsed and shared structures also implement the `Send` and `Sync` traits,
 //! meaning that they can be transferred and shared between threads.
 //! This allows parsing and checking to be performed in parallel.
 //!
 //! [Kontroli]: https://github.com/01mf02/kontroli-rs
-//!
-//! [`Symbols`]: scope::Symbols
 
 extern crate alloc;
 extern crate lazy_st;
