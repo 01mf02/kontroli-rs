@@ -1,4 +1,4 @@
-use kocheck::{seq, Error, Event, Opt};
+use kocheck::{par, Error, Event, Opt};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -27,6 +27,7 @@ fn produce_single<'a>(
     opt: &'a Opt,
 ) -> impl Iterator<Item = Result<Event, Error>> + 'a {
     let head = std::iter::once(Ok(Event::Module(vec![module.name.to_string()])));
+    /*
     let commands = kontroli::parse::lexes(module.text)
         .map(move |cmd| kocheck::parse::<String>(cmd?, opt))
         .map(|res| res.transpose())
@@ -34,6 +35,8 @@ fn produce_single<'a>(
         .map(|cmd| cmd.map(Event::Command).map_err(|e| e.into()));
     // cmds
     head.chain(commands)
+    */
+    head
 }
 
 fn produce_multiple<'a>(
@@ -47,22 +50,20 @@ fn produce_multiple<'a>(
     result
 }
 
-fn consume(iter: impl Iterator<Item = Result<Event, Error>>, opt: &Opt) {
+fn consume(iter: impl Iterator<Item = Result<Event, Error>> + Send, opt: &Opt) {
     let iter = iter.inspect(|r| r.iter().for_each(|ev| add_lambda_output(&ev.to_string())));
 
-    if let Err(e) = seq::consume(iter, &opt) {
+    if let Err(e) = par::consume(iter, &opt) {
         add_error(&format!("Error: {:?}", e))
     }
 }
 
 fn get_omit(do_until: usize) -> Option<kocheck::Stage> {
     match do_until {
-        0 => Some(kocheck::Stage::Parse),
-        1 => Some(kocheck::Stage::Scope),
-        2 => Some(kocheck::Stage::Share),
-        3 => Some(kocheck::Stage::Infer),
-        4 => Some(kocheck::Stage::Check),
-        5 => None,
+        0 => Some(kocheck::Stage::Share),
+        1 => Some(kocheck::Stage::Infer),
+        2 => Some(kocheck::Stage::Check),
+        3 => None,
         _ => panic!("omission index out of bounds"),
     }
 }

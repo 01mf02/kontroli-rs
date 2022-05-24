@@ -24,14 +24,12 @@ thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.</textarea>
       <input type="checkbox" id="eta" class="option" names="eta">
       <label for="eta">Reduce terms modulo eta</label><br>
 
-      <input type="range" min="0" max="5" value="5" id="omit" list="tickmarks">
+      <input type="range" min="0" max="3" value="3" id="omit" list="tickmarks">
       <datalist id="tickmarks">
-        <option value="0" label="lex"></option>
-        <option value="1" label="parse"></option>
-        <option value="2" label="scope"></option>
-        <option value="3" label="share"></option>
-        <option value="4" label="infer"></option>
-        <option value="5" label="check"></option>
+        <option value="0" label="parse"></option>
+        <option value="1" label="share"></option>
+        <option value="2" label="infer"></option>
+        <option value="3" label="check"></option>
       </datalist>
 
       <div>
