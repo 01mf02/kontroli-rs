@@ -6,7 +6,13 @@ members = [
     "koweb",
 ]
 
-default-members = [ "kocheck" ]
+# do not build koweb by default
+default-members = [
+    "dedukti-parse",
+#   TODO: fix tests in Kontroli!
+#   "kontroli",
+    "kocheck",
+]
 
 [profile.release]
 codegen-units = 1
