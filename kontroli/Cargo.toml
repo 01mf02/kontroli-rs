@@ -12,10 +12,10 @@ categories = ["concurrency", "no-std", "science"]
 
 [dependencies]
 dedukti-parse = { version = "0.2", path = "../dedukti-parse" }
-fnv = "1.0.3"
-im = "14.3"
+fnv = "1.0.7"
+im = "15.1.0"
 lazy-st = "0.2"
-log = "0.4"
+log = "0.4.17"
 nested-modules = "0.2"
 
 [lib]
@@ -23,7 +23,7 @@ bench = false
 
 [dev-dependencies]
 colosseum = "0.2"
-criterion = "0.3"
+criterion = "0.3.5"
 
 [[bench]]
 name = "bench"
