@@ -1,3 +1,4 @@
+use dedukti_parse::{Atom, CmdIter, Symb};
 use kocheck::{par, Error, Event, Opt};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -22,38 +23,17 @@ struct Module<S> {
     text: S,
 }
 
-fn produce_single<'a>(
-    module: Module<&'a str>,
-    opt: &'a Opt,
-) -> impl Iterator<Item = Result<Event, Error>> + 'a {
+fn produce(module: Module<&str>) -> impl Iterator<Item = Result<Event, Error>> + '_ {
     let head = std::iter::once(Ok(Event::Module(vec![module.name.to_string()])));
-    /*
-    let commands = kontroli::parse::lexes(module.text)
-        .map(move |cmd| kocheck::parse::<String>(cmd?, opt))
-        .map(|res| res.transpose())
-        .flatten()
-        .map(|cmd| cmd.map(Event::Command).map_err(|e| e.into()));
-    // cmds
+    let commands = CmdIter::<_, Atom<Symb<String>>, String>::new(module.text)
+        .map(|cmd| Ok(Event::Command(cmd?.map_const(String::from))));
     head.chain(commands)
-    */
-    head
-}
-
-fn produce_multiple<'a>(
-    modules: &'a [Module<String>],
-    opt: &'a Opt,
-) -> Vec<impl Iterator<Item = Result<Event, Error>> + 'a> {
-    let mut result = vec![];
-    for Module { name, text } in modules {
-        result.push(produce_single(Module { text, name }, opt));
-    }
-    result
 }
 
 fn consume(iter: impl Iterator<Item = Result<Event, Error>> + Send, opt: &Opt) {
     let iter = iter.inspect(|r| r.iter().for_each(|ev| add_lambda_output(&ev.to_string())));
 
-    if let Err(e) = par::consume(iter, &opt) {
+    if let Err(e) = par::consume(iter, opt) {
         add_error(&format!("Error: {:?}", e))
     }
 }
@@ -81,7 +61,7 @@ pub fn check_single(text: &str, eta: bool, omit: usize) {
         files: vec![],
     };
 
-    consume(produce_single(Module { text, name: "main" }, &opt), &opt)
+    consume(produce(Module { text, name: "main" }), &opt)
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -115,17 +95,19 @@ pub async fn check_multiple(programs: JsValue, module_to_run: String, eta: bool,
 
     let mut modules = Vec::new();
     for (filename, url) in main.dependency.iter().zip(main.dependency_url_list.iter()) {
-        add_hash_output(&filename);
+        add_hash_output(filename);
         // remove suffix ".dk"
         let name = filename[0..filename.len() - 3].to_string();
 
-        let text = fetch::fetch(&url)
+        let text = fetch::fetch(url)
             .await
             .expect("fetch did not return anything");
 
         modules.push(Module { name, text });
     }
 
-    let vec_iter = produce_multiple(&modules, &opt);
-    consume(vec_iter.into_iter().flatten(), &opt)
+    let modules = modules
+        .iter()
+        .flat_map(|Module { name, text }| produce(Module { name, text }));
+    consume(modules, &opt)
 }
