@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
     // log warnings and errors by default
     // allow setting the logging level by using the environment variable "LOG"
     // e.g. `LOG=trace kocheck ...`
-    env_logger::from_env(Env::default().filter_or("LOG", "warn")).init();
+    env_logger::Builder::from_env(Env::default().filter_or("LOG", "warn")).init();
 
     let opt = Opt::parse();
 
