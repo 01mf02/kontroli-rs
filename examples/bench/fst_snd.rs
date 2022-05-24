@@ -10,12 +10,13 @@ fn fs(f: &str, n: usize) {
     }
 }
 
+/// Define constants `fsn` containing `2^(n-1)` occurrences of `fst x y` and `snd x y`.
 fn main() {
     println!("A : Type.");
-    println!("def fst := \\ x : A => \\ y : A => x.");
-    println!("def snd := \\ x : A => \\ y : A => y.");
+    println!("def fst (x : A) (y : A) := x.");
+    println!("def snd (x : A) (y : A) := y.");
     for i in 1.. {
-        print!("def fs{} := \\ x : A => \\ y : A => ", i);
+        print!("def fs{} (x : A) (y : A) := ", i);
         fs("fst", i);
         println!(".")
     }
