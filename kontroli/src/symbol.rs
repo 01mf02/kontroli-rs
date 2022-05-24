@@ -14,12 +14,12 @@ use core::hash::{Hash, Hasher};
 /// are not equal, as well as their hashes:
 ///
 /// ~~~
-/// # use kontroli::Symbol;
+/// # use kontroli::symbol::{Owned, Symbol};
 /// # use std::collections::hash_map::DefaultHasher;
 /// # use std::hash::{Hash, Hasher};
-/// let h1 = String::from("Hello");
-/// let h2 = String::from("Hello");
-/// let wl = String::from("World");
+/// let h1 = Owned::new(String::from("Hello"));
+/// let h2 = Owned::new(String::from("Hello"));
+/// let wl = Owned::new(String::from("World"));
 /// let s1 = Symbol::new(&h1);
 /// let s2 = Symbol::new(&h2);
 /// let s3 = Symbol::new(&wl);

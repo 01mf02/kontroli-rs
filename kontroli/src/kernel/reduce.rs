@@ -26,21 +26,7 @@ pub struct State<'s, 't> {
 impl<'s, 't> State<'s, 't> {
     /// Construct a new state from a reference to a term.
     ///
-    /// This does not yet evaluate anything, as can be seen from following example:
-    ///
-    /// ~~~
-    /// # use kontroli::{Error, Share, Symbols};
-    /// # use kontroli::scope::Term as STerm;
-    /// # use kontroli::rc::{GCtx, Term};
-    /// # use kontroli::rc::state::State;
-    /// let syms = Symbols::new();
-    ///
-    /// let term: Term = STerm::parse(r"(x => x) (x => x)").share(&syms)?;
-    ///
-    /// let state = State::new(term.clone());
-    /// assert!(Term::ptr_eq(&Term::from(state), &term));
-    /// # Ok::<(), Error>(())
-    /// ~~~
+    /// This does not yet evaluate anything.
     pub fn new(term: STerm<'s, 't>) -> Self {
         Self {
             ctx: Context::default(),
@@ -165,25 +151,6 @@ impl<'s, 't> RState<'s, 't> {
 
 impl<'s, 't> State<'s, 't> {
     /// Evaluate the state to its weak head normal form.
-    ///
-    /// ~~~
-    /// # use kontroli::{Error, Share, Symbols};
-    /// # use kontroli::scope::Term as STerm;
-    /// # use kontroli::rc::{GCtx, RTerm, Term};
-    /// # use kontroli::rc::state::State;
-    /// let gc = GCtx::new();
-    /// let syms = Symbols::new();
-    ///
-    /// let term = STerm::parse(r"(x => x) (x => x)").share(&syms)?;
-    /// let mut state = State::new(term);
-    /// state.whnf(&gc);
-    ///
-    /// let expected = STerm::parse(r"(x => x)").share(&syms)?;
-    /// assert!(state.ctx.is_empty());
-    /// assert!(state.stack.is_empty());
-    /// assert_eq!(state.term, expected);
-    /// # Ok::<(), Error>(())
-    /// ~~~
     fn whnf(&mut self, gc: &'t GCtx<'s>) {
         use STerm::*;
         loop {
@@ -299,27 +266,6 @@ impl<'s, 't> Stack<'s, 't> {
     /// Determine whether the stack of an abstract machine matches the rule's LHS.
     ///
     /// Return a new machine context containing variable assignments in case of a match.
-    ///
-    /// ~~~
-    /// # use kontroli::rc::state::State;
-    /// # use kontroli::rc::{GCtx, RTerm, Rule, Term};
-    /// # use kontroli::scope::{Rule as SRule, Term as STerm};
-    /// # use kontroli::{Error, Share, Symbols};
-    /// let syms: Symbols = vec!["id", "f", "a"].into_iter().collect();
-    /// let gc = GCtx::new();
-
-    /// let rule = SRule::parse("[A] id A --> A.").share(&syms)?;
-    /// let term = STerm::parse("id f a").share(&syms)?;
-
-    /// let mut state = State::new(term);
-    /// state.whnf(&gc);
-    /// let subst = state.stack.match_flatten(&rule, &gc).unwrap();
-    /// let subst = subst.iter().map(|rtt| (*rtt.force()).clone());
-
-    /// let expected: Term = STerm::parse("f").share(&syms)?;
-    /// assert_eq!(vec![expected], subst.collect::<Vec<_>>());
-    /// # Ok::<(), Error>(())
-    /// ~~~
     fn match_flatten(&self, rule: &'t Rule<'s>, gc: &'t GCtx<'s>) -> Option<Context<'s, 't>> {
         self.match_rule(rule, gc)?
             .into_iter()

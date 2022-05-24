@@ -38,12 +38,3 @@ impl<'s> Symbols<'s> {
         path.into_iter().for_each(|p| self.0.open_or_default(p))
     }
 }
-
-/*
-impl<'s> FromIterator<&'s str> for Symbols<'s> {
-    fn from_iter<I: IntoIterator<Item = &'s str>>(iter: I) -> Self {
-        let set: FnvHashSet<_> = iter.into_iter().collect();
-        Self(Context::from(nested_modules::Module::from(set)))
-    }
-}
-*/

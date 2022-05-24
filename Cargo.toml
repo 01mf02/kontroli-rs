@@ -9,8 +9,7 @@ members = [
 # do not build koweb by default
 default-members = [
     "dedukti-parse",
-#   TODO: fix tests in Kontroli!
-#   "kontroli",
+    "kontroli",
     "kocheck",
 ]
 

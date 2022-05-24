@@ -153,31 +153,3 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, Command<'s>> for parse::Command<R, R, P
         }
     }
 }
-
-/*
-// TODO: make this `#[cfg(test)]`
-// for that, rewrite example in lib.rs
-impl<'s> Command<&'s str> {
-    /// Parse a command and scope it. Used for testing.
-    pub fn parse(i: &'s str) -> Self {
-        parse::Command::parse_str(i).unwrap().into()
-    }
-}
-
-impl<'s> Term<&'s str> {
-    /// Parse a term and scope it. Used for testing.
-    pub fn parse(i: &'s str) -> Self {
-        parse::Term::parse_str(i).unwrap().into()
-    }
-}
-
-impl<'s> Rule<&'s str> {
-    /// Parse a rule and scope it. Used for testing.
-    pub fn parse(i: &'s str) -> Self {
-        match parse::Command::parse_str(i).unwrap() {
-            parse::Command::Rules(mut rules) => rules.pop().unwrap().into(),
-            _ => panic!("command is not a rule"),
-        }
-    }
-}
-*/

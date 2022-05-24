@@ -34,7 +34,7 @@
 //!
 //! ~~~
 //! # use kontroli::{Command, Error, Share, Symbols};
-//! # use kontroli::rc::{GCtx, Intro, Rule, Typing};
+//! # use kontroli::kernel::{self, GCtx};
 //! # use colosseum::unsync::Arena;
 //! let cmds = [
 //!     // declarations
@@ -54,27 +54,27 @@
 //! let mut gc = GCtx::new();
 //!
 //! for c in cmds.iter() {
-//!     // parse and scope command in one go
-//!     let cmd = Command::parse(c);
+//!     // parse and share command in one go
+//!     let cmd = kontroli::parse::Command::parse_str(c).unwrap().share(&syms)?;
 //!     match cmd {
 //!         // introduction of a new name
 //!         Command::Intro(id, it) => {
-//!             let it: Intro = it.share(&syms)?;
-//!
-//!             let id: &str = arena.alloc(id);
+//!             let owned = kontroli::symbol::Owned::new(id.clone());
 //!             // add symbol to symbol table and fail if it is not new
-//!             let sym = syms.insert(id)?;
+//!             let sym = syms.insert(id, arena.alloc(owned))?;
 //!
 //!             // typecheck and insert into global context
 //!             let rewritable = it.rewritable();
-//!             let typing: Typing = Typing::intro(it, &gc)?;
-//!             typing.check(&gc)?;
+//!             let (typing, check) = kernel::intro(it, &gc)?;
+//!             if let Some(check) = check {
+//!                 check.check(&gc)?
+//!             }
 //!             gc.insert(sym, typing, rewritable)?
 //!         }
 //!         // addition of rewrite rules
 //!         Command::Rules(rules) => {
 //!             for rule in rules {
-//!                 gc.add_rule(rule.share(&syms)?)?
+//!                 gc.add_rule(rule)?
 //!             }
 //!         }
 //!     }
