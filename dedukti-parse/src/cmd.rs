@@ -27,6 +27,16 @@ pub struct Rule<V, Tm> {
     pub rhs: Tm,
 }
 
+impl<C, V, Tm> Command<C, V, Tm> {
+    /// Apply a function to the constant introduced by an introduction.
+    pub fn map_const<C2>(self, f: impl FnOnce(C) -> C2) -> Command<C2, V, Tm> {
+        match self {
+            Self::Intro(x, args, it) => Command::Intro(f(x), args, it),
+            Self::Rules(rules) => Command::Rules(rules),
+        }
+    }
+}
+
 impl<C: Display, V: Display, Tm: Display> Display for Command<C, V, Tm> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
