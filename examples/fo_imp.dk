@@ -1,0 +1,5 @@
+prop: Type.
+imp: prop -> prop -> prop.
+def prf: prop -> Type.
+[x: prop, y: prop] prf (imp x y) --> prf x -> prf y.
+thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.
