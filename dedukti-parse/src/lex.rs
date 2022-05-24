@@ -90,7 +90,7 @@ fn symb<'s>(lex: &mut Lexer<'s, Token<&'s str>>) -> Option<Symb<&'s str>> {
 
     while let Some(after_dot) = lex.remainder().strip_prefix('.') {
         let len = if let Some(tail) = after_dot.strip_prefix(ih) {
-            1 + tail.find(|c| !it(c)).unwrap_or_else(|| tail.len())
+            1 + tail.find(|c| !it(c)).unwrap_or(tail.len())
         } else if let Some(after_moustache) = after_dot.strip_prefix("{|") {
             2 + after_moustache.find("|}")? + 2
         } else {

@@ -143,8 +143,7 @@ where
     let cmds = iter
         .filter(|event| !opt.omits(Stage::Share) || event.is_err())
         .map(|event| from_event(event?, &mut syms, &arena).map_err(Error::Ko))
-        .map(|ro| ro.transpose())
-        .flatten();
+        .flat_map(|ro| ro.transpose());
 
     infer_checks(cmds, opt, &mut gc)
 }

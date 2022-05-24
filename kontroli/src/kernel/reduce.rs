@@ -337,24 +337,16 @@ impl<'s, 't> Stack<'s, 't> {
     where
         't: 'a,
     {
-        let iter = self.0.into_iter().rev();
-        Box::new(
-            iter.zip(pats)
-                .map(|(rstate, pat)| rstate.match_pat(pat, gc))
-                .flatten(),
-        )
+        let iter = self.0.into_iter().rev().zip(pats);
+        Box::new(iter.flat_map(|(rstate, pat)| rstate.match_pat(pat, gc)))
     }
 
     fn match_pats<'a>(&'a self, pats: &'t [Pattern<'s>], gc: &'t GCtx<'s>) -> Subst<'s, 't, 'a>
     where
         't: 'a,
     {
-        let iter = self.0.iter().rev();
-        Box::new(
-            iter.zip(pats)
-                .map(|(rstate, pat)| rstate.clone().match_pat(pat, gc))
-                .flatten(),
-        )
+        let iter = self.0.iter().rev().zip(pats);
+        Box::new(iter.flat_map(|(rstate, pat)| rstate.clone().match_pat(pat, gc)))
     }
 
     fn match_top<'a>(&'a self, pat: &'t TopPattern<'s>, gc: &'t GCtx<'s>) -> Subst<'s, 't, 'a>
