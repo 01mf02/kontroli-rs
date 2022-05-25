@@ -1,6 +1,6 @@
 //! Parallel event processing.
 
-use crate::{Error, Event, Opt, PCommand, PathRead, Stage};
+use crate::{Error, Event, Opt, PathRead, Stage};
 use colosseum::sync::Arena;
 use core::borrow::Borrow;
 use kontroli::error::Error as KoError;
@@ -25,7 +25,7 @@ fn from_event<'s>(
 }
 
 fn share<'s, S: Borrow<str> + Ord>(
-    cmd: PCommand<S>,
+    cmd: kontroli::parse::Item<S>,
     syms: &mut Symbols<'s>,
     arena: &'s Arena<symbol::Owned>,
 ) -> Result<Command<'s>, KoError> {

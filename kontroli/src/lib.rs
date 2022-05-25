@@ -72,11 +72,7 @@
 //!             gc.insert(sym, typing, rewritable)?
 //!         }
 //!         // addition of rewrite rules
-//!         Command::Rules(rules) => {
-//!             for rule in rules {
-//!                 gc.add_rule(rule)?
-//!             }
-//!         }
+//!         Command::Rules(rules) => rules.into_iter().try_for_each(|r| gc.add_rule(r))?,
 //!     }
 //! }
 //! # Ok::<_, Error>(())

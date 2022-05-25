@@ -391,7 +391,7 @@ impl<A, V> Term<A, V> {
 
 impl<'s> Term<Atom<Symb<&'s str>>, &'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self> {
-        use crate::Lex;
+        use logos::Logos;
         let mut ctx = Ctx::default();
         let mut iter = Token::lexer(s).chain(core::iter::once(Token::Dot));
         let (tm, tok) = Self::parse(&mut ctx, &mut iter)?;

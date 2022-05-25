@@ -1,8 +1,10 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kontroli::rc::{GCtx, Intro, Typing};
-use kontroli::{Command, Error, Scope, Share, Symbols};
+use kontroli::kernel::{self, GCtx};
+use kontroli::{Command, Error, Share, Symbols};
 
-fn check<'s>(cmds: Vec<kontroli::scope::Command<&'s str>>) -> Result<(), Error> {
+type Commands<'s> = Vec<kontroli::parse::Item<&'s str>>;
+
+fn check<'s>(cmds: Commands<'s>) -> Result<(), Error> {
     use colosseum::unsync::Arena;
 
     let arena = Arena::new();
@@ -10,38 +12,32 @@ fn check<'s>(cmds: Vec<kontroli::scope::Command<&'s str>>) -> Result<(), Error> 
     let mut gc = GCtx::new();
 
     for c in cmds.into_iter() {
-        match c {
+        match c.share(&syms)? {
             // introduction of a new name
             Command::Intro(id, it) => {
-                let it: Intro = it.share(&syms)?;
-
-                let id: &str = arena.alloc(id);
+                let owned = kontroli::symbol::Owned::new(id.clone());
                 // add symbol to symbol table and fail if it is not new
-                let sym = syms.insert(id)?;
+                let sym = syms.insert(id, arena.alloc(owned))?;
 
                 // typecheck and insert into global context
                 let rewritable = it.rewritable();
-                let typing: Typing = Typing::intro(it, &gc)?;
-                typing.check(&gc)?;
+                let (typing, check) = kernel::intro(it, &gc)?;
+                if let Some(check) = check {
+                    check.check(&gc)?
+                }
                 gc.insert(sym, typing, rewritable)?
             }
             // addition of rewrite rules
-            Command::Rules(rules) => {
-                for rule in rules {
-                    gc.add_rule(rule.share(&syms)?)?
-                }
-            }
+            Command::Rules(rules) => rules.into_iter().try_for_each(|r| gc.add_rule(r))?,
         }
     }
 
     Ok(())
 }
 
-fn parse(file: &str) -> Vec<kontroli::scope::Command<&str>> {
-    use kontroli::parse::{lexes, Command, Parse};
-    lexes(file)
-        .map(|tokens| Command::parse_vec(tokens?))
-        .map(|cmd| cmd.unwrap().scope())
+fn parse(file: &str) -> Commands {
+    kontroli::parse::Strict::new(file)
+        .map(|cmd| cmd.unwrap())
         .collect()
 }
 

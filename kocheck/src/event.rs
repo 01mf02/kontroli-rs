@@ -1,8 +1,7 @@
-use crate::PCommand;
 use core::fmt::{self, Display};
 use kontroli::Symbols;
 
-pub type Command = PCommand<String>;
+pub type Command = kontroli::parse::Item<String>;
 
 #[allow(clippy::large_enum_variant)]
 /// Commands with interspersed module opening.

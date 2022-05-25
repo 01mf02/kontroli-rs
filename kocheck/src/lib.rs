@@ -11,12 +11,11 @@ pub use opt::Opt;
 pub use path_read::PathRead;
 pub use stage::Stage;
 
-use kontroli::parse::{Atom, Command, Symb, Term};
-pub type PCommand<S> = Command<S, S, Term<Atom<Symb<S>>, S>>;
+use kontroli::parse::Item;
 
-pub fn log_cmd<S: core::fmt::Display>(cmd: &PCommand<S>) {
+pub fn log_cmd<S: core::fmt::Display>(cmd: &Item<S>) {
     match cmd {
-        PCommand::Intro(id, _, _) => log::info!("Introduce symbol {}", id),
-        PCommand::Rules(rules) => log::info!("Add {} rules", rules.len()),
+        Item::Intro(id, _, _) => log::info!("Introduce symbol {}", id),
+        Item::Rules(rules) => log::info!("Add {} rules", rules.len()),
     }
 }
