@@ -1,8 +1,7 @@
 //! Type checking and type inference for terms.
 
 use super::sterm::{SComb, STerm};
-use super::GCtx;
-use crate::error::TypingError as Error;
+use super::{Error, GCtx};
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
 

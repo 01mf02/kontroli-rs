@@ -1,6 +1,5 @@
 //! Maps from symbols to their associated types and rewrite rules.
 
-use crate::error::GCtxError as Error;
 use alloc::{string::String, sync::Arc, vec::Vec};
 use core::hash::Hash;
 
@@ -10,6 +9,12 @@ type FnvHashMap<K, V> = im::hashmap::HashMap<K, V, fnv::FnvBuildHasher>;
 type Rule<Sym, Pat, Tm> = crate::Rule<(String, Option<Tm>), crate::App<Sym, Pat>, Tm>;
 
 type Typing<Tm> = crate::Typing<Tm, Option<Tm>>;
+
+#[derive(Debug)]
+pub enum Error {
+    Reintroduction,
+    NonRewritable,
+}
 
 /// Map from symbols to their associated types and rewrite rules.
 ///

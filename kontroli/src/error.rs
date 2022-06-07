@@ -1,50 +1,22 @@
 //! Common error type.
 
-use alloc::string::String;
+use crate::gctx::Error as GCtxError;
+use crate::kernel::Error as TypingError;
+use crate::share::Error as ShareError;
+use crate::symbols::Error as SymbolsError;
 
 /// Common error type.
 #[derive(Debug)]
 pub enum Error {
-    Scope(ScopeError),
+    Share(ShareError),
     GCtx(GCtxError),
     Symbols(SymbolsError),
     Typing(TypingError),
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum ScopeError {
-    UndeclaredSymbol(String),
-    NoPrepattern,
-    NoTopPattern,
-}
-
-#[derive(Debug)]
-pub enum GCtxError {
-    Reintroduction,
-    NonRewritable,
-}
-
-#[derive(Debug)]
-pub enum SymbolsError {
-    Reinsertion,
-}
-
-#[derive(Debug)]
-pub enum TypingError {
-    ProductExpected,
-    SortExpected,
-    BindNoType,
-    Unconvertible,
-    KindNotTypable,
-    UnexpectedKind,
-    DomainFreeAbstraction,
-    TypeAndTermEmpty,
-    TypeNotFound,
-}
-
-impl From<ScopeError> for Error {
-    fn from(err: ScopeError) -> Self {
-        Self::Scope(err)
+impl From<ShareError> for Error {
+    fn from(err: ShareError) -> Self {
+        Self::Share(err)
     }
 }
 

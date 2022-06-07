@@ -7,7 +7,6 @@ mod sterm;
 mod subst;
 mod tests;
 
-use crate::error::TypingError as Error;
 use crate::share::{Intro, Pattern, Rule, TopPattern};
 use sterm::{LTerm, STerm};
 
@@ -17,6 +16,19 @@ pub type Check<'s> = crate::Typing<LTerm<'s>>;
 
 type Result<T> = core::result::Result<T, Error>;
 type IntroResult<'s> = Result<(Typing<'s>, Option<Check<'s>>)>;
+
+#[derive(Debug)]
+pub enum Error {
+    ProductExpected,
+    SortExpected,
+    BindNoType,
+    Unconvertible,
+    KindNotTypable,
+    UnexpectedKind,
+    DomainFreeAbstraction,
+    TypeAndTermEmpty,
+    TypeNotFound,
+}
 
 impl From<sterm::UnexpectedKind> for Error {
     fn from(_: sterm::UnexpectedKind) -> Self {

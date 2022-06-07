@@ -1,11 +1,15 @@
 //! Maps from strings to (shared) symbols.
 
 use super::{symbol, Symbol};
-use crate::error::SymbolsError as Error;
 use alloc::{string::String, vec::Vec};
 use core::borrow::Borrow;
 use fnv::FnvHashMap;
 use nested_modules::Context;
+
+#[derive(Debug)]
+pub enum Error {
+    Reinsertion,
+}
 
 /// Map from strings to (shared) symbols.
 #[derive(Default)]

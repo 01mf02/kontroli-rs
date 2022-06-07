@@ -1,6 +1,5 @@
 //! Convert from scoped to shared structures.
 
-use crate::error::ScopeError as Error;
 use crate::parse::term::{AppH, Atom};
 use crate::parse::{self, Symb};
 use crate::{Comb, LTerm, Symbol, Symbols};
@@ -30,6 +29,13 @@ pub type Pattern<'s> = crate::Pattern<Symbol<'s>>;
 
 pub trait Share<'s, Target> {
     fn share(self, syms: &Symbols<'s>) -> Result<Target>;
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Error {
+    UndeclaredSymbol(String),
+    NoPrepattern,
+    NoTopPattern,
 }
 
 impl<'s, S: Borrow<str> + Ord> Share<'s, Symbol<'s>> for Symb<S> {
