@@ -3,12 +3,22 @@ use core::fmt::{self, Display};
 /// Combinator term.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Comb<Id, Tm> {
+    /// Application
     Appl(Tm, alloc::vec::Vec<Tm>),
+    /// Product
     Prod(Id, Tm, Tm),
+    /// Abstraction
     Abst(Id, Option<Tm>, Tm),
 }
 
 impl<Id, Tm> Comb<Id, Tm> {
+    /// Return true if the term
+    /// (or the application of some terms to it, if `no_args` is false)
+    /// is *surely* in weak-head normal form.
+    ///
+    /// In cases where it is not clear by looking at the term
+    /// whether it is in WHNF (for example, for applications),
+    /// this function plays it safe and returns false.
     pub fn is_whnf(&self, no_args: impl FnOnce() -> bool) -> bool {
         match self {
             Comb::Appl(..) => false,
