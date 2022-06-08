@@ -2,8 +2,8 @@ mod error;
 mod event;
 mod infer_checks;
 mod opt;
-pub mod par;
 mod path_read;
+pub mod process;
 mod stage;
 
 pub use error::Error;

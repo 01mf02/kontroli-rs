@@ -1,7 +1,7 @@
 //! A typechecker for the lambda-Pi calculus modulo rewriting.
 
 use clap::Parser;
-use kocheck::{par, Error, Opt};
+use kocheck::{process, Error, Opt};
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
@@ -32,17 +32,17 @@ fn main() -> Result<(), Error> {
             };
 
             let optr = opt.clone();
-            let consumer = std::thread::spawn(move || par::consume(receiver.into_iter(), &optr));
+            let consume = std::thread::spawn(move || process::consume(receiver.into_iter(), &optr));
 
-            par::produce(&opt, |event| sender.send(event))?;
+            process::produce(&opt, |event| sender.send(event))?;
 
             // signalise that we are done sending precommands
             // (otherwise the consumer will eventually wait forever)
             drop(sender);
 
             // wait for all commands to be consumed
-            consumer.join().unwrap()
+            consume.join().unwrap()
         }
-        None => par::run(&opt),
+        None => process::run(&opt),
     }
 }

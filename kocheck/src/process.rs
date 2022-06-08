@@ -5,6 +5,7 @@ use colosseum::sync::Arena;
 use core::borrow::Borrow;
 use kontroli::error::Error as KoError;
 use kontroli::{symbol, GCtx, Share, Symbols};
+use std::io::Read;
 
 fn from_event<'s>(
     event: Event,
@@ -32,6 +33,14 @@ fn share<'s, S: Borrow<str> + Ord>(
     }
 }
 
+fn parse(r: impl Read) -> impl Iterator<Item = Result<kontroli::parse::Item<String>, Error>> {
+    use std::io::{BufRead, BufReader};
+    let lines = BufReader::new(r).lines().map(|line| line.unwrap());
+    kontroli::parse::Lazy::new(lines)
+        .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
+        .map(|cmd| cmd.map_err(Error::Parse))
+}
+
 pub fn run(opt: &Opt) -> Result<(), Error> {
     let arena: Arena<symbol::Owned> = Arena::new();
     let mut syms: Symbols = Symbols::new();
@@ -43,10 +52,7 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
         let file = PathRead::try_from(file)?;
         syms.set_path(file.path);
 
-        use std::io::{BufRead, BufReader};
-        let lines = BufReader::new(file.read).lines().map(|line| line.unwrap());
-        let cmds = kontroli::parse::Lazy::new(lines)
-            .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
+        let cmds = parse(file.read)
             .filter(|cmd| !opt.omits(Stage::Share) || cmd.is_err())
             .map(|cmd| share(cmd?, &mut syms, &arena).map_err(Error::Ko));
 
@@ -62,14 +68,8 @@ where
     for file in opt.files.iter() {
         let file = PathRead::try_from(file)?;
 
-        use std::io::{BufRead, BufReader};
-        let lines = BufReader::new(file.read).lines().map(|line| line.unwrap());
-        let cmds = kontroli::parse::Lazy::new(lines)
-            .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
-            .map(|cmd| cmd.map_err(Error::Parse));
-
         let head = core::iter::once(Ok(Event::Module(file.path)));
-        let tail = cmds.map(|cmd| cmd.map(Event::Command));
+        let tail = parse(file.read).map(|cmd| cmd.map(Event::Command));
 
         // sending fails prematurely if consumption fails
         // in that case, handle the error after this function exits
