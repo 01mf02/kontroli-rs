@@ -225,15 +225,15 @@ where
     }
 }
 
-pub type Item<S> = Command<S, S, Term<term::Atom<Symb<S>>, S>>;
+pub type Scoped<S> = Command<S, S, Term<term::Atom<Symb<S>>, S>>;
 
-impl<'s> Item<&'s str> {
+impl<'s> Scoped<&'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         Strict::new(s).next().unwrap_or(Err(Error::ExpectedInput))
     }
 }
 
-impl Item<String> {
+impl Scoped<String> {
     pub fn parse_lines<S: Borrow<str>>(lines: impl Iterator<Item = S>) -> Result<Self, Error> {
         Lazy::new(lines).next().unwrap_or(Err(Error::ExpectedInput))
     }

@@ -1,7 +1,7 @@
 use core::fmt::{self, Display};
 use kontroli::Symbols;
 
-pub type Command = kontroli::parse::Item<String>;
+pub type Command = kontroli::parse::Scoped<String>;
 
 #[allow(clippy::large_enum_variant)]
 /// Commands with interspersed module opening.

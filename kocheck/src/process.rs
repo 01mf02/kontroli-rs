@@ -4,7 +4,7 @@ use crate::{infer_checks, Command, Error, Event, Opt, PathRead, Stage};
 use colosseum::sync::Arena;
 use core::borrow::Borrow;
 use kontroli::error::Error as KoError;
-use kontroli::parse::Item;
+use kontroli::parse::Scoped;
 use kontroli::{symbol, GCtx, Share, Symbols};
 
 fn from_event<'s>(
@@ -19,7 +19,7 @@ fn from_event<'s>(
 }
 
 fn share<'s, S: Borrow<str> + Ord>(
-    cmd: Item<S>,
+    cmd: Scoped<S>,
     syms: &mut Symbols<'s>,
     arena: &'s Arena<symbol::Owned>,
 ) -> Result<Command<'s>, KoError> {
@@ -33,15 +33,15 @@ fn share<'s, S: Borrow<str> + Ord>(
     }
 }
 
-fn log_cmd<S: core::fmt::Display>(cmd: &Item<S>) {
+fn log_cmd<S: core::fmt::Display>(cmd: &Scoped<S>) {
     match cmd {
-        Item::Intro(id, _, _) => log::info!("Introduce symbol {}", id),
-        Item::Rules(rules) => log::info!("Add {} rules", rules.len()),
+        Scoped::Intro(id, _, _) => log::info!("Introduce symbol {}", id),
+        Scoped::Rules(rules) => log::info!("Add {} rules", rules.len()),
     }
 }
 
 /// Parse a sequence of commands from a reader.
-fn parse(r: impl std::io::Read) -> impl Iterator<Item = Result<Item<String>, Error>> {
+fn parse(r: impl std::io::Read) -> impl Iterator<Item = Result<Scoped<String>, Error>> {
     use std::io::{BufRead, BufReader};
     let lines = BufReader::new(r).lines().map(|line| line.unwrap());
     kontroli::parse::Lazy::new(lines)
