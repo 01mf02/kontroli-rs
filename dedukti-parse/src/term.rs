@@ -224,7 +224,7 @@ where
     }
 }
 
-/// The identity scoper.
+/// The identity scoper, mapping symbols to themselves.
 impl<S, V> Scope<S, V> for Symb<S> {
     fn scope(symb: Symb<S>, _: &Ctx<Self, V>) -> Self {
         symb
