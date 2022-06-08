@@ -57,6 +57,7 @@ fn check((checks, gc): Checks) -> Result<(), KoError> {
     checks.into_iter().try_for_each(|chk| Ok(chk.check(&gc)?))
 }
 
+/// Process a stream of commands.
 pub fn infer_checks<'s, I>(iter: I, opt: &Opt, gc: &mut GCtx<'s>) -> Result<(), Error>
 where
     I: Iterator<Item = Result<Command<'s>, Error>> + Send,

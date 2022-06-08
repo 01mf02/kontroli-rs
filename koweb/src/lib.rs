@@ -1,5 +1,5 @@
-use dedukti_parse::{Atom, CmdIter, Symb};
-use kocheck::{par, Error, Event, Opt};
+use dedukti_parse::{Atom, Strict, Symb};
+use kocheck::{process, Error, Event, Opt};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -25,7 +25,7 @@ struct Module<S> {
 
 fn produce(module: Module<&str>) -> impl Iterator<Item = Result<Event, Error>> + '_ {
     let head = std::iter::once(Ok(Event::Module(vec![module.name.to_string()])));
-    let commands = CmdIter::<_, Atom<Symb<String>>, String>::new(module.text)
+    let commands = Strict::<_, Atom<Symb<String>>, String>::new(module.text)
         .map(|cmd| Ok(Event::Command(cmd?.map_const(String::from))));
     head.chain(commands)
 }
@@ -33,7 +33,7 @@ fn produce(module: Module<&str>) -> impl Iterator<Item = Result<Event, Error>> +
 fn consume(iter: impl Iterator<Item = Result<Event, Error>> + Send, opt: &Opt) {
     let iter = iter.inspect(|r| r.iter().for_each(|ev| add_lambda_output(&ev.to_string())));
 
-    if let Err(e) = par::consume(iter, opt) {
+    if let Err(e) = process::consume(iter, opt) {
         add_error(&format!("Error: {:?}", e))
     }
 }

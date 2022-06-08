@@ -4,8 +4,8 @@ use crate::{infer_checks, Command, Error, Event, Opt, PathRead, Stage};
 use colosseum::sync::Arena;
 use core::borrow::Borrow;
 use kontroli::error::Error as KoError;
+use kontroli::parse::Item;
 use kontroli::{symbol, GCtx, Share, Symbols};
-use std::io::Read;
 
 fn from_event<'s>(
     event: Event,
@@ -19,7 +19,7 @@ fn from_event<'s>(
 }
 
 fn share<'s, S: Borrow<str> + Ord>(
-    cmd: kontroli::parse::Item<S>,
+    cmd: Item<S>,
     syms: &mut Symbols<'s>,
     arena: &'s Arena<symbol::Owned>,
 ) -> Result<Command<'s>, KoError> {
@@ -33,11 +33,18 @@ fn share<'s, S: Borrow<str> + Ord>(
     }
 }
 
-fn parse(r: impl Read) -> impl Iterator<Item = Result<kontroli::parse::Item<String>, Error>> {
+fn log_cmd<S: core::fmt::Display>(cmd: &Item<S>) {
+    match cmd {
+        Item::Intro(id, _, _) => log::info!("Introduce symbol {}", id),
+        Item::Rules(rules) => log::info!("Add {} rules", rules.len()),
+    }
+}
+
+fn parse(r: impl std::io::Read) -> impl Iterator<Item = Result<Item<String>, Error>> {
     use std::io::{BufRead, BufReader};
     let lines = BufReader::new(r).lines().map(|line| line.unwrap());
     kontroli::parse::Lazy::new(lines)
-        .inspect(|cmd| cmd.iter().for_each(crate::log_cmd))
+        .inspect(|cmd| cmd.iter().for_each(log_cmd))
         .map(|cmd| cmd.map_err(Error::Parse))
 }
 
