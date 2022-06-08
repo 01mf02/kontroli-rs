@@ -40,6 +40,7 @@ fn log_cmd<S: core::fmt::Display>(cmd: &Item<S>) {
     }
 }
 
+/// Parse a sequence of commands from a reader.
 fn parse(r: impl std::io::Read) -> impl Iterator<Item = Result<Item<String>, Error>> {
     use std::io::{BufRead, BufReader};
     let lines = BufReader::new(r).lines().map(|line| line.unwrap());
@@ -48,6 +49,10 @@ fn parse(r: impl std::io::Read) -> impl Iterator<Item = Result<Item<String>, Err
         .map(|cmd| cmd.map_err(Error::Parse))
 }
 
+/// Process all given input files.
+///
+/// This should be functionally equivalent to
+/// [consuming](consume) all events [produced](produce) from the input files.
 pub fn run(opt: &Opt) -> Result<(), Error> {
     let arena: Arena<symbol::Owned> = Arena::new();
     let mut syms: Symbols = Symbols::new();
@@ -55,7 +60,7 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
 
     gc.eta = opt.eta;
 
-    for file in opt.files.iter() {
+    for file in &opt.files {
         let file = PathRead::try_from(file)?;
         syms.set_path(file.path);
 
@@ -68,11 +73,12 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn produce<F, E>(opt: &Opt, send: F) -> Result<(), Error>
+/// Produce a stream of events from a sequence of input files.
+pub fn produce<F, E>(files: &[std::path::PathBuf], send: F) -> Result<(), Error>
 where
     F: Fn(Result<Event, Error>) -> Result<(), E>,
 {
-    for file in opt.files.iter() {
+    for file in files {
         let file = PathRead::try_from(file)?;
 
         let head = core::iter::once(Ok(Event::Module(file.path)));
@@ -87,6 +93,7 @@ where
     Ok(())
 }
 
+/// Consume a stream of events by processing them one by one.
 pub fn consume<I>(iter: I, opt: &Opt) -> Result<(), Error>
 where
     I: Iterator<Item = Result<Event, Error>> + Send,

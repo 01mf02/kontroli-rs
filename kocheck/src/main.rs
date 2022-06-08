@@ -34,7 +34,7 @@ fn main() -> Result<(), Error> {
             let optr = opt.clone();
             let consume = std::thread::spawn(move || process::consume(receiver.into_iter(), &optr));
 
-            process::produce(&opt, |event| sender.send(event))?;
+            process::produce(&opt.files, |event| sender.send(event))?;
 
             // signalise that we are done sending precommands
             // (otherwise the consumer will eventually wait forever)
