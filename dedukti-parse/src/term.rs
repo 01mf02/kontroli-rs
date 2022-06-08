@@ -1,13 +1,21 @@
+//! Terms of the lambda-Pi calculus.
+
 use crate::{Symb, Token};
 use alloc::{boxed::Box, vec::Vec};
 use core::borrow::Borrow;
 use core::fmt::{self, Display};
 
+/// A term is an application of terms to an application head.
 pub type Term<A, V> = App<AppH<A, V>>;
 
 /// Application of applications to a head.
 #[derive(Clone, Debug)]
-pub struct App<H>(pub H, pub Vec<Self>);
+pub struct App<H> {
+    /// head of the application
+    pub head: H,
+    /// arguments applied to the head (which are again applications)
+    pub args: Vec<Self>,
+}
 
 /// Head of an application.
 #[derive(Clone, Debug)]
@@ -23,19 +31,22 @@ pub enum AppH<A, V> {
 /// Term without subterms.
 #[derive(Clone, Debug)]
 pub enum Atom<C> {
+    /// constant
     Const(C),
+    /// variable (de Bruijn index)
     Var(usize),
+    /// "Type"
     Type,
 }
 
 impl<H: Display> Display for App<H> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if !self.1.is_empty() {
+        if !self.args.is_empty() {
             write!(f, "(")?;
         }
-        self.0.fmt(f)?;
-        self.1.iter().try_for_each(|a| write!(f, " {}", a))?;
-        if !self.1.is_empty() {
+        self.head.fmt(f)?;
+        self.args.iter().try_for_each(|a| write!(f, " {}", a))?;
+        if !self.args.is_empty() {
             write!(f, ")")?;
         }
         Ok(())
@@ -64,6 +75,7 @@ impl<A: Display, V: Display> Display for AppH<A, V> {
     }
 }
 
+/// Parse error.
 #[derive(Debug, PartialEq)]
 pub enum Error {
     ExpectedIdentOrLPar,
@@ -72,12 +84,13 @@ pub enum Error {
     UnclosedLPar,
 }
 
-pub type Result<T> = core::result::Result<T, Error>;
+type Result<T> = core::result::Result<T, Error>;
 
 impl<H> App<H> {
     /// Create an application with a head and no applied arguments.
     pub fn new(head: H) -> Self {
-        Self(head, Vec::new())
+        let args = Vec::new();
+        Self { head, args }
     }
 }
 
@@ -132,15 +145,18 @@ enum Cont<A, V> {
     LPar(LPar<A, V>),
 }
 
+/// Context in which a term is parsed.
 #[derive(Debug)]
 pub struct Ctx<A, V> {
     /// variables that were bound outside the term
     bound: Vec<V>,
+    /// open constructs around the term
     stack: Vec<Cont<A, V>>,
 }
 
 impl<A, V> Ctx<A, V> {
-    pub fn bound_mut(&mut self) -> &mut Vec<V> {
+    /// Return the bound variables for mutation.
+    pub(crate) fn bound_mut(&mut self) -> &mut Vec<V> {
         &mut self.bound
     }
 
@@ -156,7 +172,7 @@ impl<A, V> Ctx<A, V> {
     /// removing them from the stack.
     /// However, when we reduce the stack, we need to obtain the variables,
     /// and this is quite error-prone and ugly.
-    pub fn find<S: Eq + ?Sized>(&self, s: &S) -> Option<usize>
+    fn find<S: Eq + ?Sized>(&self, s: &S) -> Option<usize>
     where
         V: Borrow<S>,
     {
@@ -242,6 +258,7 @@ impl<A, V> Term<A, V> {
     }
 }
 
+/// Should I stay or should I go?
 enum Loop<T> {
     Return(T),
     Continue,
@@ -272,7 +289,7 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
         }
     }
 
-    pub fn init<I>(ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<(Self, OTok<S>)>
+    fn init<I>(ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<(Self, OTok<S>)>
     where
         I: Iterator<Item = Token<S>>,
     {
@@ -337,7 +354,7 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
                 tok @ (None | Some(Token::Comment(_))) => {
                     return Ok(Loop::Return((State::ATerm(x, app), tok)))
                 }
-                Some(Token::Symb(s)) => app.1.push(A::go(s, ctx)),
+                Some(Token::Symb(s)) => app.args.push(A::go(s, ctx)),
                 Some(Token::Arrow) => {
                     ctx.stack.push(Cont::Prod(x, app));
                     return Ok(Loop::Continue);
@@ -361,7 +378,7 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
                         app = match lpar.app {
                             None => tm,
                             Some(mut app) => {
-                                app.1.push(tm);
+                                app.args.push(tm);
                                 app
                             }
                         }
@@ -374,8 +391,14 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
     }
 }
 
+#[cfg(test)]
 impl<A, V> Term<A, V> {
-    pub fn parse<S: Into<V>, I>(ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<(Self, Token<S>)>
+    /// Parse a term from a stream of tokens and put it into context.
+    ///
+    /// The context is mutated during parsing.
+    /// If this function returns `Ok(..)`, then
+    /// `ctx` should have the same value as before calling this function.
+    fn parse<S: Into<V>, I>(ctx: &mut Ctx<A, V>, iter: &mut I) -> Result<(Self, Token<S>)>
     where
         I: Iterator<Item = Token<S>>,
         A: Scope<S, V>,
@@ -389,8 +412,10 @@ impl<A, V> Term<A, V> {
     }
 }
 
+#[cfg(test)]
 impl<'s> Term<Atom<Symb<&'s str>>, &'s str> {
-    pub fn parse_str(s: &'s str) -> Result<Self> {
+    /// Parse a scoped term from a string.
+    fn parse_str(s: &'s str) -> Result<Self> {
         use logos::Logos;
         let mut ctx = Ctx::default();
         let mut iter = Token::lexer(s).chain(core::iter::once(Token::Dot));

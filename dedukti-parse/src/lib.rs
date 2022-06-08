@@ -15,15 +15,15 @@
 
 extern crate alloc;
 
-pub mod cmd;
-pub mod lex;
-pub mod symb;
+mod cmd;
+mod lex;
+mod symb;
 pub mod term;
 
 pub use cmd::{Command, Intro, Rule};
 pub use lex::Token;
 pub use symb::Symb;
-pub use term::{Atom, Scope, Term};
+pub use term::{Scope, Term};
 
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -31,6 +31,7 @@ use core::borrow::Borrow;
 use logos::Logos;
 use term::Ctx;
 
+/// Parse error.
 #[derive(Debug, PartialEq)]
 pub enum Error {
     Command(cmd::Error),
@@ -38,6 +39,7 @@ pub enum Error {
     ExpectedInput,
 }
 
+/// Strict parser.
 pub struct Strict<'s, S, A, V>
 where
     Token<S>: Logos<'s>,
@@ -46,6 +48,7 @@ where
     ctx: Ctx<A, V>,
 }
 
+/// Lazy parser.
 pub struct Lazy<I, A, V> {
     lines: I,
     open_comments: usize,
@@ -56,6 +59,7 @@ pub struct Lazy<I, A, V> {
 }
 
 impl<'s, A, V> Strict<'s, &'s str, A, V> {
+    /// Initialise the parser with the content of a Dedukti theory.
     pub fn new(s: &'s str) -> Self {
         Self {
             lexer: Token::lexer(s),
@@ -65,6 +69,7 @@ impl<'s, A, V> Strict<'s, &'s str, A, V> {
 }
 
 impl<I, A, V> Lazy<I, A, V> {
+    /// Initialise the parser with an iterator over lines of a Dedukti theory.
     pub fn new(lines: I) -> Self {
         Self {
             lines,
@@ -225,14 +230,17 @@ where
     }
 }
 
+/// A command containing scoped terms.
 pub type Scoped<S> = Command<S, S, Term<term::Atom<Symb<S>>, S>>;
 
+#[cfg(test)]
 impl<'s> Scoped<&'s str> {
     pub fn parse_str(s: &'s str) -> Result<Self, Error> {
         Strict::new(s).next().unwrap_or(Err(Error::ExpectedInput))
     }
 }
 
+#[cfg(test)]
 impl Scoped<String> {
     pub fn parse_lines<S: Borrow<str>>(lines: impl Iterator<Item = S>) -> Result<Self, Error> {
         Lazy::new(lines).next().unwrap_or(Err(Error::ExpectedInput))

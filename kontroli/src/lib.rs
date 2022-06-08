@@ -36,26 +36,26 @@
 //! # use kontroli::{Command, Error, Share, Symbols};
 //! # use kontroli::kernel::{self, GCtx};
 //! # use colosseum::unsync::Arena;
-//! let cmds = [
-//!     // declarations
-//!     "prop : Type.",
-//!     "imp : prop -> prop -> prop.",
+//! let cmds = r#"
+//!     (; declarations ;)
+//!     prop : Type.
+//!     imp : prop -> prop -> prop.
 //!
-//!     // definition with a rewrite rule
-//!     "def proof : prop -> Type.",
-//!     "[x: prop, y: prop] proof (imp x y) --> proof x -> proof y.",
+//!     (; definition with a rewrite rule ;)
+//!     def proof : prop -> Type.
+//!     [x: prop, y: prop] proof (imp x y) --> proof x -> proof y.
 //!
-//!     // theorem
-//!     r"thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p.",
-//! ];
+//!     (; theorem ;)
+//!     thm imp_refl (x : prop) : proof (imp x x) := p : proof x => p.
+//! "#;
 //!
 //! let arena = Arena::new();
 //! let mut syms = Symbols::new();
 //! let mut gc = GCtx::new();
 //!
-//! for c in cmds.iter() {
-//!     // parse and share command in one go
-//!     let cmd = kontroli::parse::Command::parse_str(c).unwrap().share(&syms)?;
+//! for cmd in kontroli::parse::Strict::new(cmds) {
+//!     // match constants in the command to previously introduced constants
+//!     let cmd = cmd.unwrap().share(&syms)?;
 //!     match cmd {
 //!         // introduction of a new name
 //!         Command::Intro(id, it) => {
@@ -71,7 +71,7 @@
 //!             }
 //!             gc.insert(sym, typing, rewritable)?
 //!         }
-//!         // addition of rewrite rules
+//!         // addition of rewrite rules (without typechecking them!)
 //!         Command::Rules(rules) => rules.into_iter().try_for_each(|r| gc.add_rule(r))?,
 //!     }
 //! }

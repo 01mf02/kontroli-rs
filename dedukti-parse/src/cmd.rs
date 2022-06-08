@@ -2,6 +2,7 @@ use crate::Token;
 use alloc::vec::Vec;
 use core::fmt::{self, Display};
 
+/// Command of a Dedukti theory.
 #[derive(Clone, Debug)]
 pub enum Command<C, V, Tm> {
     // Introduce a new symbol with arguments
@@ -10,6 +11,7 @@ pub enum Command<C, V, Tm> {
     Rules(Vec<Rule<V, Tm>>),
 }
 
+/// A command that introduces a new constant.
 #[derive(Clone, Debug)]
 pub enum Intro<Ty, Tm = Ty> {
     Definition(Option<Ty>, Option<Tm>),
@@ -17,6 +19,7 @@ pub enum Intro<Ty, Tm = Ty> {
     Declaration(Ty),
 }
 
+/// A command that introduces a set of rewrite rules.
 #[derive(Clone, Debug)]
 pub struct Rule<V, Tm> {
     /// context (bound variables)
@@ -112,6 +115,7 @@ impl<V, Tm> RuleCtx<V, Tm> {
     }
 }
 
+/// Error occurring during the parsing of a command.
 #[derive(Debug, PartialEq)]
 pub enum Error {
     ExpectedColon,
@@ -128,6 +132,7 @@ pub enum Error {
 
 type Result<T> = core::result::Result<T, Error>;
 
+/// State of the command parser.
 #[derive(Debug)]
 pub(crate) enum State<C, V, Tm> {
     /// nothing

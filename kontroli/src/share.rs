@@ -70,11 +70,11 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, LTerm<'s>> for AppH<Atom<Symb<R>>, R> {
 
 impl<'s, R: Borrow<str> + Ord> Share<'s, LTerm<'s>> for PTerm<R> {
     fn share(self, syms: &Symbols<'s>) -> Result<LTerm<'s>> {
-        let head = self.0.share(syms)?;
-        if self.1.is_empty() {
+        let head = self.head.share(syms)?;
+        if self.args.is_empty() {
             Ok(head)
         } else {
-            let tail: Result<_> = self.1.into_iter().map(|tm| tm.share(syms)).collect();
+            let tail: Result<_> = self.args.into_iter().map(|tm| tm.share(syms)).collect();
             Ok(LTerm::Comb(Comb::Appl(head, tail?).into()))
         }
     }
