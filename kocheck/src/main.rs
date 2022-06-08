@@ -1,36 +1,11 @@
 //! A typechecker for the lambda-Pi calculus modulo rewriting.
 
 use clap::Parser;
-use kocheck::{par, Error, Event, Opt, PathRead};
+use kocheck::{par, Error, Opt};
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
-fn produce<F, E>(opt: &Opt, send: F) -> Result<(), Error>
-where
-    F: Fn(Result<Event, Error>) -> Result<(), E>,
-{
-    for file in opt.files.iter() {
-        let file = PathRead::try_from(file)?;
-
-        use std::io::{BufRead, BufReader};
-        let lines = BufReader::new(file.read).lines().map(|line| line.unwrap());
-        let cmds = kontroli::parse::Lazy::new(lines)
-            .inspect(|cmd| cmd.iter().for_each(kocheck::log_cmd))
-            .map(|cmd| cmd.map_err(Error::Parse));
-
-        let head = core::iter::once(Ok(Event::Module(file.path)));
-        let tail = cmds.map(|cmd| cmd.map(Event::Command));
-
-        // sending fails prematurely if consumption fails
-        // in that case, handle the error after this function exits
-        if head.chain(tail).try_for_each(&send).is_err() {
-            return Ok(());
-        }
-    }
-    Ok(())
-}
 
 fn main() -> Result<(), Error> {
     use env_logger::Env;
@@ -59,7 +34,7 @@ fn main() -> Result<(), Error> {
             let optr = opt.clone();
             let consumer = std::thread::spawn(move || par::consume(receiver.into_iter(), &optr));
 
-            produce(&opt, |event| sender.send(event))?;
+            par::produce(&opt, |event| sender.send(event))?;
 
             // signalise that we are done sending precommands
             // (otherwise the consumer will eventually wait forever)
