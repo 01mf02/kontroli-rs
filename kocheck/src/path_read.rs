@@ -4,7 +4,9 @@ use std::path::{self, Path, PathBuf};
 
 /// Combination of a module path and a corresponding reader.
 pub struct PathRead {
+    /// Module path, for example `["a", "b", "c"]` for the file path `"a/b/c.dk"`
     pub path: Vec<String>,
+    /// Reader for the content of the module
     pub read: Box<dyn Read + Send>,
 }
 
@@ -16,6 +18,7 @@ fn is_dash(file: &Path) -> bool {
     }
 }
 
+/// Establish the module path for a given file and open it for reading.
 impl core::convert::TryFrom<&PathBuf> for PathRead {
     type Error = Error;
 
