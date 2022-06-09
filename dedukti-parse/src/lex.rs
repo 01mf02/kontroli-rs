@@ -8,54 +8,68 @@ use logos::{Filter, Lexer, Logos};
 #[derive(Logos, Debug, PartialEq, Eq)]
 #[logos(type S = &str)]
 pub enum Token<S> {
+    /// definition
     #[token("def")]
     Def,
 
+    /// theorem
     #[token("thm")]
     Thm,
 
+    /// opening bracket
     #[token("[")]
     LBrk,
 
+    /// closing bracket
     #[token("]")]
     RBrk,
 
+    /// opening parenthesis
     #[token("(")]
     LPar,
 
+    /// closing parenthesis
     #[token(")")]
     RPar,
 
+    /// has type
     #[token(":")]
     Colon,
 
+    /// is defined as
     #[token(":=")]
     ColonEq,
 
+    /// product
     #[token("->")]
     Arrow,
 
+    /// abstraction
     #[token("=>")]
     FatArrow,
 
+    /// rewrites to
     #[token("-->")]
     LongArrow,
 
+    /// separate variables in rewrite rule contexts
     #[token(",")]
     Comma,
 
+    /// terminate command
     #[token(".")]
     Dot,
 
+    /// symbol
     #[regex("[a-zA-Z0-9_!?][a-zA-Z0-9_!?']*", symb)]
     #[token("{|", moustache)]
     Symb(Symb<S>),
 
+    /// unclosed comments (the number indicates how many comments are still open)
     #[token("(;", comment1)]
     Comment(usize),
 
-    // Logos requires one token variant to handle errors,
-    // it can be named anything you wish.
+    /// unrecognised token
     #[regex(r"[ \t\n\f]+", logos::skip)]
     #[error]
     Error,
