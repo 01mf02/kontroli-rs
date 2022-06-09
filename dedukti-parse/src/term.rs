@@ -224,10 +224,10 @@ where
     }
 }
 
-/// The identity scoper, mapping symbols to themselves.
-impl<S, V> Scope<S, V> for Symb<S> {
+/// The trivial scoper, mapping symbols to something they can be trivially converted to (including themselves).
+impl<S: Into<S2>, S2, V> Scope<S, V> for Symb<S2> {
     fn scope(symb: Symb<S>, _: &Ctx<Self, V>) -> Self {
-        symb
+        symb.map(S::into)
     }
 }
 
