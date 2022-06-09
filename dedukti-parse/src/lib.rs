@@ -1,14 +1,74 @@
 //! Parser for the Dedukti file format
 //!
-//! Example usage:
+//! This crate serves to parse Dedukti theory files.
+//! The syntax of Dedukti theories is documented
+//! [here](https://github.com/Deducteam/Dedukti/blob/aff4500e3c556f32569a016424a37230c44adf05/syntax.bnf).
+//!
+//! One of the main targets of this crate is speed:
+//! An evaluation of an older version of this crate in the article
+//! [Safe, Fast, Concurrent Proof Checking for the lambda-Pi Calculus Modulo Rewriting](https://doi.org/10.1145/3497775.3503683)
+//! showed that this parser can be more than 4x faster than the parser in Dedukti.
+//! This is relevant because the runtime of parsing
+//! can make up for nearly half the total runtime of Dedukti.
+//!
+//! This crate currently does not support the complete Dedukti syntax;
+//! in particular, commands starting with `#`, such as `#EVAL` and `#REQUIRE` are not supported.
+//! Still, the supported subset of the syntax suffices to parse many large proof corpora,
+//! such as those produced from Matita, HOL Light, and Isabelle/HOL.
+//!
+//! # Usage
+//!
+//! This crate supports several modes of operation:
+//!
+//! * [Strict] parsing: The whole content of the file has to be in memory *before* parsing.
+//! * [Lazy] parsing: The file is read bit by bit *during* parsing.
+//!
+//! Strict parsing of a whole file is faster than lazy parsing; however, it
+//! consumes more memory than lazy parsing and takes longer to get the first command.
+//!
+//! One important operation that is performed during parsing is [*scoping*](Scope).
+//! This operation decides how to store symbols occurring in a term.
+//! For example, when we have a term `x => multiply x x`,
+//! the two (variable) arguments of `multiply` can be either
+//! a) stored as strings (just like the constant `multiply`) or
+//! b) stored as de Bruijn indices (natural numbers that denote the binder `x =>`).
+//!
+//! Option a) can use `String` and `&str` as string type.
+//! However, `&str` can be only used in conjunction with strict parsing, because
+//! lazy parsing "forgets" the input string and therefore
+//! does not allow references into the input string.
+//! Option b) can be used regardless of strict or lazy parsing.
+//!
+//! # Example
 //!
 //! ~~~
-//! use dedukti_parse::{Command, Error, Strict, Symb};
+//! use dedukti_parse::{term, Command, Error, Lazy, Scoped, Strict, Symb};
 //!
-//! let cmds = "prop: Type. def proof : prop -> Type.";
-//! let cmds = Strict::<_, Symb<&str>, &str>::new(&cmds);
-//! let cmds: Result<Vec<_>, _> = cmds.collect();
-//! assert_eq!(cmds?.len(), 2);
+//! let cmds = r#"
+//!     prop: Type.
+//!     def proof : prop -> Type.
+//! "#;
+//!
+//! // strict parsing with `&str` variables
+//! let parse = Strict::<_, Symb<&str>, &str>::new(&cmds);
+//! let parse: Result<Vec<_>, _> = parse.collect();
+//! assert_eq!(parse?.len(), 2);
+//!
+//! // strict parsing with de Bruijn variables
+//! let parse = Strict::<_, term::Atom<Symb<String>>, String>::new(cmds);
+//! let parse: Result<Vec<_>, _> = parse.collect();
+//! assert_eq!(parse?.len(), 2);
+//!
+//! // lazy parsing with `String` variables
+//! let parse = Lazy::<_, Symb<String>, String>::new(cmds.lines());
+//! let parse: Result<Vec<_>, _> = parse.collect();
+//! assert_eq!(parse?.len(), 2);
+//!
+//! // lazy parsing with de Bruijn variables
+//! let parse = Lazy::<_, term::Atom<Symb<String>>, String>::new(cmds.lines());
+//! let parse: Result<Vec<_>, _> = parse.collect();
+//! assert_eq!(parse?.len(), 2);
+//!
 //! # Ok::<_, Error>(())
 //! ~~~
 #![no_std]
