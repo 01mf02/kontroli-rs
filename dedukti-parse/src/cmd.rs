@@ -40,6 +40,34 @@ impl<C, V, Tm> Command<C, V, Tm> {
     }
 }
 
+impl<Ty, Tm> Intro<Ty, Tm> {
+    /// Only constants introduced by definitions are rewritable.
+    pub fn rewritable(&self) -> bool {
+        match self {
+            Self::Definition(..) => true,
+            Self::Declaration(_) | Self::Theorem(..) => false,
+        }
+    }
+
+    /// Apply a function to the type of the introduced constant, if given.
+    pub fn map_type<U>(self, f: impl FnOnce(Ty) -> U) -> Intro<U, Tm> {
+        match self {
+            Self::Definition(ty, tm) => Intro::Definition(ty.map(f), tm),
+            Self::Theorem(ty, tm) => Intro::Theorem(f(ty), tm),
+            Self::Declaration(ty) => Intro::Declaration(f(ty)),
+        }
+    }
+
+    /// Apply a function to the term of the introduced constant, if given.
+    pub fn map_term<U>(self, f: impl FnOnce(Tm) -> U) -> Intro<Ty, U> {
+        match self {
+            Self::Definition(ty, tm) => Intro::Definition(ty, tm.map(f)),
+            Self::Theorem(ty, tm) => Intro::Theorem(ty, f(tm)),
+            Self::Declaration(ty) => Intro::Declaration(ty),
+        }
+    }
+}
+
 impl<C: Display, V: Display, Tm: Display> Display for Command<C, V, Tm> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
