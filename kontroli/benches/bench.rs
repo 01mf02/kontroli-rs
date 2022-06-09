@@ -2,7 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use kontroli::kernel::{self, GCtx};
 use kontroli::{Command, Error, Share, Symbols};
 
-type Commands<'s> = Vec<kontroli::parse::Item<&'s str>>;
+type Commands<'s> = Vec<kontroli::parse::Scoped<&'s str>>;
 
 fn check<'s>(cmds: Commands<'s>) -> Result<(), Error> {
     use colosseum::unsync::Arena;
