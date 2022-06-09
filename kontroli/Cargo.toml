@@ -1,6 +1,6 @@
 [package]
 name = "kontroli"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2021"
 description = "Type checking for the lambda-Pi calculus modulo rewriting"
@@ -11,7 +11,7 @@ keywords = ["verification", "dependent-types", "type-checking", "rewriting", "de
 categories = ["concurrency", "no-std", "science"]
 
 [dependencies]
-dedukti-parse = { version = "0.2", path = "../dedukti-parse" }
+dedukti-parse = { version = "0.3.1", path = "../dedukti-parse" }
 fnv = "1.0.7"
 im = "15.1.0"
 lazy-st = "0.2"

@@ -1,6 +1,6 @@
 [package]
 name = "kocheck"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2021"
 description = "Type checker for the lambda-Pi calculus modulo rewriting"
@@ -19,7 +19,7 @@ clap = { version = "3.1.18", features = ["derive"] }
 colosseum = "0.2.2"
 flume = { version = "0.10.12", default-features = false }
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
-kontroli = { version = "0.3", path = "../kontroli" }
+kontroli = { version = "0.4.0", path = "../kontroli" }
 log = "0.4.17"
 env_logger = "0.9.0"
 rayon = "1.5.3"
