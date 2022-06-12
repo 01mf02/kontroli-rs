@@ -1,5 +1,10 @@
 # Kontroli
 
+![Build status](https://github.com/01mf02/kontroli-rs/workflows/Rust/badge.svg)
+[![Crates.io](https://img.shields.io/crates/v/kontroli.svg)](https://crates.io/crates/kontroli)
+[![Documentation](https://docs.rs/kontroli/badge.svg)](https://docs.rs/kontroli)
+[![Rust 1.56+](https://img.shields.io/badge/rust-1.56+-orange.svg)](https://www.rust-lang.org)
+
 Kontroli (Esperanto for *verify*) is
 an alternative implementation of the logical framework [Dedukti],
 concentrating on the verification of proofs.
