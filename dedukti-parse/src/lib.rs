@@ -18,26 +18,45 @@
 //!
 //! # Usage
 //!
+//! ## Lazy / Strict
+//!
 //! This crate supports several modes of operation:
 //!
-//! * [Strict] parsing: The whole content of the file has to be in memory *before* parsing.
+//! * [Strict] parsing: The whole content of the file is in memory *before* parsing.
 //! * [Lazy] parsing: The file is read bit by bit *during* parsing.
 //!
 //! Strict parsing of a whole file is faster than lazy parsing; however, it
 //! consumes more memory than lazy parsing and takes longer to get the first command.
 //!
+//! ## Scoping
+//!
 //! One important operation that is performed during parsing is [*scoping*](Scope).
 //! This operation decides how to store symbols occurring in a term.
-//! For example, when we have a term `x => multiply x x`,
-//! the two (variable) arguments of `multiply` can be either
-//! a) stored as strings (just like the constant `multiply`) or
-//! b) stored as de Bruijn indices (natural numbers that denote the binder `x =>`).
+//! There are currently two options:
 //!
-//! Option a) can use `String` and `&str` as string type.
+//! 1. All symbols are unconditionally stored using strings.
+//! 2. Symbols are distinguished into
+//!    [*atoms*](term::Atom) that are either constants and variables, where
+//!    constants are saved using strings and variables as de Bruijn indices
+//!    (natural numbers that refer to the position of the binder of the variable).
+//!
+//! The first option can use `String` and `&str` as string type.
 //! However, `&str` can be only used in conjunction with strict parsing, because
 //! lazy parsing "forgets" the input string and therefore
 //! does not allow references into the input string.
-//! Option b) can be used regardless of strict or lazy parsing.
+//! The second option can be used regardless of strict or lazy parsing.
+//!
+//! ## When to use what?
+//!
+//! * Use lazy parsing if you
+//!   want to wait as little as possible to get each command or
+//!   minimise your memory consumption.
+//! * Use strict parsing if you
+//!   parse a whole file and wish to reduce the total runtime of parsing.
+//! * Store symbols unconditionally using strings if
+//!   you do not care whether a symbol is a variable or not.
+//!   In that case, when doing strict parsing,
+//!   prefer `&str` over `String` as string type to reduce `String` allocations.
 //!
 //! # Example
 //!
@@ -49,22 +68,22 @@
 //!     def proof : prop -> Type.
 //! "#;
 //!
-//! // strict parsing with `&str` variables
+//! // strict parsing with `&str` symbols
 //! let parse = Strict::<_, Symb<&str>, &str>::new(&cmds);
 //! let parse: Result<Vec<_>, _> = parse.collect();
 //! assert_eq!(parse?.len(), 2);
 //!
-//! // strict parsing with de Bruijn variables
+//! // strict parsing with atoms
 //! let parse = Strict::<_, term::Atom<Symb<String>>, String>::new(cmds);
 //! let parse: Result<Vec<_>, _> = parse.collect();
 //! assert_eq!(parse?.len(), 2);
 //!
-//! // lazy parsing with `String` variables
+//! // lazy parsing with `String` symbols
 //! let parse = Lazy::<_, Symb<String>, String>::new(cmds.lines());
 //! let parse: Result<Vec<_>, _> = parse.collect();
 //! assert_eq!(parse?.len(), 2);
 //!
-//! // lazy parsing with de Bruijn variables
+//! // lazy parsing with atoms
 //! let parse = Lazy::<_, term::Atom<Symb<String>>, String>::new(cmds.lines());
 //! let parse: Result<Vec<_>, _> = parse.collect();
 //! assert_eq!(parse?.len(), 2);
