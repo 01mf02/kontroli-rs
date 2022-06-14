@@ -14,9 +14,7 @@ pub struct Opt {
     pub eta: bool,
 
     /// Perform only operations until (excluding) the given stage.
-    ///
-    /// Possible values for STAGE are: share, infer, check.
-    #[clap(long, value_name = "STAGE")]
+    #[clap(long, value_name = "STAGE", arg_enum)]
     pub omit: Option<Stage>,
 
     /// Parse N commands in advance (∞ if argument omitted)
