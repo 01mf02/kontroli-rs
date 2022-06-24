@@ -1,4 +1,3 @@
-use dedukti_parse::{Atom, Strict, Symb};
 use kocheck::{process, Error, Event, Opt};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -24,8 +23,9 @@ struct Module<S> {
 }
 
 fn produce(module: Module<&str>) -> impl Iterator<Item = Result<Event, Error>> + '_ {
+    use dedukti_parse::{term, Strict, Symb};
     let head = std::iter::once(Ok(Event::Module(vec![module.name.to_string()])));
-    let commands = Strict::<_, Atom<Symb<String>>, String>::new(module.text)
+    let commands = Strict::<_, term::Atom<Symb<String>>, String>::new(module.text)
         .map(|cmd| Ok(Event::Command(cmd?.map_const(String::from))));
     head.chain(commands)
 }
