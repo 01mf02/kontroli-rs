@@ -5,6 +5,8 @@ version = "0.1.0"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>", "Joshua Caumont <joshua.caumont@gmail.com>"]
 categories = ["wasm"]
 readme = "README.md"
+repository = "https://github.com/01mf02/kontroli-rs"
+license = "GPL-3.0-only"
 edition = "2018"
 
 [lib]
