@@ -5,7 +5,6 @@ mod infer_check;
 mod reduce;
 mod sterm;
 mod subst;
-mod tests;
 
 use crate::share::{Intro, Pattern, Rule, TopPattern};
 use sterm::{LTerm, STerm};
