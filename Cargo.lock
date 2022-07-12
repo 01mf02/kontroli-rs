@@ -335,6 +335,7 @@ dependencies = [
 name = "dedukti-parse"
 version = "0.3.1"
 dependencies = [
+ "clap 3.1.18",
  "logos",
 ]
 
