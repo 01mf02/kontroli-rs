@@ -23,10 +23,7 @@ pub struct Opt {
     /// Use string references when parsing strictly.
     #[clap(long)]
     share: bool,
-    /// Print only a dot for each read command.
-    ///
-    /// This is useful to protocol when commands were read,
-    /// for example with `ts -s %.s`.
+    /// Print nothing.
     #[clap(long)]
     quiet: bool,
 
@@ -41,18 +38,28 @@ fn no_space_before<S>(token: &Token<S>) -> bool {
     matches!(token, Token::RBrk | Token::RPar | Token::Comma | Token::Dot)
 }
 
-fn print_tokens<S: Display>(iter: impl Iterator<Item = Token<S>>) {
+fn print_token<S: Display>(token: Token<S>, space: &mut bool) {
+    if *space && !no_space_before(&token) {
+        print!(" ");
+    }
+    print!("{}", token);
+    *space = !no_space_after(&token);
+
+    if matches!(token, Token::Dot) {
+        println!("");
+    }
+}
+
+fn print_tokens<S: Display>(iter: impl Iterator<Item = Token<S>>, opt: &Opt) {
     let mut space = false;
 
     for token in iter {
-        if space && !no_space_before(&token) {
-            print!(" ");
-        }
-        print!("{}", token);
-        space = !no_space_after(&token);
-
         if matches!(token, Token::Dot) {
-            println!("");
+            log::info!("command lexed");
+        }
+
+        if !opt.quiet {
+            print_token(token, &mut space)
         }
     }
 }
@@ -63,14 +70,16 @@ fn print_cmds<C: Display, V: Display, Tm: Display>(
 ) {
     for cmd in iter {
         let cmd = cmd.unwrap();
+        log::info!("command parsed");
         if !opt.quiet {
             print!("{cmd}")
         }
-        println!(".");
     }
 }
 
 fn main() -> io::Result<()> {
+    env_logger::Builder::from_env("LOG").init();
+
     let opt = Opt::parse();
 
     for path in &opt.files {
@@ -107,16 +116,7 @@ fn main() -> io::Result<()> {
         } else {
             let file = std::fs::read_to_string(path)?;
             use logos::Logos;
-            let lexer = Token::lexer(&file);
-            if opt.quiet {
-                for token in lexer {
-                    if token == Token::Dot {
-                        println!(".")
-                    }
-                }
-            } else {
-                print_tokens(lexer)
-            }
+            print_tokens(Token::lexer(&file), &opt)
         };
     }
     Ok(())
