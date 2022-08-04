@@ -17,6 +17,7 @@ enum Parse {
 }
 
 #[derive(Clone, Debug, Parser)]
+#[clap(version)]
 pub struct Opt {
     /// Parse instead of only lex
     #[clap(long, value_name = "MODE", arg_enum)]
