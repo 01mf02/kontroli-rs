@@ -8,6 +8,11 @@ members = [
 ]
 
 default-members = [
+    # for tests
+    "dedukti-parse",
+    "kontroli",
+
+    # for the main binary
     "kocheck",
 ]
 
