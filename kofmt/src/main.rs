@@ -6,6 +6,10 @@ use std::fmt::{Debug, Display};
 use std::io::{self};
 use std::path::PathBuf;
 
+#[cfg(feature = "mimalloc")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[derive(Clone, Debug, PartialEq, Eq, ArgEnum)]
 enum Parse {
     Strict,

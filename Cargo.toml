@@ -2,14 +2,12 @@
 members = [
     "dedukti-parse",
     "kontroli",
+    "kofmt",
     "kocheck",
     "koweb",
 ]
 
-# do not build koweb by default
 default-members = [
-    "dedukti-parse",
-    "kontroli",
     "kocheck",
 ]
 
