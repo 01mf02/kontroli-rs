@@ -3,6 +3,7 @@ use clap::Parser;
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, Parser)]
+#[clap(version)]
 /// A typechecker for the lambda-Pi calculus modulo rewriting
 pub struct Opt {
     /// Reduce terms modulo eta
