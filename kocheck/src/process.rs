@@ -74,9 +74,9 @@ pub fn run(opt: &Opt) -> Result<(), Error> {
 }
 
 /// Produce a stream of events from a sequence of input files.
-pub fn produce<F, E>(files: &[std::path::PathBuf], send: F) -> Result<(), Error>
+pub fn produce<F, E>(files: &[std::path::PathBuf], mut send: F) -> Result<(), Error>
 where
-    F: Fn(Result<Event, Error>) -> Result<(), E>,
+    F: FnMut(Result<Event, Error>) -> Result<(), E>,
 {
     for file in files {
         let file = PathRead::try_from(file)?;
@@ -86,7 +86,7 @@ where
 
         // sending fails prematurely if consumption fails
         // in that case, handle the error after this function exits
-        if head.chain(tail).try_for_each(&send).is_err() {
+        if head.chain(tail).try_for_each(&mut send).is_err() {
             return Ok(());
         }
     }
