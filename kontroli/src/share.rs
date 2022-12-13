@@ -80,14 +80,14 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, LTerm<'s>> for PTerm<R> {
     }
 }
 
-impl<'s> TryFrom<LTerm<'s>> for Pattern<'s> {
+impl<'s> TryFrom<&LTerm<'s>> for Pattern<'s> {
     type Error = Error;
 
-    fn try_from(tm: LTerm<'s>) -> Result<Self> {
+    fn try_from(tm: &LTerm<'s>) -> Result<Self> {
         match tm {
-            LTerm::Const(c) => Ok(Self::Symb(c, Vec::new())),
-            LTerm::Var(v) => Ok(Self::MVar(v)),
-            LTerm::Comb(comb) => match *comb {
+            LTerm::Const(c) => Ok(Self::Symb(*c, Vec::new())),
+            LTerm::Var(v) => Ok(Self::MVar(*v)),
+            LTerm::Comb(comb) => match &**comb {
                 Comb::Appl(head, args2) => match Self::try_from(head)? {
                     Self::Symb(s, mut args) => {
                         let args2 = args2.into_iter().map(Self::try_from);
@@ -115,7 +115,7 @@ impl<'s, R: Borrow<str> + Ord> Share<'s, Rule<'s>> for parse::Rule<R, PTerm<R>> 
         let ctx = ctx.collect::<Result<_>>()?;
 
         let lhs = self.lhs.share(syms)?;
-        let lhs = Pattern::try_from(lhs)?;
+        let lhs = Pattern::try_from(&lhs)?;
         let lhs = lhs.joke(joker);
         let lhs = TopPattern::try_from(lhs).map_err(|_| Error::NoTopPattern)?;
 
