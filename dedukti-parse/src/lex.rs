@@ -24,6 +24,9 @@ pub enum Token<S> {
     #[token("]")]
     RBrk,
 
+    #[token("#")]
+    Hash,
+
     /// opening parenthesis
     #[token("(")]
     LPar,
@@ -82,6 +85,7 @@ impl<S: Display> Display for Token<S> {
             Self::Thm => "thm".fmt(f),
             Self::LBrk => "[".fmt(f),
             Self::RBrk => "]".fmt(f),
+            Self::Hash => "#".fmt(f),
             Self::LPar => "(".fmt(f),
             Self::RPar => ")".fmt(f),
             Self::Colon => ":".fmt(f),

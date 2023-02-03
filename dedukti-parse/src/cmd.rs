@@ -198,6 +198,9 @@ pub(crate) enum State<C, V, Tm> {
     /// `[x1 : t1, .., xn : tn] tm -->`
     RuleR(RuleCtx<V, Tm>, Tm),
 
+    /// `#`
+    Pragma,
+
     Command(Command<C, V, Tm>),
 }
 
@@ -229,6 +232,9 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
         S: Into<C> + Into<V>,
     {
         match (self, token) {
+            (State::Pragma, Token::Dot) => Ok(State::Init),
+            (State::Pragma, _) => Ok(State::Pragma),
+
             (state, Token::Symb(s)) if s.path.is_empty() => state.apply_name(s.name),
             (_, Token::Symb(_)) => Err(Error::UnexpectedPath),
 
@@ -236,6 +242,7 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
             (State::Init, Token::Def) => Ok(State::Def),
             (State::Init, Token::Thm) => Ok(State::Thm),
             (State::Init, Token::LBrk) => Ok(State::RuleCtx(Default::default(), None)),
+            (State::Init, Token::Hash) => Ok(State::Pragma),
             (State::Init, _) => Err(Error::ExpectedCmd),
 
             // s + :
