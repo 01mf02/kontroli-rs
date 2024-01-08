@@ -15,7 +15,7 @@ rust-version = "1.56"
 default = ["mimalloc"]
 
 [dependencies]
-clap = { version = "3.1.18", features = ["derive"] }
+clap = { version = "4.0.0", features = ["derive"] }
 colosseum = "0.2.2"
 flume = { version = "0.10.12", default-features = false }
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
