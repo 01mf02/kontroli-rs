@@ -18,7 +18,7 @@ It is also a testbed for parallelising type checking.
 
 # Usage
 
-Kontroli requires at least Rust 1.56.
+Kontroli requires at least Rust 1.64.
 Installation instructions are available at <https://rustup.rs/>.
 
 To run Kontroli on output generated from Isabelle/Pure:
