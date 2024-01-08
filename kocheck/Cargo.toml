@@ -9,7 +9,7 @@ repository = "https://github.com/01mf02/kontroli-rs"
 license = "GPL-3.0-only"
 keywords = ["verification", "dependent-types", "type-checking", "rewriting", "dedukti"]
 categories = ["command-line-utilities", "science"]
-rust-version = "1.56"
+rust-version = "1.64"
 
 [features]
 default = ["mimalloc"]
