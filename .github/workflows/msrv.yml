@@ -1,0 +1,16 @@
+name: Build with MSRV (minimal supported Rust version)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Cargo.lock'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: dtolnay/rust-toolchain@1.60
+    - name: Check
+      run: cargo check
