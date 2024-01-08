@@ -11,6 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: dtolnay/rust-toolchain@1.60
+    - uses: dtolnay/rust-toolchain@1.64
     - name: Check
       run: cargo check
