@@ -1,6 +1,6 @@
 [package]
 name = "kocheck"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2021"
 description = "Type checker for the lambda-Pi calculus modulo rewriting"
