@@ -71,6 +71,11 @@ Examples of the syntax can be seen in
 [examples/nat.dk](examples/nat.dk) or
 [examples/pure.dk](examples/pure.dk).
 
+Kontroli imposes that in a term with a subterm `(t)`, `t` must be a valid term itself.
+This excludes one syntactic form allowed by Dedukti, namely `(a: A) -> b`,
+because `a: A` on its own is not a proper term.
+However, such terms can be written equivalently as `a: A -> b`.
+
 # Development
 
 A few useful commands for developing Kontroli:
