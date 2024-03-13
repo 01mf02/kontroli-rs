@@ -208,5 +208,5 @@ pub fn get_graph_rust(make_text_js: String) -> JsValue {
     info!("GRAPH : {:?}", graph);
     info!("VEC_NAME : {:?}", &vec_names);
     info!("FINAL OUTPUT SENT TO JS : {:?}", output);
-    JsValue::from_serde(&output).unwrap()
+    serde_wasm_bindgen::to_value(&output).unwrap()
 }

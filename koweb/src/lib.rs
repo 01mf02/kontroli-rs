@@ -77,7 +77,7 @@ pub async fn check_multiple(programs: JsValue, module_to_run: String, eta: bool,
     //console_log::init_with_level(log::Level::Trace);
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    let programs: Vec<Program> = programs.into_serde().unwrap();
+    let programs: Vec<Program> = serde_wasm_bindgen::from_value(programs).unwrap();
 
     let opt = Opt {
         eta,
