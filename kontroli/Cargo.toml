@@ -4,7 +4,7 @@ version = "0.4.0"
 authors = ["Michael Färber <michael.faerber@gedenkt.at>"]
 edition = "2021"
 description = "Type checking for the lambda-Pi calculus modulo rewriting"
-readme = "../README.md"
+readme = "README.md"
 repository = "https://github.com/01mf02/kontroli-rs"
 license = "GPL-3.0-only"
 keywords = ["verification", "dependent-types", "type-checking", "rewriting", "dedukti"]
@@ -14,7 +14,7 @@ categories = ["concurrency", "no-std", "science"]
 dedukti-parse = { version = "0.3.1", path = "../dedukti-parse" }
 fnv = "1.0.7"
 im = "15.1.0"
-lazy-st = "0.2"
+lazy-st = "1.0"
 log = "0.4.17"
 nested-modules = "0.2"
 
