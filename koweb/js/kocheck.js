@@ -8,15 +8,6 @@ import { add_error } from "./export.js";
 
 let program_list = [];
 
-class Program {
-    constructor(name, dependency, dependency_url_list, raw_url) {
-        this.name = name;
-        this.dependency = dependency;
-        this.dependency_url_list = dependency_url_list;
-        this.raw_url = raw_url;
-    }
-}
-
 function remove_all_outputs_dom() {
     document.querySelectorAll(".prompt").forEach((e) => e.remove());
 }
@@ -25,46 +16,33 @@ function remove_all_errors_dom() {
     document.querySelectorAll(".error").forEach((e) => e.remove());
 }
 
-let check_fetch = function check_fetch(response) {
+function check_fetch(response) {
     if (response.ok === false) {
-        add_error("ERROR IN FETCH : " + response.statusText + " - " + response.url);
+        add_error("Fetch error: " + response.statusText + " - " + response.url);
         throw Error(response.statusText);
     }
-    return response; //why do we return tho
-};
-
-function load_program_from_url(context_id) {
-    remove_all_errors_dom();
-    const url = document.getElementById("url").value;
-    if (url != "") {
-        fetch(url)
-            .then(check_fetch)
-            .then((result) => {
-                result
-                    .text() //if the string is 404 not found
-                    .then((string) => {
-                        console.log(
-                            "THIS IS THE STRING WE GET FROM THE URL :: ",
-                            string
-                        );
-                        load_text_from_url_in_editor(string);
-                    })
-                    .catch((err) => {
-                        console.log("ERROR :", err);
-                        add_error(err);
-                    });
-            })
-            .catch((err) => {
-                console.log("ERROR :", err);
-                // add_error(err);
-            });
-    } else {
-        add_error("Empty url field");
-    }
+    return response
 }
 
-function load_text_from_url_in_editor(program_text) {
-    document.getElementById('editor').value = program_text;
+function fetch_then(url, f) {
+    remove_all_errors_dom();
+    console.log("Fetching from URL: ", url);
+    if (url == "") {
+        add_error("No URL given");
+        return
+    }
+    fetch(url).then(check_fetch).then(result => {
+        result.text().then(string => {
+            console.log("Content of the fetched file: ", string);
+            f(string)
+        }).catch(err => {
+            console.log("Error: ", err);
+            add_error(err);
+        })
+    }).catch(err => {
+        console.log("Error: ", err);
+        // add_error(err);
+    });
 }
 
 async function run(program = undefined) {
@@ -78,7 +56,9 @@ async function run(program = undefined) {
 }
 
 document.getElementById("load_url").onclick = () => {
-    load_program_from_url("errors");
+    fetch_then(document.getElementById("url").value, program_text =>
+        document.getElementById('editor').value = program_text
+    )
 };
 
 document.getElementById("run").onclick = async () => {
@@ -96,67 +76,31 @@ document.getElementById("run_multiple").onclick = async () => {
     await check_multiple(program_list, module_to_run, eta, omit);
 };
 
-
-document.getElementById("load_make").onclick = () => {
-    fetch_make_text_from_url();
-};
-
-// const url = "https://raw.githubusercontent.com//bachelorproject/master/examples/kontroli.mk";
 // https://github.com/01mf02/kontroli-rs/blob/master/examples/sudoku/deps.mk
-function fetch_make_text_from_url() {
-    remove_all_errors_dom();
-    const url = document.getElementById("urlmake").value; //continue here
-    console.log(url);
-    if (url != "") {
-        fetch(url)
-            .then(check_fetch)
-            .then((result) => {
-                result
-                    .text() //if the string is 404 not found
-                    .then((string) => {
-                        console.log(
-                            "THIS IS THE MAKE STRING WE GOT FROM :: ",
-                            string
-                        );
-                        use_graph_data(get_graph_rust(string)); //donc ici je vais utiliser un fonction rust qui permetra de get let dependences
-                    }) //here we need to call the get dep from rust then we can generate the html and the css from it and the raw urls
-                    .catch((err) => {
-                        console.log("ERROR :", err);
-                        add_error(err);
-                    });
-            })
-            .catch((err) => {
-                console.log("ERROR :", err);
-                // add_error(err);
-            });
-    } else {
-        add_error("Empty url field");
-    }
-}
+document.getElementById("load_make").onclick = () => {
+    fetch_then(document.getElementById("urlmake").value, string =>
+        use_graph_data(get_graph_rust(string))
+    )
+};
 
 function use_graph_data(graph_data) {
     const dependency_list = graph_data;
-    console.log("GRAPH DATA : ", graph_data);
+    console.log("Graph data: ", graph_data);
 
-    let list_of_files = [];
-
-    for (let i = 0; i < dependency_list.length; i++) {
-        list_of_files.push(dependency_list[i][0]);
-    }
-    console.log("LIST OF FILES : ", list_of_files);
+    const files = dependency_list.map(dep => dep[0]);
+    console.log("List of files: ", files);
 
     generate_run_options_html(graph_data);
-    const urls = generate_gitraw_urls(list_of_files);
-    const dependency_url_list = dependencies_as_urls(graph_data, urls);
-    save_to_program_list(graph_data, urls, dependency_url_list);
-}
 
-function remove_all_select_options() {
-    document.querySelectorAll(".select").forEach((e) => e.remove());
+    const urls = generate_gitraw_urls(files);
+    const dependency_url_list = graph_data.map(node => generate_gitraw_urls(node[1]));
+
+    program_list = make_program_list(graph_data, urls, dependency_url_list);
+    console.log("Program list: ", program_list);
 }
 
 function generate_run_options_html(graph_data) {
-    remove_all_select_options();
+    document.querySelectorAll(".select").forEach(e => e.remove())
     let parent_select = document.getElementById("file_to_run");
     for (const node of graph_data) {
         let option = document.createElement("option");
@@ -168,71 +112,21 @@ function generate_run_options_html(graph_data) {
     }
 }
 
-function generate_gitraw_urls(list_of_files) {
+function generate_gitraw_urls(files) {
     const top_url = document.getElementById("urlmake").value;
-
-    let result_list = [];
-
-    for (let file of list_of_files) {
-        // console.log("FILE : ", file);
-        if (file.startsWith("../")) {
-            let sub_dir_counter = 0;
-            while (file.startsWith("../")) {
-                sub_dir_counter += 1;
-                console.log("file before remove ../", file);
-                file = file.slice(3, file.length);
-                console.log("file after remove ../", file);
-            }
-
-            let result_relative_url = top_url.substring(
-                0,
-                top_url.lastIndexOf("/")
-            );
-            while (sub_dir_counter != 0) {
-                result_relative_url = result_relative_url.slice(0, -1);
-                result_relative_url = result_relative_url.substring(
-                    0,
-                    result_relative_url.lastIndexOf("/")
-                );
-                sub_dir_counter -= 1;
-            }
-            result_list.push(result_relative_url + "/" + file);
-        } else {
-            //so i need to get the url till the last /
-            var firstpart = top_url.substring(0, top_url.lastIndexOf("/"));
-            let dkurl = firstpart + "/" + file; //this is not correct i need to remove the n.mk then add file
-            // console.log("NEW GITRAW URL : ", dkurl);
-            result_list.push(dkurl);
-        }
-    }
-    // console.log("GENERATE URL FINAL :", result_list);
-    return result_list;
+    const prefix = top_url.substring(0, top_url.lastIndexOf("/"));
+    return files.map(file => prefix + "/" + file)
 }
 
-// TODO fix this i think
-// TODO i should only display run selected module when there is something loaded or display a message like nothing was loaded
-function dependencies_as_urls(graph_data, urls) {
-    // console.log("DEBUG DEPENDENCY AS URL");
-    // let counter = 0;
-    let dep_url_list_list = [];
-    for (let node of graph_data) {
-        let dep_url_list = generate_gitraw_urls(node[1]);
-        // console.log("DEBUG LIST PUSHED IN LIST LIST", dep_url_list);
-        dep_url_list_list.push(dep_url_list);
-    }
-    return dep_url_list_list;
-}
-
-function save_to_program_list(graph_data, urls, dependency_url_list) {
+function make_program_list(graph_data, urls, dependency_url_list) {
+    let l = [];
     for (let i = 0; i < graph_data.length; i++) {
-        program_list.push(
-            new Program(
-                graph_data[i][0],
-                graph_data[i][1],
-                dependency_url_list[i],
-                urls[i]
-            )
-        );
+        l.push({
+            name: graph_data[i][0],
+            dependency: graph_data[i][1],
+            dependency_url_list: dependency_url_list[i],
+            raw_url: urls[i],
+        })
     }
-    console.log("PROGRAM LIST : ", program_list);
+    return l
 }
