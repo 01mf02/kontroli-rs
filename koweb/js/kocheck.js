@@ -45,14 +45,13 @@ function fetch_then(url, f) {
     });
 }
 
-async function run(program = undefined) {
+async function run(program) {
     remove_all_errors_dom();
     remove_all_outputs_dom();
 
-    let text = program ?? document.getElementById('editor').value;
     let eta = document.getElementById("eta").checked;
     let omit = document.getElementById("omit").value;
-    check_single(text, eta, omit);
+    check_single(program, eta, omit);
 }
 
 document.getElementById("load_url").onclick = () => {
@@ -62,7 +61,7 @@ document.getElementById("load_url").onclick = () => {
 };
 
 document.getElementById("run").onclick = async () => {
-    await run();
+    await run(document.getElementById('editor').value);
 };
 
 document.getElementById("run_multiple").onclick = async () => {
