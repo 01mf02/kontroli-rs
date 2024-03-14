@@ -6,14 +6,15 @@ import init, {
 
 import { add_error } from "./export.js";
 
+// result of loading a Makefile
 let program_list = [];
 
 function remove_all_outputs_dom() {
-    document.querySelectorAll(".prompt").forEach((e) => e.remove());
+    document.querySelectorAll(".prompt").forEach(e => e.remove())
 }
 
 function remove_all_errors_dom() {
-    document.querySelectorAll(".error").forEach((e) => e.remove());
+    document.querySelectorAll(".error").forEach(e => e.remove())
 }
 
 function check_fetch(response) {
