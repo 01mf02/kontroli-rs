@@ -49,14 +49,14 @@ impl<'s, 't> STerm<'s, 't> {
     }
 
     /// Apply some terms to the term.
-    pub fn apply(mut self, args: impl Iterator<Item = Self>) -> Self {
+    pub fn apply(mut self, args: impl IntoIterator<Item = Self>) -> Self {
         if let Self::SComb(ref mut c) = self {
             if let Some(Comb::Appl(_, args1)) = Rc::get_mut(c) {
                 args1.extend(args);
                 return self;
             }
         }
-        Self::SComb(Rc::new(Comb::Appl(self, args.collect())))
+        Self::SComb(Rc::new(Comb::Appl(self, args.into_iter().collect())))
     }
 }
 
