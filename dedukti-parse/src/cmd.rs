@@ -11,12 +11,15 @@ pub enum Command<C, V, Tm> {
     Rules(Vec<Rule<V, Tm>>),
 }
 
+/// Injectivity.
+type Inj = bool;
+
 /// A command that introduces a new constant.
 #[derive(Clone, Debug)]
 pub enum Intro<Ty, Tm = Ty> {
     Definition(Option<Ty>, Option<Tm>),
     Theorem(Ty, Tm),
-    Declaration(Ty),
+    Declaration(Inj, Ty),
 }
 
 /// A command that introduces a set of rewrite rules.
@@ -41,11 +44,12 @@ impl<C, V, Tm> Command<C, V, Tm> {
 }
 
 impl<Ty, Tm> Intro<Ty, Tm> {
-    /// Only constants introduced by definitions are rewritable.
+    /// Only constants that are injective or introduced by definitions are rewritable.
     pub fn rewritable(&self) -> bool {
         match self {
+            Self::Declaration(inj, _) => inj,
             Self::Definition(..) => true,
-            Self::Declaration(_) | Self::Theorem(..) => false,
+            Self::Theorem(..) => false,
         }
     }
 
@@ -54,7 +58,7 @@ impl<Ty, Tm> Intro<Ty, Tm> {
         match self {
             Self::Definition(ty, tm) => Intro::Definition(ty.map(f), tm),
             Self::Theorem(ty, tm) => Intro::Theorem(f(ty), tm),
-            Self::Declaration(ty) => Intro::Declaration(f(ty)),
+            Self::Declaration(inj, ty) => Intro::Declaration(inj, f(ty)),
         }
     }
 
@@ -63,7 +67,7 @@ impl<Ty, Tm> Intro<Ty, Tm> {
         match self {
             Self::Definition(ty, tm) => Intro::Definition(ty, tm.map(f)),
             Self::Theorem(ty, tm) => Intro::Theorem(ty, f(tm)),
-            Self::Declaration(ty) => Intro::Declaration(ty),
+            Self::Declaration(inj, ty) => Intro::Declaration(inj, ty),
         }
     }
 }
@@ -75,7 +79,8 @@ impl<C: Display, V: Display, Tm: Display> Display for Command<C, V, Tm> {
                 match it {
                     Intro::Theorem(_, _) => write!(f, "thm ")?,
                     Intro::Definition(_, _) => write!(f, "def ")?,
-                    Intro::Declaration(_) => (),
+                    Intro::Declaration(true, _) => write!(f, "injective ")?,
+                    Intro::Declaration(false, _) => (),
                 };
                 write!(f, "{}", x)?;
                 args.iter()
@@ -86,7 +91,7 @@ impl<C: Display, V: Display, Tm: Display> Display for Command<C, V, Tm> {
                         tm.iter().try_for_each(|tm| write!(f, " := {}", tm))
                     }
                     Intro::Theorem(ty, tm) => write!(f, " : {} := {}", ty, tm),
-                    Intro::Declaration(ty) => write!(f, " : {}", ty),
+                    Intro::Declaration(_inj, ty) => write!(f, " : {}", ty),
                 }
             }
             Self::Rules(rules) => rules.iter().try_for_each(|rule| rule.fmt(f)),
@@ -108,9 +113,10 @@ impl<V: Display, Tm: Display> Display for Rule<V, Tm> {
 }
 
 #[derive(Debug)]
-pub(crate) enum DefThm {
+pub(crate) enum Prefix {
     Def,
     Thm,
+    Inj,
 }
 
 #[derive(Debug)]
@@ -166,27 +172,19 @@ pub(crate) enum State<C, V, Tm> {
     /// nothing
     Init,
 
-    /// `def`
-    Def,
-    /// `thm`
-    Thm,
+    /// `def`, `thm`, `injective`
+    Prefix(Prefix),
 
-    /// `s` followed by `:` if true
-    Decl(C, bool),
+    /// `def/thm s (x1 : t1) .. (xn : tn)`, followed by `:` or `:=` if `Some(_)`
+    Args(Option<Prefix>, C, Vec<Tm>, Option<OfEq>),
 
-    /// `def/thm s (x1 : t1) .. (xn : tn)`
-    Args(DefThm, C, Vec<Tm>),
     /// `def/thm s (x1 : t1) .. (`
     /// followed by `x`   if `Some((x, false))`
     /// followed by `x :` if `Some((x,  true))`
-    ArgsIn(DefThm, C, Vec<Tm>, Option<(V, bool)>),
-    /// `def/thm s (x1 : t1) ... (xn: tn) : ty :=`
-    DefThmEq(DefThm, C, Vec<Tm>, Tm),
+    ArgsIn(Option<Prefix>, C, Vec<Tm>, Option<(V, bool)>),
 
-    /// `def s (x1 : t1) .. (xn : tn)` followed by `:` or `:=`
-    DefOfEq(C, Vec<Tm>, OfEq),
-    /// `thm s (x1 : t1) .. (xn : tn)` followed by `:`
-    ThmOf(C, Vec<Tm>),
+    /// `def/thm s (x1 : t1) .. (xn : tn) : ty :=`
+    OfEq(Option<Prefix>, C, Vec<Tm>, Tm),
 
     /// `[x1 : t1, ..,`
     /// followed by `x`   if `Some((x, false))`
@@ -239,35 +237,31 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
             (_, Token::Symb(_)) => Err(Error::UnexpectedPath),
 
             // starting commands
-            (State::Init, Token::Def) => Ok(State::Def),
-            (State::Init, Token::Thm) => Ok(State::Thm),
+            (State::Init, Token::Def) => Ok(State::Prefix(Prefix::Def)),
+            (State::Init, Token::Thm) => Ok(State::Prefix(Prefix::Thm)),
+            (State::Init, Token::Inj) => Ok(State::Prefix(Prefix::Inj)),
             (State::Init, Token::LBrk) => Ok(State::RuleCtx(Default::default(), None)),
             (State::Init, Token::Hash) => Ok(State::Pragma),
             (State::Init, _) => Err(Error::ExpectedCmd),
 
-            // s + :
-            (State::Decl(s, false), Token::Colon) => Ok(State::Decl(s, true)),
-            (State::Decl(_, false), _) => Err(Error::ExpectedColon),
-
-            (State::Def | State::Thm, _) => Err(Error::ExpectedIdent),
+            (State::Prefix(_), _) => Err(Error::ExpectedIdent),
 
             // def/thm s + (
-            (State::Args(dt, s, ctx), Token::LPar) => Ok(State::ArgsIn(dt, s, ctx, None)),
-
+            (State::Args(p, s, c, None), Token::LPar) => Ok(State::ArgsIn(p, s, c, None)),
             // thm s (..) + :
-            (State::Args(DefThm::Thm, s, c), Token::Colon) => Ok(State::ThmOf(s, c)),
-            // def s (..) + :
-            (State::Args(DefThm::Def, s, c), Token::Colon) => Ok(State::DefOfEq(s, c, OfEq::Of)),
+            (State::Args(p, s, c, None), Token::Colon) => Ok(State::Args(p, s, c, Some(OfEq::Of))),
             // def s (..) + :=
-            (State::Args(DefThm::Def, s, c), Token::ColonEq) => Ok(State::DefOfEq(s, c, OfEq::Eq)),
-            (State::Args(DefThm::Thm, _, _), _) => Err(Error::ExpectedColon),
-            (State::Args(DefThm::Def, _, _), _) => Err(Error::ExpectedColonOrColonEq),
+            (State::Args(p @ Some(Prefix::Def), s, c, None), Token::ColonEq) => {
+                Ok(State::Args(p, s, c, Some(OfEq::Eq)))
+            }
+            (State::Args(Some(Prefix::Def), _, _, None), _) => Err(Error::ExpectedColonOrColonEq),
+            (State::Args(_, _, _, None), _) => Err(Error::ExpectedColon),
 
             (State::ArgsIn(_, _, _, None), _) => Err(Error::ExpectedIdent),
 
             // def s (x + :
-            (State::ArgsIn(dt, s, c, Some((x, false))), Token::Colon) => {
-                Ok(State::ArgsIn(dt, s, c, Some((x, true))))
+            (State::ArgsIn(p, s, c, Some((x, false))), Token::Colon) => {
+                Ok(State::ArgsIn(p, s, c, Some((x, true))))
             }
             (State::ArgsIn(_, _, _, Some((_, false))), _) => Err(Error::ExpectedColon),
 
@@ -300,14 +294,11 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
 
     pub fn apply_name(self, name: impl Into<C> + Into<V>) -> Result<State<C, V, Tm>> {
         match self {
-            State::Init => Ok(State::Decl(name.into(), false)),
+            State::Init => Ok(State::Args(None, name.into(), Vec::new(), None)),
             // def/thm + s
-            State::Def => Ok(State::Args(DefThm::Def, name.into(), Vec::new())),
-            State::Thm => Ok(State::Args(DefThm::Thm, name.into(), Vec::new())),
+            State::Prefix(p) => Ok(State::Args(Some(p), name.into(), Vec::new(), None)),
             // def/thm s ( + x
-            State::ArgsIn(dt, s, c, None) => {
-                Ok(State::ArgsIn(dt, s, c, Some((name.into(), false))))
-            }
+            State::ArgsIn(p, s, c, None) => Ok(State::ArgsIn(p, s, c, Some((name.into(), false)))),
             // [x1 : t1, .., + x
             State::RuleCtx(c, None) => Ok(State::RuleCtx(c, Some((name.into(), false)))),
             _ => Err(Error::UnexpectedToken),
@@ -317,10 +308,8 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
     pub fn expects_term(&self) -> bool {
         matches!(
             self,
-            State::Decl(_, true)
-                | State::ThmOf(..)
-                | State::DefOfEq(..)
-                | State::DefThmEq(..)
+            State::Args(_, _, _, Some(_))
+                | State::OfEq(..)
                 | State::ArgsIn(.., Some((_, true)))
                 | State::RuleCtx(_, Some((_, true)))
                 | State::RuleL(_)
@@ -338,7 +327,7 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
             (State::ArgsIn(dt, s, mut ctx, Some((x, true))), Token::RPar) => {
                 bound.push(x);
                 ctx.push(tm);
-                Ok(State::Args(dt, s, ctx))
+                Ok(State::Args(dt, s, ctx, None))
             }
 
             (State::RuleL(ctx), Token::LongArrow) => {
@@ -360,12 +349,11 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
                 ctx.vars.push(Some(tm));
                 Ok(State::RuleCtx(ctx, None))
             }
-            (State::RuleCtx(..), _) => Err(Error::ExpectedCommaOrRBrk),
-            (State::ThmOf(x, ctx), Token::ColonEq) => Ok(State::DefThmEq(DefThm::Thm, x, ctx, tm)),
-            (State::DefOfEq(x, ctx, OfEq::Of), Token::ColonEq) => {
-                Ok(State::DefThmEq(DefThm::Def, x, ctx, tm))
-            }
-            (State::ThmOf(..), _) => Err(Error::ExpectedColonEq),
+            (
+                State::Args(p @ Some(Prefix::Def | Prefix::Thm), x, ctx, Some(OfEq::Of)),
+                Token::ColonEq,
+            ) => Ok(State::OfEq(p, x, ctx, tm)),
+            (State::Args(Some(Prefix::Thm), _, _, Some(_)), _) => Err(Error::ExpectedColonEq),
 
             (State::ArgsIn(_, _, _, Some((_, true))), _) => Err(Error::ExpectedRPar),
 
@@ -376,19 +364,27 @@ impl<C, V: Joker, Tm> State<C, V, Tm> {
 
     fn close(self, bound: &mut Vec<V>, tm: Tm) -> Result<Command<C, V, Tm>> {
         match self {
-            State::Decl(x, true) => Ok(Command::Intro(x, Vec::new(), Intro::Declaration(tm))),
-            State::DefOfEq(x, ctx, ofeq) => {
-                let it = match ofeq {
-                    OfEq::Eq => Intro::Definition(None, Some(tm)),
-                    OfEq::Of => Intro::Definition(Some(tm), None),
+            State::Args(p, x, ctx, Some(OfEq::Eq)) => {
+                assert!(matches!(p, Some(Prefix::Def)));
+                let it = Intro::Definition(None, Some(tm));
+                let ctx = bound.drain(..).zip(ctx).collect();
+                Ok(Command::Intro(x, ctx, it))
+            }
+            State::Args(p, x, ctx, Some(OfEq::Of)) => {
+                let it = match p {
+                    None => Intro::Declaration(false, tm),
+                    Some(Prefix::Inj) => Intro::Declaration(true, tm),
+                    Some(Prefix::Def) => Intro::Definition(Some(tm), None),
+                    Some(Prefix::Thm) => unreachable!(),
                 };
                 let ctx = bound.drain(..).zip(ctx).collect();
                 Ok(Command::Intro(x, ctx, it))
             }
-            State::DefThmEq(dt, x, ctx, ty) => {
-                let it = match dt {
-                    DefThm::Thm => Intro::Theorem(ty, tm),
-                    DefThm::Def => Intro::Definition(Some(ty), Some(tm)),
+            State::OfEq(p, x, ctx, ty) => {
+                let it = match p {
+                    Some(Prefix::Thm) => Intro::Theorem(ty, tm),
+                    Some(Prefix::Def) => Intro::Definition(Some(ty), Some(tm)),
+                    Some(Prefix::Inj) | None => unreachable!(),
                 };
                 let ctx = bound.drain(..).zip(ctx).collect();
                 Ok(Command::Intro(x, ctx, it))

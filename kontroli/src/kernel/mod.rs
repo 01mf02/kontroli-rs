@@ -75,7 +75,10 @@ fn theorem<'s>(ty: LTerm<'s>, tm: LTerm<'s>, gc: &GCtx<'s>) -> IntroResult<'s> {
 /// This allows us to postpone and parallelise type checking.
 pub fn intro<'s>(it: Intro<'s>, gc: &GCtx<'s>) -> IntroResult<'s> {
     match it {
-        Intro::Declaration(ty) => declare(ty, gc),
+        // we do not need to consider injectivity, because
+        // it is only used when a side of a rewrite rule cannot be typed,
+        // in which case we fail anyways
+        Intro::Declaration(_inj, ty) => declare(ty, gc),
         Intro::Definition(oty, otm) => match (oty, otm) {
             (Some(ty), None) => declare(ty, gc),
             (oty, Some(tm)) => define(oty, tm, gc),

@@ -16,6 +16,10 @@ pub enum Token<S> {
     #[token("thm")]
     Thm,
 
+    /// injectivity
+    #[token("injective")]
+    Inj,
+
     /// opening bracket
     #[token("[")]
     LBrk,
@@ -83,6 +87,7 @@ impl<S: Display> Display for Token<S> {
         match self {
             Self::Def => "def".fmt(f),
             Self::Thm => "thm".fmt(f),
+            Self::Inj => "injective".fmt(f),
             Self::LBrk => "[".fmt(f),
             Self::RBrk => "]".fmt(f),
             Self::Hash => "#".fmt(f),

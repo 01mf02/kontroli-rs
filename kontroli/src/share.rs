@@ -133,7 +133,7 @@ impl<'s, Tm: Share<'s, LTerm<'s>>> Share<'s, Intro<'s>> for parse::Intro<Tm> {
                 tm.map(|tm| tm.share(syms)).transpose()?,
             )),
             Self::Theorem(ty, tm) => Ok(Intro::Theorem(ty.share(syms)?, tm.share(syms)?)),
-            Self::Declaration(ty) => Ok(Intro::Declaration(ty.share(syms)?)),
+            Self::Declaration(inj, ty) => Ok(Intro::Declaration(inj, ty.share(syms)?)),
         }
     }
 }

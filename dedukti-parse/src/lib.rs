@@ -331,6 +331,11 @@ fn positive() -> Result<(), Error> {
     Command::parse_str("prop : Type.")?;
     Command::parse_str("imp: prop -> prop -> prop.")?;
     Command::parse_str("def prf: prop -> Type.")?;
+    Command::parse_str("def f (x: A) : A.")?;
+    Command::parse_str("def f (x: A) := t.")?;
+    Command::parse_str("def f (x: A) : A := t.")?;
+    Command::parse_str("injective f (x: type): x.")?;
+    Command::parse_str("injective eta : type -> Type.")?;
     Command::parse_str("[x, y] prf (imp x y) --> prf x -> prf y.")?;
     Command::parse_str("thm imp_refl (x: prop) : prf (imp x x) := p: prf x => p.")?;
     Command::parse_str("[] eq _ _ --> false.")?;
@@ -347,17 +352,25 @@ fn negative() {
     use cmd::Error::*;
     let parse_err = |s: &str| match Command::parse_str(s) {
         Err(Error::Command(e)) => e,
-        _ => panic!("command error expected"),
+        e => panic!("command error expected, found {e:?}"),
     };
     assert_eq!(parse_err("."), ExpectedCmd);
     assert_eq!(parse_err("x ->"), ExpectedColon);
     assert_eq!(parse_err("def :"), ExpectedIdent);
+    assert_eq!(parse_err("thm ->"), ExpectedIdent);
+    assert_eq!(parse_err("injective ("), ExpectedIdent);
     assert_eq!(parse_err("def d ->"), ExpectedColonOrColonEq);
+    assert_eq!(parse_err("def d := t := t."), UnexpectedToken);
     assert_eq!(parse_err("thm t := tm."), ExpectedColon);
     assert_eq!(parse_err("thm t :  ty."), ExpectedColonEq);
+    assert_eq!(parse_err("thm t : ty := tm :="), UnexpectedToken);
     assert_eq!(parse_err("thm t (->"), ExpectedIdent);
     assert_eq!(parse_err("thm t (x ->"), ExpectedColon);
     assert_eq!(parse_err("thm t (x : a -->"), ExpectedRPar);
+    assert_eq!(parse_err("thm t: ty def"), ExpectedColonEq);
+    assert_eq!(parse_err("injective eta := Type."), ExpectedColon);
+    assert_eq!(parse_err("injective eta : Type := Type."), UnexpectedToken);
+
     assert_eq!(parse_err("[->"), ExpectedCommaOrRBrk);
     assert_eq!(parse_err("[x ->"), ExpectedCommaOrRBrk);
     assert_eq!(parse_err("[x] l."), ExpectedLongArrow);
