@@ -330,6 +330,7 @@ impl Scoped<String> {
 fn positive() -> Result<(), Error> {
     Command::parse_str("prop : Type.")?;
     Command::parse_str("imp: prop -> prop -> prop.")?;
+    Command::parse_str("imp (l: prop) (r: prop): prop.")?;
     Command::parse_str("def prf: prop -> Type.")?;
     Command::parse_str("def f (x: A) : A.")?;
     Command::parse_str("def f (x: A) := t.")?;
