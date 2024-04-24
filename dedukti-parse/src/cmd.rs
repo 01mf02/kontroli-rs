@@ -47,7 +47,7 @@ impl<Ty, Tm> Intro<Ty, Tm> {
     /// Only constants that are injective or introduced by definitions are rewritable.
     pub fn rewritable(&self) -> bool {
         match self {
-            Self::Declaration(inj, _) => inj,
+            Self::Declaration(inj, _) => *inj,
             Self::Definition(..) => true,
             Self::Theorem(..) => false,
         }
