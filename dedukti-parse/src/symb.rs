@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use core::fmt::{self, Display};
 
 /// Symbol consisting of a relative module path and a name.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Symb<S> {
     /// module path (`["a", "b"]` for symbol `"a.b.c"`)
     pub path: Vec<S>,
