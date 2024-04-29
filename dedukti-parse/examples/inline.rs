@@ -1,14 +1,14 @@
 use core::hash::Hash;
-use dedukti_parse::{term, Command, Intro, Strict, Symb};
+use dedukti_parse::{term, Command, Intro, Strict, Symb, Term};
 use std::collections::{HashMap, HashSet};
 
-fn map_atoms<A, B, V>(t: term::Term<A, V>, f: &mut impl FnMut(A) -> term::Term<B, V>) -> term::Term<B, V> {
+fn map_atoms<A, B, V>(t: Term<A, V>, f: &mut impl FnMut(A) -> Term<B, V>) -> Term<B, V> {
     use term::AppH;
     let args = t.args.into_iter().map(|a| map_atoms(a, f)).collect();
     let head = match t.head {
         AppH::Atom(a) => {
             let b = f(a);
-            return term::Term {
+            return Term {
                 head: b.head,
                 args: b.args.into_iter().chain(args).collect(),
             };
@@ -22,15 +22,15 @@ fn map_atoms<A, B, V>(t: term::Term<A, V>, f: &mut impl FnMut(A) -> term::Term<B
             AppH::Prod(v, Box::new(map_atoms(*ty, f)), Box::new(map_atoms(*tm, f)))
         }
     };
-    term::Term { head, args }
+    Term { head, args }
 }
 
 fn subst<A: Clone + Eq + Hash, V: Clone>(
-    map: &mut HashMap<A, term::Term<A, V>>,
-    t: term::Term<A, V>,
-) -> term::Term<A, V> {
+    map: &mut HashMap<A, Term<A, V>>,
+    t: Term<A, V>,
+) -> Term<A, V> {
     map_atoms(t, &mut |a| match map.remove(&a) {
-        None => term::Term {
+        None => Term {
             head: term::AppH::Atom(a),
             args: Vec::new(),
         },
