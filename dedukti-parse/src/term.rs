@@ -259,10 +259,7 @@ impl<A, V> Term<A, V> {
 }
 
 /// Should I stay or should I go?
-enum Loop<T> {
-    Return(T),
-    Continue,
-}
+type Loop<T> = core::ops::ControlFlow<T>;
 
 type OTok<S> = Option<Token<S>>;
 
@@ -272,8 +269,8 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
         I: Iterator<Item = Token<S>>,
     {
         match self.resume(ctx, iter)? {
-            Loop::Continue => Self::init(ctx, iter),
-            Loop::Return(ret) => Ok(ret),
+            Loop::Continue(()) => Self::init(ctx, iter),
+            Loop::Break(ret) => Ok(ret),
         }
     }
 
@@ -282,7 +279,7 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
         I: Iterator<Item = Token<S>>,
     {
         match self {
-            Self::Init => Ok(Loop::Continue),
+            Self::Init => Ok(Loop::Continue(())),
             Self::Symb(s1) => Self::symb(Symb::new(s1), ctx, iter),
             Self::VarOf(v) => Self::varof(v, ctx, iter),
             Self::ATerm(x, app) => Self::aterm(x, app, ctx, iter),
@@ -297,8 +294,8 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
             match iter.next() {
                 tok @ (None | Some(Token::Comment(_))) => return Ok((Self::Init, tok)),
                 Some(Token::Symb(s)) => match Self::symb(s, ctx, iter)? {
-                    Loop::Continue => (),
-                    Loop::Return(ret) => return Ok(ret),
+                    Loop::Continue(()) => (),
+                    Loop::Break(ret) => return Ok(ret),
                 },
                 Some(Token::LPar) => ctx.stack.push(Cont::LPar(LPar { x: None, app: None })),
                 _ => return Err(Error::ExpectedIdentOrLPar),
@@ -314,10 +311,10 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
             return Self::aterm(None, A::go(s, ctx), ctx, iter);
         }
         match iter.next() {
-            tok @ (None | Some(Token::Comment(_))) => Ok(Loop::Return((Self::Symb(s.name), tok))),
+            tok @ (None | Some(Token::Comment(_))) => Ok(Loop::Break((Self::Symb(s.name), tok))),
             Some(Token::FatArrow) => {
                 ctx.stack.push(Cont::Abst(s.name.into(), None));
-                Ok(Loop::Continue)
+                Ok(Loop::Continue(()))
             }
             Some(Token::Colon) => Self::varof(s.name.into(), ctx, iter),
             Some(tok) => {
@@ -332,12 +329,12 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
         I: Iterator<Item = Token<S>>,
     {
         match iter.next() {
-            tok @ (None | Some(Token::Comment(_))) => Ok(Loop::Return((Self::VarOf(v), tok))),
+            tok @ (None | Some(Token::Comment(_))) => Ok(Loop::Break((Self::VarOf(v), tok))),
             Some(Token::Symb(s)) => Self::aterm(Some(v), A::go(s, ctx), ctx, iter),
             Some(Token::LPar) => {
                 let x = Some(v);
                 ctx.stack.push(Cont::LPar(LPar { x, app: None }));
-                Ok(Loop::Continue)
+                Ok(Loop::Continue(()))
             }
             Some(_) => Err(Error::ExpectedIdentOrLPar),
         }
@@ -352,23 +349,23 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
         loop {
             match iter.next() {
                 tok @ (None | Some(Token::Comment(_))) => {
-                    return Ok(Loop::Return((State::ATerm(x, app), tok)))
+                    return Ok(Loop::Break((State::ATerm(x, app), tok)))
                 }
                 Some(Token::Symb(s)) => app.args.push(A::go(s, ctx)),
                 Some(Token::Arrow) => {
                     ctx.stack.push(Cont::Prod(x, app));
-                    return Ok(Loop::Continue);
+                    return Ok(Loop::Continue(()));
                 }
                 Some(Token::FatArrow) => match x {
                     None => return Err(Error::AnonymousLambda),
                     Some(x) => {
                         ctx.stack.push(Cont::Abst(x, Some(app)));
-                        return Ok(Loop::Continue);
+                        return Ok(Loop::Continue(()));
                     }
                 },
                 Some(Token::LPar) => {
                     ctx.stack.push(Cont::LPar(LPar { x, app: Some(app) }));
-                    return Ok(Loop::Continue);
+                    return Ok(Loop::Continue(()));
                 }
                 Some(_) if x.is_some() => return Err(Error::AbstWithoutRhs),
                 Some(tok) => match app.reduce(ctx) {
@@ -384,7 +381,7 @@ impl<S: Into<V>, A: Scope<S, V>, V> State<S, A, V> {
                         }
                     }
                     (Some(_lpar), _) => return Err(Error::UnclosedLPar),
-                    (None, tm) => return Ok(Loop::Return((State::ATerm(x, tm), Some(tok)))),
+                    (None, tm) => return Ok(Loop::Break((State::ATerm(x, tm), Some(tok)))),
                 },
             }
         }
